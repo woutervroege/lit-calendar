@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "deploy": "turbo run deploy",
     "preview": "turbo run preview",
     "type-check": "turbo run type-check",
     "lint": "biome lint .",
