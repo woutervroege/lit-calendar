@@ -2,6 +2,7 @@
   position: absolute;
   width: 100%;
   container-type: size;
+  touch-action: none;
   --background-color: var(--event-card-background, var(--event-card-default-bg));
 }
 

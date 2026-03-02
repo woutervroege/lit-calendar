@@ -1,5 +1,5 @@
 :host {
-  pointer-events: auto;
+  pointer-events: none;
   user-select: none;
   inset: 0;
   position: absolute;
