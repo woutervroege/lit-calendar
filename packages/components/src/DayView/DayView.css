@@ -9,17 +9,23 @@
 }
 
 section {
-  background:
-    repeating-linear-gradient(
+  background-image:
+    linear-gradient(
       to right,
       var(--line-color) 0 var(--line),
-      transparent var(--line) calc(100% / var(--days))
+      transparent var(--line) 100%
     ),
-    repeating-linear-gradient(
+    linear-gradient(
       to bottom,
       var(--line-color) 0 var(--line),
-      transparent var(--line) calc(100% / var(--hours))
+      transparent var(--line) 100%
     );
+  background-size:
+    calc(100% / var(--days)) 100%,
+    100% calc(100% / var(--hours));
+  background-repeat:
+    repeat-x,
+    repeat-y;
   position: relative;
   height: 100%;
 }
@@ -47,15 +53,21 @@ section[data-drag-hover]::before {
 
 /* Month view: multi-row grid (e.g. 7 columns × N weeks) */
 section.month-view {
-  background:
-    repeating-linear-gradient(
+  background-image:
+    linear-gradient(
       to right,
       var(--line-color) 0 var(--line),
-      transparent var(--line) calc(100% / var(--days))
+      transparent var(--line) 100%
     ),
-    repeating-linear-gradient(
+    linear-gradient(
       to bottom,
       var(--line-color) 0 var(--line),
-      transparent var(--line) calc(100% / var(--grid-rows))
+      transparent var(--line) 100%
     );
+  background-size:
+    calc(100% / var(--days)) 100%,
+    100% calc(100% / var(--grid-rows));
+  background-repeat:
+    repeat-x,
+    repeat-y;
 }
