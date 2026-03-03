@@ -86,6 +86,93 @@ export class TimedEventInteractionController {
     this.#finalizeNonMove();
   };
 
+  readonly keydownHandler = (e: KeyboardEvent) => {
+    if (e.shiftKey === true && e.ctrlKey === true) {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this.#adjustEndBySingleStep(-1);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this.#adjustEndBySingleStep(1);
+        return;
+      }
+    }
+
+    if (e.ctrlKey === true && e.metaKey === true) {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this.#moveBySingleStep(-1);
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this.#moveBySingleStep(1);
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        this.#moveByHours(-24);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        this.#moveByHours(24);
+      }
+    }
+  };
+
+  #moveBySingleStep(direction: -1 | 1) {
+    const start = this.#toPlainDateTimeOrNull(this.#host.start);
+    const end = this.#toPlainDateTimeOrNull(this.#host.end);
+    if (!start || !end) return;
+
+    if (this.#mode === "all-day") {
+      const delta = Temporal.Duration.from({ days: direction });
+      this.#host.start = start.add(delta).toString();
+      this.#host.end = end.add(delta).toString();
+      this.#host.dispatchEvent(new CustomEvent("update"));
+      return;
+    }
+
+    const ctor = this.constructor as typeof TimedEventInteractionController;
+    const minutes = ctor.snapInterval * direction;
+    const delta = Temporal.Duration.from({ minutes });
+    this.#host.start = start.add(delta).toString();
+    this.#host.end = end.add(delta).toString();
+    this.#host.dispatchEvent(new CustomEvent("update"));
+  }
+
+  #moveByHours(hours: number) {
+    const start = this.#toPlainDateTimeOrNull(this.#host.start);
+    const end = this.#toPlainDateTimeOrNull(this.#host.end);
+    if (!start || !end) return;
+
+    const delta = Temporal.Duration.from({ hours });
+    this.#host.start = start.add(delta).toString();
+    this.#host.end = end.add(delta).toString();
+    this.#host.dispatchEvent(new CustomEvent("update"));
+  }
+
+  #adjustEndBySingleStep(direction: -1 | 1) {
+    if (this.#mode !== "timed") return;
+
+    const start = this.#toPlainDateTimeOrNull(this.#host.start);
+    const end = this.#toPlainDateTimeOrNull(this.#host.end);
+    if (!start || !end) return;
+
+    const ctor = this.constructor as typeof TimedEventInteractionController;
+    const minutes = ctor.snapInterval * direction;
+    let nextEnd = end.add(Temporal.Duration.from({ minutes }));
+
+    const minDurationMinutes = ctor.snapInterval;
+    const minEnd = start.add(Temporal.Duration.from({ minutes: minDurationMinutes }));
+    if (Temporal.PlainDateTime.compare(nextEnd, minEnd) < 0) {
+      nextEnd = minEnd;
+    }
+
+    this.#host.end = nextEnd.toString();
+    this.#host.dispatchEvent(new CustomEvent("update"));
+  }
+
   #deriveOperation(event: PointerEvent): InteractionOperation | null {
     const target = event.target as EventTarget | null;
     const allowedElement = this.#getAllowedTarget(target, event.composedPath());

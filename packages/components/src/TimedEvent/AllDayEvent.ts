@@ -361,6 +361,7 @@ export class AllDayEvent extends BaseEvent {
         @pointerdown=${this.interactionController.pointerDownHandler}
         @pointermove=${this.interactionController.pointerMoveHandler}
         @pointerup=${this.interactionController.pointerUpHandler}
+        @keydown=${this.interactionController.keydownHandler}
       >
         ${this.#renderEventCards(dayInsets, canResizeStart)}
       </button>
