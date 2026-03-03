@@ -57,33 +57,57 @@ export class TimedEvent extends BaseEvent {
     overlappingSiblings: TimedEvent[],
     day: Temporal.PlainDate
   ): { width: number; marginLeft: number; indentation?: number } {
+    const sameStartSiblings = this.#getSameStartSiblings(overlappingSiblings, day);
+
+    if (sameStartSiblings.length > 1) {
+      return this.#calculateSharedStartPosition(sameStartSiblings);
+    }
+
+    return this.#calculateStaggeredPosition(overlappingSiblings, day);
+  }
+
+  #getSameStartSiblings(
+    overlappingSiblings: TimedEvent[],
+    day: Temporal.PlainDate
+  ): TimedEvent[] {
     const thisStartEff = this.#getEffectiveTimesForDay(day).start;
-    const sameStartSiblings = overlappingSiblings.filter((sibling) => {
+    return overlappingSiblings.filter((sibling) => {
       const sibStartEff = sibling.#getEffectiveTimesForDay(day).start;
       return sibStartEff.toString() === thisStartEff.toString();
     });
+  }
 
-    if (sameStartSiblings.length > 1) {
-      const startTimeIndex = sameStartSiblings.indexOf(this);
-      const width = 1 / sameStartSiblings.length;
-      const marginLeft = startTimeIndex / sameStartSiblings.length;
-      return { width, marginLeft };
-    } else {
-      const sortedSiblings = overlappingSiblings.sort((a, b) => {
-        const aIsStartingToday = a.startDate?.toString() === day.toString();
-        const bIsStartingToday = b.startDate?.toString() === day.toString();
-        if (!aIsStartingToday && bIsStartingToday) return -1;
-        if (aIsStartingToday && !bIsStartingToday) return 1;
-        const aStartTime = a.startTime ? a.startTime.toString() : "00:00:00";
-        const bStartTime = b.startTime ? b.startTime.toString() : "00:00:00";
-        return aStartTime.localeCompare(bStartTime);
-      });
-      const overlappingIndex = sortedSiblings.indexOf(this);
-      const indentation = overlappingIndex * 12;
-      const width = 1 - indentation / 200;
-      const marginLeft = 0;
-      return { width, marginLeft, indentation };
-    }
+  #calculateSharedStartPosition(
+    sameStartSiblings: TimedEvent[]
+  ): { width: number; marginLeft: number } {
+    const startTimeIndex = sameStartSiblings.indexOf(this);
+    const width = 1 / sameStartSiblings.length;
+    const marginLeft = startTimeIndex / sameStartSiblings.length;
+    return { width, marginLeft };
+  }
+
+  #calculateStaggeredPosition(
+    overlappingSiblings: TimedEvent[],
+    day: Temporal.PlainDate
+  ): { width: number; marginLeft: number; indentation: number } {
+    const sortedSiblings = [...overlappingSiblings].sort((a, b) =>
+      this.#compareSiblingStart(a, b, day)
+    );
+    const overlappingIndex = sortedSiblings.indexOf(this);
+    const indentation = overlappingIndex * 12;
+    const width = 1 - indentation / 200;
+    const marginLeft = 0;
+    return { width, marginLeft, indentation };
+  }
+
+  #compareSiblingStart(a: TimedEvent, b: TimedEvent, day: Temporal.PlainDate): number {
+    const aIsStartingToday = a.startDate?.toString() === day.toString();
+    const bIsStartingToday = b.startDate?.toString() === day.toString();
+    if (!aIsStartingToday && bIsStartingToday) return -1;
+    if (aIsStartingToday && !bIsStartingToday) return 1;
+    const aStartTime = a.startTime ? a.startTime.toString() : "00:00:00";
+    const bStartTime = b.startTime ? b.startTime.toString() : "00:00:00";
+    return aStartTime.localeCompare(bStartTime);
   }
 
   #calculateVerticalPositioning(day: Temporal.PlainDate): { top: number; bottom: number } {
@@ -162,6 +186,15 @@ export class TimedEvent extends BaseEvent {
       return this.#formatDisplayTime(startTime, endTime);
     }
 
+    return this.#formatMultiDayDisplayTime(startDate, endDate, startTime, endTime);
+  }
+
+  #formatMultiDayDisplayTime(
+    startDate: Temporal.PlainDate | null,
+    endDate: Temporal.PlainDate | null,
+    startTime: Temporal.PlainTime,
+    endTime: Temporal.PlainTime
+  ): string {
     const startTimeLabel = startTime.toLocaleString(this.locale, {
       hour: "2-digit",
       minute: "2-digit",
@@ -172,16 +205,7 @@ export class TimedEvent extends BaseEvent {
       minute: "2-digit",
     });
 
-    // Determine the first rendered (visible) day from the calendar.
-    const renderedDays = this.renderedDays;
-    const viewStartDate =
-      renderedDays && renderedDays.length
-        ? renderedDays.reduce<Temporal.PlainDate | null>((earliest, day) => {
-            if (!earliest) return day;
-            return Temporal.PlainDate.compare(day, earliest) < 0 ? day : earliest;
-          }, null)
-        : null;
-
+    const viewStartDate = this.#getViewStartDate();
     const showStartDate =
       startDate && viewStartDate
         ? Temporal.PlainDate.compare(startDate, viewStartDate) < 0
@@ -199,6 +223,18 @@ export class TimedEvent extends BaseEvent {
     const endPart = `${endDateLabel} ${endTimeLabel}`.trim();
 
     return `${startPart} - ${endPart}`;
+  }
+
+  #getViewStartDate(): Temporal.PlainDate | null {
+    const renderedDays = this.renderedDays;
+    if (!renderedDays || !renderedDays.length) {
+      return null;
+    }
+
+    return renderedDays.reduce<Temporal.PlainDate | null>((earliest, day) => {
+      if (!earliest) return day;
+      return Temporal.PlainDate.compare(day, earliest) < 0 ? day : earliest;
+    }, null);
   }
 
   connectedCallback() {
@@ -219,36 +255,61 @@ export class TimedEvent extends BaseEvent {
 
   #handleInteractionDragHover = (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
-    const hover = event.detail as
+    const hover = this.#getHoverDetail(event);
+
+    if (!hover || !hover.time) {
+      this.#clearPreviewDisplayTime();
+      return;
+    }
+
+    const preview = this.#getPreviewTimeRange(hover.time);
+    if (!preview) {
+      this.#clearPreviewDisplayTime();
+      return;
+    }
+
+    const { previewStart, previewEnd } = preview;
+    this.#previewDisplayTime = this.#formatDisplayTime(previewStart, previewEnd);
+    this.requestUpdate();
+  };
+
+  #getHoverDetail(event: CustomEvent):
+    | {
+        dayIndex: number;
+        time: Temporal.PlainTime | null;
+        clientX: number;
+        clientY: number;
+      }
+    | null {
+    return (event.detail as
       | {
           dayIndex: number;
           time: Temporal.PlainTime | null;
           clientX: number;
           clientY: number;
         }
-      | null;
+      | null) ?? null;
+  }
 
-    if (!hover || !hover.time) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
-      return;
-    }
+  #clearPreviewDisplayTime() {
+    this.#previewDisplayTime = null;
+    this.requestUpdate();
+  }
 
+  #getPreviewTimeRange(
+    hoverTime: Temporal.PlainTime | null
+  ): { previewStart: Temporal.PlainTime; previewEnd: Temporal.PlainTime } | null {
     const startTime = this.startTime;
     const endTime = this.endTime;
-
-    if (!startTime || !endTime) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
-      return;
+    if (!hoverTime || !startTime || !endTime) {
+      return null;
     }
 
     const duration = startTime.until(endTime);
-    const previewStart = hover.time;
+    const previewStart = hoverTime;
     const previewEnd = previewStart.add(duration);
-    this.#previewDisplayTime = this.#formatDisplayTime(previewStart, previewEnd);
-    this.requestUpdate();
-  };
+    return { previewStart, previewEnd };
+  }
 
   render() {
     const colorStyles = getEventColorStyles(this.color);
@@ -256,54 +317,65 @@ export class TimedEvent extends BaseEvent {
       this.interactionController.isDragging || this.dragOffsetX !== 0 || this.dragOffsetY !== 0
         ? `translate(${this.dragOffsetX}px, ${this.dragOffsetY}px)`
         : "none";
-    return html`
-            <button
-                class="m-0 text-0 relative w-full h-full border-none bg-none outline-none p-0"
-                style=${styleMap({
-                  ...colorStyles,
-                  transform: dragTransform,
-                  // Disable transform animation entirely to avoid any snap/flash at drag end.
-                  transition: "none",
-                })}
-                @pointerdown=${this.interactionController.pointerDownHandler}
-                @pointermove=${this.interactionController.pointerMoveHandler}
-                @pointerup=${this.interactionController.pointerUpHandler}
-            >
 
-                ${this.dayInsets.map(
-                  (inset, i) => html`
-                    <event-card
-                        summary=${this.summary}
-                        time=${i === 0 ? this.displayTime : ""}
-                        style=${styleMap(inset as Record<string, string | number>)}
-                        ?first-segment=${true}
-                        ?last-segment=${true}
-                    >
-                        ${
-                          i === 0
-                            ? html`
-                            <resize-handle 
-                                position="start"
-                                title="Resize start time"
-                            ></resize-handle>
-                        `
-                            : ""
-                        }
-                        ${
-                          i === this.dayInsets.length - 1
-                            ? html`
-                            <resize-handle 
-                                position="end"
-                                title="Resize end time"
-                            ></resize-handle>
-                        `
-                            : ""
-                        }
-                    </event-card>
-                `
-                )}
-            
-            </button>
-        `;
+    return html`
+      <button
+        class="m-0 text-0 relative w-full h-full border-none bg-none outline-none p-0"
+        style=${styleMap({
+          ...colorStyles,
+          transform: dragTransform,
+          // Disable transform animation entirely to avoid any snap/flash at drag end.
+          transition: "none",
+        })}
+        @pointerdown=${this.interactionController.pointerDownHandler}
+        @pointermove=${this.interactionController.pointerMoveHandler}
+        @pointerup=${this.interactionController.pointerUpHandler}
+      >
+        ${this.#renderEventCards()}
+      </button>
+    `;
+  }
+
+  #renderEventCards() {
+    const dayInsets = this.dayInsets;
+    return dayInsets.map((inset, index) =>
+      this.#renderEventCard(inset as Record<string, string | number>, index, dayInsets.length)
+    );
+  }
+
+  #renderEventCard(
+    inset: Record<string, string | number>,
+    index: number,
+    total: number
+  ) {
+    const isFirst = index === 0;
+    const isLast = index === total - 1;
+
+    return html`
+      <event-card
+        summary=${this.summary}
+        time=${isFirst ? this.displayTime : ""}
+        style=${styleMap(inset)}
+        ?first-segment=${true}
+        ?last-segment=${true}
+      >
+        ${isFirst
+          ? html`
+              <resize-handle
+                position="start"
+                title="Resize start time"
+              ></resize-handle>
+            `
+          : ""}
+        ${isLast
+          ? html`
+              <resize-handle
+                position="end"
+                title="Resize end time"
+              ></resize-handle>
+            `
+          : ""}
+      </event-card>
+    `;
   }
 }

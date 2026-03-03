@@ -80,6 +80,11 @@ export class AllDayEvent extends BaseEvent {
     const referenceDay = this.#getReferenceDay(renderedDays);
     if (!referenceDay) return 0;
 
+    const occupiedRows = this.#getOccupiedRowsForReferenceDay(referenceDay, renderedDays);
+    return this.#findFirstFreeRow(occupiedRows);
+  }
+
+  #getOccupiedRowsForReferenceDay(referenceDay: string, renderedDays: string[]): Set<number> {
     const occupiedRows = new Set<number>();
 
     for (const sibling of this.siblings) {
@@ -91,6 +96,10 @@ export class AllDayEvent extends BaseEvent {
       occupiedRows.add(siblingIndex);
     }
 
+    return occupiedRows;
+  }
+
+  #findFirstFreeRow(occupiedRows: Set<number>): number {
     let candidate = 0;
     while (occupiedRows.has(candidate)) {
       candidate += 1;
@@ -126,11 +135,7 @@ export class AllDayEvent extends BaseEvent {
       occupied.add(sibling.#getStackIndexForRow(renderedDays, rowIndex));
     }
 
-    let candidate = 0;
-    while (occupied.has(candidate)) {
-      candidate += 1;
-    }
-    return candidate;
+    return this.#findFirstFreeRow(occupied);
   }
 
   // All-day events always occupy the full width of the day column they belong to.
@@ -142,23 +147,10 @@ export class AllDayEvent extends BaseEvent {
     const dayIndex = renderedDays.indexOf(day.toString());
     if (dayIndex === -1 || renderedDays.length === 0) return null;
 
-    const cols = this.daysPerRow > 0 ? this.daysPerRow : renderedDays.length;
-    const rowIndex = this.daysPerRow > 0 ? Math.floor(dayIndex / this.daysPerRow) : 0;
-    const colIndex = this.daysPerRow > 0 ? dayIndex % this.daysPerRow : dayIndex;
+    const { cols, rowIndex, colIndex } = this.#getGridPosition(dayIndex, renderedDays.length);
     const left = (colIndex / cols) * 100;
-    const stackIndex =
-      this.daysPerRow > 0 && this.gridRows > 0
-        ? this.#getStackIndexForRow(renderedDays, rowIndex)
-        : this.#getStackIndex(renderedDays);
-
-    const isDragging = this.interactionController.isDragging;
-    const top = isDragging
-      ? this.daysPerRow > 0 && this.gridRows > 0
-        ? `calc(var(--row-height, 100%) * ${rowIndex})`
-        : "0"
-      : this.daysPerRow > 0 && this.gridRows > 0
-        ? `calc(var(--row-height, 100%) * ${rowIndex} + var(--event-height, 32px) * ${stackIndex})`
-        : `calc(var(--event-height, 32px) * ${stackIndex})`;
+    const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
+    const top = this.#getTopPosition(rowIndex, stackIndex);
 
     return {
       top,
@@ -169,6 +161,40 @@ export class AllDayEvent extends BaseEvent {
       "--indentation": "0px",
       "--z-index": 1,
     };
+  }
+
+  #getGridPosition(dayIndex: number, totalRenderedDays: number): {
+    cols: number;
+    rowIndex: number;
+    colIndex: number;
+  } {
+    const cols = this.daysPerRow > 0 ? this.daysPerRow : totalRenderedDays;
+    const rowIndex = this.daysPerRow > 0 ? Math.floor(dayIndex / this.daysPerRow) : 0;
+    const colIndex = this.daysPerRow > 0 ? dayIndex % this.daysPerRow : dayIndex;
+    return { cols, rowIndex, colIndex };
+  }
+
+  #getStackIndexForPosition(renderedDays: string[], rowIndex: number): number {
+    const hasGrid = this.daysPerRow > 0 && this.gridRows > 0;
+    return hasGrid ? this.#getStackIndexForRow(renderedDays, rowIndex) : this.#getStackIndex(renderedDays);
+  }
+
+  #getTopPosition(rowIndex: number, stackIndex: number): string {
+    const isDragging = this.interactionController.isDragging;
+    const hasGrid = this.daysPerRow > 0 && this.gridRows > 0;
+
+    if (isDragging) {
+      if (hasGrid) {
+        return `calc(var(--row-height, 100%) * ${rowIndex})`;
+      }
+      return "0";
+    }
+
+    if (hasGrid) {
+      return `calc(var(--row-height, 100%) * ${rowIndex} + var(--event-height, 32px) * ${stackIndex})`;
+    }
+
+    return `calc(var(--event-height, 32px) * ${stackIndex})`;
   }
 
   get dayInsets() {
@@ -195,14 +221,16 @@ export class AllDayEvent extends BaseEvent {
     const endDate = this.endDate;
     if (!startDate || !endDate) return "";
 
-    const renderedDays = [...this.renderedDays].sort((a, b) => Temporal.PlainDate.compare(a, b));
+    const renderedDays = this.#getSortedRenderedDays();
     if (!renderedDays.length) return "";
 
-    const firstVisibleDay = renderedDays[0];
-    const lastVisibleDay = renderedDays[renderedDays.length - 1];
-
-    const extendsBefore = Temporal.PlainDate.compare(startDate, firstVisibleDay) < 0;
-    const extendsAfter = Temporal.PlainDate.compare(endDate, lastVisibleDay) > 0;
+    const { firstVisibleDay, lastVisibleDay } = this.#getVisibleRange(renderedDays);
+    const { extendsBefore, extendsAfter } = this.#getExtensionFlags(
+      startDate,
+      endDate,
+      firstVisibleDay,
+      lastVisibleDay
+    );
 
     if ((extendsBefore || extendsAfter) && Temporal.PlainDate.compare(startDate, endDate) !== 0) {
       return formatDateRangeShort(this.locale, startDate, endDate);
@@ -211,57 +239,100 @@ export class AllDayEvent extends BaseEvent {
     return "";
   }
 
+  #getSortedRenderedDays(): Temporal.PlainDate[] {
+    return [...this.renderedDays].sort((a, b) => Temporal.PlainDate.compare(a, b));
+  }
+
+  #getVisibleRange(renderedDays: Temporal.PlainDate[]): {
+    firstVisibleDay: Temporal.PlainDate;
+    lastVisibleDay: Temporal.PlainDate;
+  } {
+    const firstVisibleDay = renderedDays[0];
+    const lastVisibleDay = renderedDays[renderedDays.length - 1];
+    return { firstVisibleDay, lastVisibleDay };
+  }
+
+  #getExtensionFlags(
+    startDate: Temporal.PlainDate,
+    endDate: Temporal.PlainDate,
+    firstVisibleDay: Temporal.PlainDate,
+    lastVisibleDay: Temporal.PlainDate
+  ): { extendsBefore: boolean; extendsAfter: boolean } {
+    const extendsBefore = Temporal.PlainDate.compare(startDate, firstVisibleDay) < 0;
+    const extendsAfter = Temporal.PlainDate.compare(endDate, lastVisibleDay) > 0;
+    return { extendsBefore, extendsAfter };
+  }
+
   #handleInteractionDragHover = (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
 
-    const hover = event.detail as
-      | {
-          dayIndex: number;
-          time: Temporal.PlainTime | null;
-          clientX: number;
-          clientY: number;
-        }
-      | null;
-
+    const hover = this.#getHoverDetail(event);
     if (!hover) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
+      this.#clearPreviewDisplayTime();
       return;
     }
 
     const renderedDays = this.renderedDays;
-    if (!renderedDays || !renderedDays.length) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
-      return;
-    }
-
-    const { dayIndex } = hover;
-    if (dayIndex == null || dayIndex < 0 || dayIndex >= renderedDays.length) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
+    if (!renderedDays || !renderedDays.length || !this.#hasValidHoverDayIndex(hover, renderedDays)) {
+      this.#clearPreviewDisplayTime();
       return;
     }
 
     const startDate = this.startDate;
     const endDate = this.endDate;
     if (!startDate || !endDate) {
-      this.#previewDisplayTime = null;
-      this.requestUpdate();
+      this.#clearPreviewDisplayTime();
       return;
     }
 
+    const { dayIndex } = hover;
     const targetStartDate = renderedDays[dayIndex];
-
-    // Calculate inclusive number of days spanned by the event.
-    const diff = startDate.until(endDate, { largestUnit: "day" });
-    const daysCount = diff.days + 1;
-
-    const targetEndDate = targetStartDate.add({ days: daysCount - 1 });
+    const targetEndDate = this.#getTargetEndDate(startDate, endDate, targetStartDate);
 
     this.#previewDisplayTime = formatDateRangeShort(this.locale, targetStartDate, targetEndDate);
     this.requestUpdate();
   };
+
+  #getHoverDetail(event: CustomEvent):
+    | {
+        dayIndex: number;
+        time: Temporal.PlainTime | null;
+        clientX: number;
+        clientY: number;
+      }
+    | null {
+    return (event.detail as
+      | {
+          dayIndex: number;
+          time: Temporal.PlainTime | null;
+          clientX: number;
+          clientY: number;
+        }
+      | null) ?? null;
+  }
+
+  #clearPreviewDisplayTime() {
+    this.#previewDisplayTime = null;
+    this.requestUpdate();
+  }
+
+  #hasValidHoverDayIndex(
+    hover: { dayIndex: number },
+    renderedDays: Temporal.PlainDate[]
+  ): boolean {
+    const { dayIndex } = hover;
+    return dayIndex != null && dayIndex >= 0 && dayIndex < renderedDays.length;
+  }
+
+  #getTargetEndDate(
+    startDate: Temporal.PlainDate,
+    endDate: Temporal.PlainDate,
+    targetStartDate: Temporal.PlainDate
+  ): Temporal.PlainDate {
+    const diff = startDate.until(endDate, { largestUnit: "day" });
+    const daysCount = diff.days + 1;
+    return targetStartDate.add({ days: daysCount - 1 });
+  }
 
   render() {
     const dayInsets = this.dayInsets;
@@ -277,57 +348,71 @@ export class AllDayEvent extends BaseEvent {
       isDragging || hasOffset
         ? `translate(${this.dragOffsetX}px, ${this.dragOffsetY + stackOffsetY}px)`
         : "none";
-    return html`
-            <button
-                class="m-0 text-0 relative w-full h-full border-none bg-none outline-none p-0"
-                style=${styleMap({
-                  ...colorStyles,
-                  transform: dragTransform,
-                  // Disable transform animation entirely to avoid snap/flash at drag end.
-                  transition: "none",
-                })}
-                @pointerdown=${this.interactionController.pointerDownHandler}
-                @pointermove=${this.interactionController.pointerMoveHandler}
-                @pointerup=${this.interactionController.pointerUpHandler}
-            >
 
-                ${dayInsets.map(
-                  (inset, i) => html`
-                    <event-card
-                        summary=${i === 0 ? this.summary : ""}
-                        time=${i === 0 ? this.displayTime : ""}
-                        style=${styleMap(inset)}
-                        ?first-segment=${i === 0}
-                        ?last-segment=${i === dayInsets.length - 1}
-                    >
-                        ${
-                          i === 0 && canResizeStart
-                            ? html`
-                            <resize-handle 
-                                axis="horizontal"
-                                position="start"
-                                title="Resize start date"
-                            ></resize-handle>
-                        `
-                            : ""
-                        }
-                        ${
-                          i === dayInsets.length - 1
-                            ? html`
-                            <resize-handle 
-                                axis="horizontal"
-                                position="end"
-                                title="Resize end date"
-                            ></resize-handle>
-                        `
-                            : ""
-                        }
-                    </event-card>
-                `
-                )}
-            
-            </button>
-        `;
+    return html`
+      <button
+        class="m-0 text-0 relative w-full h-full border-none bg-none outline-none p-0"
+        style=${styleMap({
+          ...colorStyles,
+          transform: dragTransform,
+          // Disable transform animation entirely to avoid snap/flash at drag end.
+          transition: "none",
+        })}
+        @pointerdown=${this.interactionController.pointerDownHandler}
+        @pointermove=${this.interactionController.pointerMoveHandler}
+        @pointerup=${this.interactionController.pointerUpHandler}
+      >
+        ${this.#renderEventCards(dayInsets, canResizeStart)}
+      </button>
+    `;
+  }
+
+  #renderEventCards(
+    dayInsets: Array<Record<string, string | number>>,
+    canResizeStart: boolean
+  ) {
+    return dayInsets.map((inset, index) =>
+      this.#renderEventCard(inset, index, dayInsets.length, canResizeStart)
+    );
+  }
+
+  #renderEventCard(
+    inset: Record<string, string | number>,
+    index: number,
+    total: number,
+    canResizeStart: boolean
+  ) {
+    const isFirst = index === 0;
+    const isLast = index === total - 1;
+
+    return html`
+      <event-card
+        summary=${isFirst ? this.summary : ""}
+        time=${isFirst ? this.displayTime : ""}
+        style=${styleMap(inset)}
+        ?first-segment=${isFirst}
+        ?last-segment=${isLast}
+      >
+        ${isFirst && canResizeStart
+          ? html`
+              <resize-handle
+                axis="horizontal"
+                position="start"
+                title="Resize start date"
+              ></resize-handle>
+            `
+          : ""}
+        ${isLast
+          ? html`
+              <resize-handle
+                axis="horizontal"
+                position="end"
+                title="Resize end date"
+              ></resize-handle>
+            `
+          : ""}
+      </event-card>
+    `;
   }
 
   protected override onDragStart() {
