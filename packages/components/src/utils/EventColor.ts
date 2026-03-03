@@ -6,6 +6,7 @@ export function getEventColorStyles(color: string): Record<string, string> {
 
   const backgroundColor = rgbToRgba(tintColor(rgb, 0.7), 0.8);
   const backgroundColorHover = rgbToRgba(tintColor(rgb, 0.7), 0.95);
+  const backgroundColorFocus = rgbToRgba(tintColor(rgb, 0.55), 1);
   const borderColor = rgbToHex(shadeColor(rgb, 0.15));
   const shadowColor = rgbToHex(shadeColor(rgb, 0.35));
 
@@ -13,6 +14,7 @@ export function getEventColorStyles(color: string): Record<string, string> {
     "--background-color": backgroundColor,
     "--border-color": borderColor,
     "--background-color-hover": backgroundColorHover,
+    "--background-color-focus": backgroundColorFocus,
     "--color": color,
     "--box-shadow": `0 1px 3px 0 ${shadowColor}`,
   };

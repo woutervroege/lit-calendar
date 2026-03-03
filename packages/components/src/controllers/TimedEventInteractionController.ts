@@ -153,18 +153,30 @@ export class TimedEventInteractionController {
   }
 
   #adjustEndBySingleStep(direction: -1 | 1) {
-    if (this.#mode !== "timed") return;
-
     const start = this.#toPlainDateTimeOrNull(this.#host.start);
     const end = this.#toPlainDateTimeOrNull(this.#host.end);
     if (!start || !end) return;
 
-    const ctor = this.constructor as typeof TimedEventInteractionController;
-    const minutes = ctor.snapInterval * direction;
-    let nextEnd = end.add(Temporal.Duration.from({ minutes }));
+    let nextEnd: Temporal.PlainDateTime;
+    let minEnd: Temporal.PlainDateTime;
 
-    const minDurationMinutes = ctor.snapInterval;
-    const minEnd = start.add(Temporal.Duration.from({ minutes: minDurationMinutes }));
+    if (this.#mode === "all-day") {
+      // All-day events use exclusive-end semantics: min 1-day span means end = startDate + 1 day at 00:00.
+      const startDate = start.toPlainDate();
+      const endDate = end.toPlainDate();
+      nextEnd = endDate
+        .add(Temporal.Duration.from({ days: direction }))
+        .toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+      minEnd = startDate
+        .add(Temporal.Duration.from({ days: 1 }))
+        .toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    } else {
+      const ctor = this.constructor as typeof TimedEventInteractionController;
+      const minutes = ctor.snapInterval * direction;
+      nextEnd = end.add(Temporal.Duration.from({ minutes }));
+      minEnd = start.add(Temporal.Duration.from({ minutes: ctor.snapInterval }));
+    }
+
     if (Temporal.PlainDateTime.compare(nextEnd, minEnd) < 0) {
       nextEnd = minEnd;
     }

@@ -21,3 +21,8 @@
 :host button:has(event-card:active) {
   --event-card-background: var(--background-color-hover);
 }
+
+/* Increase tint density while focused for clear keyboard targeting */
+:host button:focus-visible {
+  --event-card-background: var(--background-color-focus, var(--background-color-hover));
+}
