@@ -12,6 +12,7 @@ const config: StorybookConfig = {
   addons: [
     getAbsolutePath('@chromatic-com/storybook'),
     getAbsolutePath('@storybook/addon-docs'),
+    getAbsolutePath("@storybook/addon-a11y")
   ],
   framework: getAbsolutePath('@storybook/web-components-vite'),
   async viteFinal(config) {
