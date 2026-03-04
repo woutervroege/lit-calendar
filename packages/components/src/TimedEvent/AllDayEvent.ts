@@ -390,6 +390,7 @@ export class AllDayEvent extends BaseEvent {
       <event-card
         summary=${isFirst ? this.summary : ""}
         time=${isFirst ? this.displayTime : ""}
+        ?past=${this.isPast}
         style=${styleMap(inset)}
         ?first-segment=${isFirst}
         ?last-segment=${isLast}
@@ -460,6 +461,7 @@ export class AllDayEvent extends BaseEvent {
   get #interactionLabel(): string {
     const title = this.summary?.trim() || "Untitled all-day event";
     const time = this.displayTime?.trim();
-    return time ? `${title}. ${time}` : title;
+    const baseLabel = time ? `${title}. ${time}` : title;
+    return this.isPast ? `Past event. ${baseLabel}` : baseLabel;
   }
 }

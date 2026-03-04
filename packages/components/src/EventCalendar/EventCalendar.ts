@@ -225,6 +225,7 @@ export class EventCalendar extends BaseElement {
                     locale=${ifDefined(this.locale)}
                     start=${event.start}
                     end=${event.end}
+                    .currentTime=${this.currentTime}
                     summary=${event.summary}
                     color=${event.color}
                     .renderedDays=${this.days}
@@ -238,6 +239,7 @@ export class EventCalendar extends BaseElement {
                     locale=${ifDefined(this.locale)}
                     start=${event.start}
                     end=${event.end}
+                    .currentTime=${this.currentTime}
                     summary=${event.summary}
                     color=${event.color}
                     .renderedDays=${this.days as unknown as never[]}

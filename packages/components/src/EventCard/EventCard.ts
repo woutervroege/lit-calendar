@@ -18,6 +18,9 @@ export class EventCard extends BaseElement {
   @property({ type: Boolean, attribute: "last-segment" })
   lastSegment = false;
 
+  @property({ type: Boolean, reflect: true })
+  past = false;
+
   static get styles() {
     return [...BaseElement.styles, unsafeCSS(componentStyle)];
   }
@@ -25,15 +28,42 @@ export class EventCard extends BaseElement {
   render() {
     return html`
           <div class=${classMap(this.#cardClasses)}>
-              <h6 class="${this.#itemClasses}">${this.summary}</h6>
-              <time class="${this.#itemClasses} font-light block text-start">${this.time}</time>
+              ${this.past ? html`<span class="sr-only">Past event.</span>` : ""}
+              <h6 class=${classMap(this.#summaryClasses)}>${this.summary}</h6>
+              <time class=${classMap(this.#timeClasses)}>${this.time}</time>
               <slot></slot>
           </div>
         `;
   }
 
-  get #itemClasses() {
-    return "m-0 text-xs text-start font-bold p-0 truncate";
+  get #summaryClasses() {
+    return {
+      "m-0": true,
+      "text-xs": true,
+      "text-start": true,
+      "font-bold": true,
+      "p-0": true,
+      "truncate": true,
+      "line-through": this.past,
+      "decoration-[1.5px]": this.past,
+      "opacity-80": this.past,
+    };
+  }
+
+  get #timeClasses() {
+    return {
+      "m-0": true,
+      "text-xs": true,
+      "text-start": true,
+      "font-bold": true,
+      "font-light": true,
+      "p-0": true,
+      "truncate": true,
+      "block": true,
+      "line-through": this.past,
+      "decoration-[1.5px]": this.past,
+      "opacity-80": this.past,
+    };
   }
 
   get #cardClasses() {

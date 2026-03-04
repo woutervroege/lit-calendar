@@ -353,7 +353,8 @@ export class TimedEvent extends BaseEvent {
   get #interactionLabel(): string {
     const title = this.summary?.trim() || "Untitled event";
     const time = this.displayTime?.trim();
-    return time ? `${title}. ${time}` : title;
+    const baseLabel = time ? `${title}. ${time}` : title;
+    return this.isPast ? `Past event. ${baseLabel}` : baseLabel;
   }
 
   #renderEventCards() {
@@ -375,6 +376,7 @@ export class TimedEvent extends BaseEvent {
       <event-card
         summary=${this.summary}
         time=${isFirst ? this.displayTime : ""}
+        ?past=${this.isPast}
         style=${styleMap(inset)}
         ?first-segment=${true}
         ?last-segment=${true}

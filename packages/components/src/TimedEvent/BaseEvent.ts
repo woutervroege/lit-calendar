@@ -9,6 +9,7 @@ import componentStyle from "./TimedEvent.css?inline";
 export abstract class BaseEvent extends BaseElement {
   #start?: string;
   #end?: string;
+  #currentTime?: string;
   #justDroppedTimeout: ReturnType<typeof setTimeout> | null = null;
 
   protected interactionController: TimedEventInteractionController;
@@ -28,6 +29,7 @@ export abstract class BaseEvent extends BaseElement {
     return {
       start: { type: String },
       end: { type: String },
+      currentTime: { type: String, attribute: "current-time" },
     } as const;
   }
 
@@ -89,6 +91,18 @@ export abstract class BaseEvent extends BaseElement {
     this.#end = end ?? undefined;
   }
 
+  get currentTime(): Temporal.PlainDateTime {
+    return this.#currentTime
+      ? Temporal.PlainDateTime.from(this.#currentTime)
+      : Temporal.Now.plainDateTimeISO();
+  }
+
+  set currentTime(currentTime: Temporal.PlainDateTime | string | null | undefined) {
+    this.#currentTime = currentTime
+      ? Temporal.PlainDateTime.from(currentTime).toString()
+      : undefined;
+  }
+
   get startDate(): Temporal.PlainDate | null {
     return this.#start ? Temporal.PlainDate.from(this.#start) : null;
   }
@@ -104,6 +118,11 @@ export abstract class BaseEvent extends BaseElement {
 
   get endTime(): Temporal.PlainTime | null {
     return this.#end ? Temporal.PlainTime.from(this.#end) : null;
+  }
+
+  get isPast(): boolean {
+    const end = this.end;
+    return end ? Temporal.PlainDateTime.compare(end, this.currentTime) <= 0 : false;
   }
 
   get days(): Temporal.PlainDate[] {
