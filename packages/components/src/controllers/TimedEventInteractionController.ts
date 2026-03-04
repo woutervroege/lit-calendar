@@ -9,6 +9,7 @@ type TimedEventHost = HTMLElement & {
   renderedDays?: unknown;
   daysPerRow?: number;
   gridRows?: number;
+  getInteractionStackOffsetY?: () => number;
 };
 
 type InteractionOperation = "move" | "resize-start" | "resize-end";
@@ -670,18 +671,26 @@ export class TimedEventInteractionController {
     dayCount: number
   ): { left: number; top: number } {
     const daysPerRow = this.#getDaysPerRow();
+    const stackOffsetY = this.#getAllDayStackOffsetY();
 
     if (daysPerRow > 0 && daysPerRow < dayCount) {
       const gridRows = (this.#host as { gridRows?: number }).gridRows ?? 1;
       const colIndex = startDayIndex % daysPerRow;
       const rowIndex = Math.floor(startDayIndex / daysPerRow);
       const left = sectionBounds.left + (colIndex / daysPerRow) * sectionBounds.width;
-      const top = sectionBounds.top + (rowIndex / gridRows) * sectionBounds.height;
+      const top = sectionBounds.top + (rowIndex / gridRows) * sectionBounds.height + stackOffsetY;
       return { left, top };
     }
 
     const left = sectionBounds.left + (startDayIndex / dayCount) * sectionBounds.width;
-    return { left, top: sectionBounds.top };
+    return { left, top: sectionBounds.top + stackOffsetY };
+  }
+
+  #getAllDayStackOffsetY(): number {
+    const getter = this.#host.getInteractionStackOffsetY;
+    if (typeof getter !== "function") return 0;
+    const offset = getter.call(this.#host);
+    return Number.isFinite(offset) ? offset : 0;
   }
 
   #getTimedStartPosition(

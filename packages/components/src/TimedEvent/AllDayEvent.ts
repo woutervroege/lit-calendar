@@ -457,6 +457,19 @@ export class AllDayEvent extends BaseEvent {
     return Number.isFinite(px) ? px : 32;
   }
 
+  getInteractionStackOffsetY(): number {
+    const startDate = this.startDate;
+    if (!startDate) return 0;
+
+    const renderedDays = this.renderedDays.map((day) => day.toString());
+    const dayIndex = renderedDays.indexOf(startDate.toString());
+    if (dayIndex < 0) return 0;
+
+    const rowIndex = this.daysPerRow > 0 ? Math.floor(dayIndex / this.daysPerRow) : 0;
+    const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
+    return stackIndex * this.#getEventHeightPx();
+  }
+
   get #interactionLabel(): string {
     const title = this.summary?.trim() || "Untitled all-day event";
     const time = this.displayTime?.trim();
