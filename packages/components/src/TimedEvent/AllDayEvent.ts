@@ -283,11 +283,8 @@ export class AllDayEvent extends BaseEvent {
     const targetStartDate = renderedDays[dayIndex];
     const targetEndDate = this.#getTargetEndDate(startDate, endDate, targetStartDate);
 
-    const nextPreviewDisplayTime = formatDateRangeShort(this.locale, targetStartDate, targetEndDate);
-    if (this.#previewDisplayTime !== nextPreviewDisplayTime) {
-      this.#previewDisplayTime = nextPreviewDisplayTime;
-      this.requestUpdate();
-    }
+    this.#previewDisplayTime = formatDateRangeShort(this.locale, targetStartDate, targetEndDate);
+    this.requestUpdate();
   };
 
   #getHoverDetail(event: CustomEvent):
@@ -309,7 +306,6 @@ export class AllDayEvent extends BaseEvent {
   }
 
   #clearPreviewDisplayTime() {
-    if (this.#previewDisplayTime === null) return;
     this.#previewDisplayTime = null;
     this.requestUpdate();
   }
@@ -336,6 +332,12 @@ export class AllDayEvent extends BaseEvent {
     const dayInsets = this.dayInsets;
     const canResizeStart = dayInsets.length > 1;
     const colorStyles = getEventColorStyles(this.color);
+    const isDragging = this.interactionController.isDragging;
+    const hasOffset = this.dragOffsetX !== 0 || this.dragOffsetY !== 0;
+    const dragTransform =
+      isDragging || hasOffset
+        ? `translate(${this.dragOffsetX}px, ${this.dragOffsetY}px)`
+        : "none";
 
     return html`
       <div
@@ -347,7 +349,7 @@ export class AllDayEvent extends BaseEvent {
         aria-keyshortcuts="Control+Meta+ArrowUp Control+Meta+ArrowDown Control+Meta+ArrowLeft Control+Meta+ArrowRight Control+Shift+ArrowUp Control+Shift+ArrowDown"
         style=${styleMap({
           ...colorStyles,
-          transform: "translate(var(--drag-offset-x, 0px), var(--drag-offset-y, 0px))",
+          transform: dragTransform,
           // Disable transform animation entirely to avoid snap/flash at drag end.
           transition: "none",
         })}
