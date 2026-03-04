@@ -40,7 +40,7 @@ section::before {
   top: var(--hover-top, 0);
   width: var(--hover-width, 0);
   height: var(--hover-height, 0);
-  background: color-mix(in oklab, CanvasText 12%, transparent);
+  background: var(--line-color);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
