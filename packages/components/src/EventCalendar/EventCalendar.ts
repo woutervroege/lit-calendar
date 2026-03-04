@@ -252,11 +252,12 @@ export class EventCalendar extends BaseElement {
 
       return html`
         <time
-          class="absolute p-1 text-sm z-20 text-gray-400 font-medium"
+          class="absolute p-1 text-sm z-20 font-medium"
           datetime=${day.toString()}
           style=${styleMap({
             right: `calc(${right}% + 6px)`,
             top: `${top}%`,
+            color: "var(--day-name-color, var(--line-color))",
           })}
         >
           ${label}

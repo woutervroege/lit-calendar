@@ -4,6 +4,7 @@
   height: 100%;
   --line: 1px;
   --line-color: color-mix(in oklab, CanvasText 7%, transparent);
+  --day-name-color: color-mix(in oklab, CanvasText 30%, transparent);
   /* Month view: columns per row (e.g. 7 for a week). Override via style or parent. */
   --days-per-row: 7;
   /* Vertical space reserved for per-cell day number labels in all-day mode. */
