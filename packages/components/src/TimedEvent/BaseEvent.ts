@@ -10,6 +10,7 @@ export abstract class BaseEvent extends BaseElement {
   #start?: string;
   #end?: string;
   #currentTime?: string;
+  #timezone?: string;
   #justDroppedTimeout: ReturnType<typeof setTimeout> | null = null;
 
   protected interactionController: TimedEventInteractionController;
@@ -29,6 +30,7 @@ export abstract class BaseEvent extends BaseElement {
     return {
       start: { type: String },
       end: { type: String },
+      timezone: { type: String },
       currentTime: { type: String, attribute: "current-time" },
     } as const;
   }
@@ -76,48 +78,61 @@ export abstract class BaseEvent extends BaseElement {
   }
 
   get start(): Temporal.PlainDateTime | null {
-    return this.#start ? Temporal.PlainDateTime.from(this.#start) : null;
+    return this.#toPlainDateTimeOrNull(this.#start);
   }
 
-  set start(start: string | null) {
-    this.#start = start ?? undefined;
+  set start(start: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | null) {
+    this.#start = start?.toString() ?? undefined;
   }
 
   get end(): Temporal.PlainDateTime | null {
-    return this.#end ? Temporal.PlainDateTime.from(this.#end) : null;
+    return this.#toPlainDateTimeOrNull(this.#end);
   }
 
-  set end(end: string | null) {
-    this.#end = end ?? undefined;
+  set end(end: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | null) {
+    this.#end = end?.toString() ?? undefined;
   }
 
   get currentTime(): Temporal.PlainDateTime {
-    return this.#currentTime
-      ? Temporal.PlainDateTime.from(this.#currentTime)
-      : Temporal.Now.plainDateTimeISO();
+    if (!this.#currentTime) {
+      return Temporal.Now.zonedDateTimeISO(this.timezone).toPlainDateTime();
+    }
+    return this.#toPlainDateTime(this.#currentTime);
   }
 
-  set currentTime(currentTime: Temporal.PlainDateTime | string | null | undefined) {
-    this.#currentTime = currentTime
-      ? Temporal.PlainDateTime.from(currentTime).toString()
-      : undefined;
+  set currentTime(
+    currentTime: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | null | undefined
+  ) {
+    this.#currentTime = currentTime?.toString() ?? undefined;
+  }
+
+  get timezone(): string {
+    return this.#timezone ?? Temporal.Now.timeZoneId();
+  }
+
+  set timezone(timezone: string | null | undefined) {
+    this.#timezone = timezone ?? undefined;
   }
 
   get startDate(): Temporal.PlainDate | null {
-    return this.#start ? Temporal.PlainDate.from(this.#start) : null;
+    const start = this.start;
+    return start ? start.toPlainDate() : null;
   }
 
   // NOTE: AllDayEvent overrides this to apply exclusive-end semantics.
   get endDate(): Temporal.PlainDate | null {
-    return this.#end ? Temporal.PlainDate.from(this.#end) : null;
+    const end = this.end;
+    return end ? end.toPlainDate() : null;
   }
 
   get startTime(): Temporal.PlainTime | null {
-    return this.#start ? Temporal.PlainTime.from(this.#start) : null;
+    const start = this.start;
+    return start ? start.toPlainTime() : null;
   }
 
   get endTime(): Temporal.PlainTime | null {
-    return this.#end ? Temporal.PlainTime.from(this.#end) : null;
+    const end = this.end;
+    return end ? end.toPlainTime() : null;
   }
 
   get isPast(): boolean {
@@ -179,4 +194,27 @@ export abstract class BaseEvent extends BaseElement {
     this.dragOffsetY = offsetY ?? 0;
     this.requestUpdate();
   };
+
+  #toPlainDateTimeOrNull(value: string | undefined): Temporal.PlainDateTime | null {
+    if (!value) return null;
+    return this.#toPlainDateTime(value);
+  }
+
+  #toPlainDateTime(value: string): Temporal.PlainDateTime {
+    if (this.#isTimezonedString(value)) {
+      return Temporal.ZonedDateTime.from(value).withTimeZone(this.timezone).toPlainDateTime();
+    }
+    if (!value.includes("T")) {
+      return Temporal.PlainDate.from(value).toPlainDateTime({
+        hour: 0,
+        minute: 0,
+        second: 0,
+      });
+    }
+    return Temporal.PlainDateTime.from(value);
+  }
+
+  #isTimezonedString(value: string): boolean {
+    return value.includes("[") && value.includes("]");
+  }
 }
