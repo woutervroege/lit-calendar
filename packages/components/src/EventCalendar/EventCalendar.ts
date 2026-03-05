@@ -10,8 +10,8 @@ import "../TimedEvent/AllDayEvent.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
 
 type EventInput = {
-  start: string;
-  end: string;
+  start: string | Temporal.PlainDate | Temporal.PlainDateTime;
+  end: string | Temporal.PlainDate | Temporal.PlainDateTime;
   summary: string;
   color: string;
 };
@@ -30,8 +30,17 @@ export class EventCalendar extends BaseElement {
   #dragHoverTime: Temporal.PlainTime | null = null;
 
   get #sortedEvents(): EventInput[] {
-    const events = [...(this.events ?? [])];
+    const events = this.#eventsForVariant;
     return events.sort((a, b) => this.#compareEventsForRenderOrder(a, b));
+  }
+
+  get #eventsForVariant(): EventInput[] {
+    const events = [...(this.events ?? [])];
+    if (this.variant === "all-day") {
+      return events;
+    }
+
+    return events.filter((event) => !this.#isAllDayEvent(event));
   }
 
   static get properties() {
@@ -347,18 +356,42 @@ export class EventCalendar extends BaseElement {
   };
 
   #compareEventsForRenderOrder(a: EventInput, b: EventInput): number {
+    const aStart = this.#toPlainDateTime(a.start);
+    const bStart = this.#toPlainDateTime(b.start);
     const startDiff = Temporal.PlainDateTime.compare(
-      Temporal.PlainDateTime.from(a.start),
-      Temporal.PlainDateTime.from(b.start)
+      aStart,
+      bStart
     );
     if (startDiff !== 0) return startDiff;
 
+    const aEnd = this.#toPlainDateTime(a.end);
+    const bEnd = this.#toPlainDateTime(b.end);
     const endDiff = Temporal.PlainDateTime.compare(
-      Temporal.PlainDateTime.from(a.end),
-      Temporal.PlainDateTime.from(b.end)
+      aEnd,
+      bEnd
     );
     if (endDiff !== 0) return endDiff;
 
     return a.summary.localeCompare(b.summary);
+  }
+
+  #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
+    if (value instanceof Temporal.PlainDateTime) {
+      return value;
+    }
+    if (value instanceof Temporal.PlainDate) {
+      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    }
+    return Temporal.PlainDateTime.from(value);
+  }
+
+  #isAllDayEvent(event: EventInput): boolean {
+    return this.#isDateOnlyValue(event.start) || this.#isDateOnlyValue(event.end);
+  }
+
+  #isDateOnlyValue(value: EventInput["start"]): boolean {
+    if (value instanceof Temporal.PlainDate) return true;
+    if (value instanceof Temporal.PlainDateTime) return false;
+    return !value.includes("T");
   }
 }

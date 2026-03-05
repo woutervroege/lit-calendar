@@ -35,8 +35,8 @@ const sampleEvents = [
     color: "#ff0000",
   },
   {
-    start: "2025-01-10T09:00:00",
-    end: "2025-01-10T10:00:00",
+    start: "2025-01-10",
+    end: "2025-01-11",
     summary: "Meeting with John",
     color: "#E05ADD",
   },
