@@ -28,6 +28,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run deploy
-        run: pnpm deploy
+        run: pnpm run deploy
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
