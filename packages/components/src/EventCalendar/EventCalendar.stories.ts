@@ -51,12 +51,14 @@ const meta: Meta = {
     days: { control: { type: "number", min: 1, max: 42 }, description: "Number of days" },
     locale: { control: "text", description: "Locale (e.g. en-US, nl-NL)" },
     variant: { control: "select", options: ["timed", "all-day"] },
+    dayNumbersHidden: { control: "boolean", description: "Hide day number labels" },
     snapInterval: { control: { type: "number", min: 5, max: 60, step: 5 } },
   },
   args: {
     startDate: "2025-01-05",
     days: 7,
     variant: "timed",
+    dayNumbersHidden: false,
     snapInterval: 30,
     events: sampleEvents,
   },
@@ -67,6 +69,7 @@ const meta: Meta = {
     el.setAttribute("variant", args.variant);
     el.setAttribute("snap-interval", String(args.snapInterval));
     el.setAttribute("current-time", args.currentTime);
+    el.toggleAttribute("day-numbers-hidden", Boolean(args.dayNumbersHidden));
     if (args.locale) {
       el.setAttribute("locale", args.locale);
     }

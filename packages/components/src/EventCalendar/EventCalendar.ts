@@ -25,6 +25,7 @@ export class EventCalendar extends BaseElement {
   #snapInterval: number = TimedEventInteractionController.snapInterval;
   declare events?: EventInput[];
   variant: "timed" | "all-day" = "timed";
+  dayNumbersHidden = false;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
 
@@ -48,6 +49,7 @@ export class EventCalendar extends BaseElement {
           toAttribute: (v: string): string => v,
         },
       },
+      dayNumbersHidden: { type: Boolean, attribute: "day-numbers-hidden", reflect: true },
       snapInterval: { type: Number, attribute: "snap-interval" },
       currentTime: {
         attribute: "current-time",
@@ -210,7 +212,7 @@ export class EventCalendar extends BaseElement {
             class="relative flex-1 flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
             style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
             ?data-drag-hover=${this.#dragHoverDayIndex !== null}>
-            ${this.variant === "all-day" ? this.#renderDayNumbers() : ""}
+            ${this.variant === "all-day" && !this.dayNumbersHidden ? this.#renderDayNumbers() : ""}
             ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
 
             ${this.#sortedEvents.map(
