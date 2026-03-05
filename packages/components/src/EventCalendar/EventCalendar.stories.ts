@@ -20,6 +20,12 @@ const sampleEvents = [
     summary: "Team Meeting",
     color: "#ff0000",
   },
+  {
+    start: "2025-01-06T12:00:00+01:00[Europe/Amsterdam]",
+    end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
+    summary: "Amsterdam Zoned Event",
+    color: "#f59e0b",
+  },
   { start: "2025-01-06T14:00:00", end: "2025-01-06T15:00:00", summary: "Fiesta", color: "#084cb8" },
   { start: "2025-01-08T16:30:00", end: "2025-01-08T17:30:00", summary: "Drinks", color: "#9f3cfa" },
   {
@@ -42,6 +48,26 @@ const sampleEvents = [
   },
 ];
 
+const timezoneShiftEvents = [
+  {
+    start: "2025-01-06T12:00:00+01:00[Europe/Amsterdam]",
+    end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
+    summary: "Amsterdam Noon (zoned)",
+    color: "#f59e0b",
+  },
+  {
+    start: "2025-01-06T09:00:00",
+    end: "2025-01-06T10:00:00",
+    summary: "Local baseline (plain)",
+    color: "#4564B5",
+  },
+] as const;
+
+const timezoneOptions =
+  typeof Intl.supportedValuesOf === "function"
+    ? Intl.supportedValuesOf("timeZone")
+    : ["UTC", "Europe/Amsterdam", "America/New_York", "Asia/Tokyo"];
+
 const meta: Meta = {
   title: "EventCalendar/EventCalendar",
   component: "event-calendar",
@@ -50,6 +76,11 @@ const meta: Meta = {
     startDate: { control: "text", description: "Start date (YYYY-MM-DD)" },
     days: { control: { type: "number", min: 1, max: 42 }, description: "Number of days" },
     locale: { control: "text", description: "Locale (e.g. en-US, nl-NL)" },
+    timezone: {
+      control: "select",
+      options: timezoneOptions,
+      description: "IANA timezone",
+    },
     variant: { control: "select", options: ["timed", "all-day"] },
     dayNumbersHidden: { control: "boolean", description: "Hide day number labels" },
     snapInterval: { control: { type: "number", min: 5, max: 60, step: 5 } },
@@ -58,6 +89,7 @@ const meta: Meta = {
     startDate: "2025-01-05",
     days: 7,
     variant: "timed",
+    timezone: "Europe/Amsterdam",
     dayNumbersHidden: false,
     snapInterval: 30,
     events: sampleEvents,
@@ -68,10 +100,15 @@ const meta: Meta = {
     el.setAttribute("days", String(args.days));
     el.setAttribute("variant", args.variant);
     el.setAttribute("snap-interval", String(args.snapInterval));
-    el.setAttribute("current-time", args.currentTime);
+    if (args.currentTime) {
+      el.setAttribute("current-time", args.currentTime);
+    }
     el.toggleAttribute("day-numbers-hidden", Boolean(args.dayNumbersHidden));
     if (args.locale) {
       el.setAttribute("locale", args.locale);
+    }
+    if (args.timezone) {
+      el.setAttribute("timezone", args.timezone);
     }
     el.setAttribute("style", "--event-height: 32px; --days-per-row: 7");
     (el as unknown as { events: typeof sampleEvents }).events = args.events ?? [];
@@ -109,4 +146,22 @@ export const Day: Story = {
 
 export const Week: Story = {
   args: { ...Day.args, ...{ days: 7 } },
+};
+
+export const TimezoneShiftAmsterdam: Story = {
+  args: {
+    ...Day.args,
+    days: 1,
+    startDate: "2025-01-06",
+    variant: "timed",
+    timezone: "Europe/Amsterdam",
+    events: timezoneShiftEvents,
+  },
+};
+
+export const TimezoneShiftNewYork: Story = {
+  args: {
+    ...TimezoneShiftAmsterdam.args,
+    timezone: "America/New_York",
+  },
 };

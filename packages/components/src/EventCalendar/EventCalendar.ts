@@ -10,8 +10,8 @@ import "../TimedEvent/AllDayEvent.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
 
 type EventInput = {
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime;
+  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
+  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
   summary: string;
   color: string;
 };
@@ -20,6 +20,7 @@ type EventInput = {
 export class EventCalendar extends BaseElement {
   #startDate?: string;
   #currentTime?: string;
+  #timezone?: string;
   #days!: number;
   #hours: number = 24;
   #snapInterval: number = TimedEventInteractionController.snapInterval;
@@ -37,7 +38,7 @@ export class EventCalendar extends BaseElement {
   get #eventsForVariant(): EventInput[] {
     const events = [...(this.events ?? [])];
     if (this.variant === "all-day") {
-      return events;
+      return events.filter((event) => !this.#isTimezonedEvent(event));
     }
 
     return events.filter((event) => !this.#isAllDayEvent(event));
@@ -59,13 +60,20 @@ export class EventCalendar extends BaseElement {
         },
       },
       dayNumbersHidden: { type: Boolean, attribute: "day-numbers-hidden", reflect: true },
+      timezone: { type: String },
       snapInterval: { type: Number, attribute: "snap-interval" },
       currentTime: {
         attribute: "current-time",
         converter: {
-          fromAttribute: (v: string | null): Temporal.PlainDateTime | undefined =>
-            v ? Temporal.PlainDateTime.from(v) : undefined,
-          toAttribute: (v: Temporal.PlainDateTime | null | undefined): string | null =>
+          fromAttribute: (v: string | null): string | undefined => v ?? undefined,
+          toAttribute: (
+            v:
+              | Temporal.PlainDateTime
+              | Temporal.ZonedDateTime
+              | string
+              | null
+              | undefined
+          ): string | null =>
             v ? v.toString() : null,
         },
       },
@@ -105,13 +113,24 @@ export class EventCalendar extends BaseElement {
   }
 
   get currentTime(): Temporal.PlainDateTime {
-    return this.#currentTime
-      ? Temporal.PlainDateTime.from(this.#currentTime)
-      : Temporal.Now.plainDateTimeISO();
+    if (!this.#currentTime) {
+      return Temporal.Now.zonedDateTimeISO(this.timezone).toPlainDateTime();
+    }
+    return this.#toPlainDateTime(this.#currentTime);
   }
 
-  set currentTime(currentTime: Temporal.PlainDateTime | string | undefined) {
-    this.#currentTime = currentTime ? Temporal.PlainDateTime.from(currentTime).toString() : undefined;
+  set currentTime(
+    currentTime: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | undefined
+  ) {
+    this.#currentTime = currentTime?.toString();
+  }
+
+  get timezone(): string {
+    return this.#timezone ?? Temporal.Now.timeZoneId();
+  }
+
+  set timezone(timezone: string | undefined) {
+    this.#timezone = timezone || undefined;
   }
 
   get days(): Temporal.PlainDate[] {
@@ -231,9 +250,10 @@ export class EventCalendar extends BaseElement {
                     ? html`
                 <all-day-event
                     locale=${ifDefined(this.locale)}
-                    start=${event.start}
-                    end=${event.end}
+                    start=${this.#toEventDateTimeString(event.start)}
+                    end=${this.#toEventDateTimeString(event.end)}
                     .currentTime=${this.currentTime}
+                    .timezone=${this.timezone}
                     summary=${event.summary}
                     color=${event.color}
                     .renderedDays=${this.days}
@@ -245,9 +265,10 @@ export class EventCalendar extends BaseElement {
                     : html`
                 <timed-event
                     locale=${ifDefined(this.locale)}
-                    start=${event.start}
-                    end=${event.end}
+                    start=${this.#toEventDateTimeString(event.start)}
+                    end=${this.#toEventDateTimeString(event.end)}
                     .currentTime=${this.currentTime}
+                    .timezone=${this.timezone}
                     summary=${event.summary}
                     color=${event.color}
                     .renderedDays=${this.days as unknown as never[]}
@@ -376,22 +397,49 @@ export class EventCalendar extends BaseElement {
   }
 
   #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
+    if (value instanceof Temporal.ZonedDateTime) {
+      return value.withTimeZone(this.timezone).toPlainDateTime();
+    }
     if (value instanceof Temporal.PlainDateTime) {
       return value;
     }
     if (value instanceof Temporal.PlainDate) {
       return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
     }
+    if (this.#isTimezonedString(value)) {
+      return Temporal.ZonedDateTime.from(value).withTimeZone(this.timezone).toPlainDateTime();
+    }
     return Temporal.PlainDateTime.from(value);
+  }
+
+  #toEventDateTimeString(value: EventInput["start"]): string {
+    if (typeof value === "string") return value;
+    return value.toString();
   }
 
   #isAllDayEvent(event: EventInput): boolean {
     return this.#isDateOnlyValue(event.start) || this.#isDateOnlyValue(event.end);
   }
 
+  #isTimezonedEvent(event: EventInput): boolean {
+    return this.#isTimezonedValue(event.start) || this.#isTimezonedValue(event.end);
+  }
+
   #isDateOnlyValue(value: EventInput["start"]): boolean {
     if (value instanceof Temporal.PlainDate) return true;
-    if (value instanceof Temporal.PlainDateTime) return false;
+    if (value instanceof Temporal.PlainDateTime || value instanceof Temporal.ZonedDateTime) {
+      return false;
+    }
     return !value.includes("T");
+  }
+
+  #isTimezonedValue(value: EventInput["start"]): boolean {
+    if (value instanceof Temporal.ZonedDateTime) return true;
+    if (typeof value !== "string") return false;
+    return this.#isTimezonedString(value);
+  }
+
+  #isTimezonedString(value: string): boolean {
+    return value.includes("[") && value.includes("]");
   }
 }
