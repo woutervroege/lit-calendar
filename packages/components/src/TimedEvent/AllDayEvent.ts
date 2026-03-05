@@ -3,7 +3,6 @@ import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { getEventColorStyles } from "../utils/EventColor";
-import { formatDateRangeShort } from "../utils/DateFormatting";
 import "../EventCard/EventCard";
 import "../ResizeHandle/ResizeHandle";
 import { BaseEvent } from "./BaseEvent";
@@ -274,17 +273,16 @@ export class AllDayEvent extends BaseEvent {
     }
 
     const startDate = this.startDate;
-    const endDate = this.endDate;
-    if (!startDate || !endDate) {
+    const startTime = this.startTime;
+    if (!startDate || !startTime) {
       this.#clearPreviewDisplayTime();
       return;
     }
 
-    const { dayIndex } = hover;
-    const targetStartDate = renderedDays[dayIndex];
-    const targetEndDate = this.#getTargetEndDate(startDate, endDate, targetStartDate);
-
-    this.#previewDisplayTime = formatDateRangeShort(this.locale, targetStartDate, targetEndDate);
+    this.#previewDisplayTime = startTime.toLocaleString(this.locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     this.requestUpdate();
   };
 
@@ -317,16 +315,6 @@ export class AllDayEvent extends BaseEvent {
   ): boolean {
     const { dayIndex } = hover;
     return dayIndex != null && dayIndex >= 0 && dayIndex < renderedDays.length;
-  }
-
-  #getTargetEndDate(
-    startDate: Temporal.PlainDate,
-    endDate: Temporal.PlainDate,
-    targetStartDate: Temporal.PlainDate
-  ): Temporal.PlainDate {
-    const diff = startDate.until(endDate, { largestUnit: "day" });
-    const daysCount = diff.days + 1;
-    return targetStartDate.add({ days: daysCount - 1 });
   }
 
   render() {
