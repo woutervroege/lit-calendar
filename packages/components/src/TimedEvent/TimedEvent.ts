@@ -156,17 +156,18 @@ export class TimedEvent extends BaseEvent {
   }
 
   #formatDisplayTime(start: Temporal.PlainTime | null, end: Temporal.PlainTime | null): string {
-    const startLabel =
-      start?.toLocaleString(this.locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) ?? "";
-    const endLabel =
-      end?.toLocaleString(this.locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) ?? "";
+    const startLabel = this.#formatTimeLabel(start);
+    const endLabel = this.#formatTimeLabel(end);
     return `${startLabel} - ${endLabel}`;
+  }
+
+  #formatTimeLabel(time: Temporal.PlainTime | null): string {
+    return (
+      time?.toLocaleString(this.locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }) ?? ""
+    );
   }
 
   get displayTime(): string {
@@ -188,6 +189,30 @@ export class TimedEvent extends BaseEvent {
     }
 
     return this.#formatMultiDayDisplayTime(startDate, endDate, startTime, endTime);
+  }
+
+  get displayTimeDetail(): string {
+    if (this.#previewDisplayTime != null) return "";
+
+    const originalStart = this.originalStartZonedDateTime;
+    const originalEnd = this.originalEndZonedDateTime;
+    if (!originalStart || !originalEnd) return "";
+    if (!this.#hasOffsetDifferenceFromCurrentTimezone(originalStart, originalEnd)) return "";
+
+    const originalStartLabel = this.#formatTimeLabel(originalStart.toPlainTime());
+    return `${originalStartLabel} ${originalStart.offset}`;
+  }
+
+  #hasOffsetDifferenceFromCurrentTimezone(
+    originalStart: Temporal.ZonedDateTime,
+    originalEnd: Temporal.ZonedDateTime
+  ): boolean {
+    const currentTimezoneStart = originalStart.withTimeZone(this.timezone);
+    const currentTimezoneEnd = originalEnd.withTimeZone(this.timezone);
+    return (
+      originalStart.offset !== currentTimezoneStart.offset ||
+      originalEnd.offset !== currentTimezoneEnd.offset
+    );
   }
 
   #formatMultiDayDisplayTime(
@@ -376,6 +401,7 @@ export class TimedEvent extends BaseEvent {
       <event-card
         summary=${this.summary}
         time=${isFirst ? this.displayTime : ""}
+        time-detail=${isFirst ? this.displayTimeDetail : ""}
         ?past=${this.isPast}
         style=${styleMap(inset)}
         ?first-segment=${true}

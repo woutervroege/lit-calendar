@@ -154,6 +154,32 @@ export abstract class BaseEvent extends BaseElement {
     return days;
   }
 
+  protected get startInputValue(): string | null {
+    return this.#start ?? null;
+  }
+
+  protected get endInputValue(): string | null {
+    return this.#end ?? null;
+  }
+
+  protected get startHasTimeComponent(): boolean {
+    return this.#hasTimeComponent(this.#start);
+  }
+
+  protected get endHasTimeComponent(): boolean {
+    return this.#hasTimeComponent(this.#end);
+  }
+
+  protected get originalStartZonedDateTime(): Temporal.ZonedDateTime | null {
+    if (!this.#start || !this.#isTimezonedString(this.#start)) return null;
+    return Temporal.ZonedDateTime.from(this.#start);
+  }
+
+  protected get originalEndZonedDateTime(): Temporal.ZonedDateTime | null {
+    if (!this.#end || !this.#isTimezonedString(this.#end)) return null;
+    return Temporal.ZonedDateTime.from(this.#end);
+  }
+
   get siblings(): BaseEvent[] {
     return [...(this.parentElement?.querySelectorAll(this.localName) ?? [])] as BaseEvent[];
   }
@@ -216,5 +242,10 @@ export abstract class BaseEvent extends BaseElement {
 
   #isTimezonedString(value: string): boolean {
     return value.includes("[") && value.includes("]");
+  }
+
+  #hasTimeComponent(value: string | undefined): boolean {
+    if (!value) return false;
+    return value.includes("T");
   }
 }
