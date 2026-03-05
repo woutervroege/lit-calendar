@@ -141,15 +141,14 @@ export class AllDayEvent extends BaseEvent {
 
   // All-day events always occupy the full width of the day column they belong to.
   // When daysPerRow > 0 (month view), position by column = dayIndex % daysPerRow, row = floor(dayIndex / daysPerRow).
-  #createDayInset(
-    day: Temporal.PlainDate,
+  #createRowInset(
+    rowIndex: number,
+    startColIndex: number,
+    widthInColumns: number,
+    cols: number,
     renderedDays: string[]
-  ): Record<string, string | number> | null {
-    const dayIndex = renderedDays.indexOf(day.toString());
-    if (dayIndex === -1 || renderedDays.length === 0) return null;
-
-    const { cols, rowIndex, colIndex } = this.#getGridPosition(dayIndex, renderedDays.length);
-    const left = (colIndex / cols) * 100;
+  ): Record<string, string | number> {
+    const left = (startColIndex / cols) * 100;
     const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
     const top = this.#getTopPosition(rowIndex, stackIndex);
 
@@ -157,7 +156,7 @@ export class AllDayEvent extends BaseEvent {
       top,
       height: `var(--event-height, 32px)`,
       "--left": `${left}%`,
-      "--width": 1,
+      "--width": widthInColumns,
       "--margin-left": 0,
       "--indentation": "0px",
       "--z-index": 1,
@@ -194,14 +193,45 @@ export class AllDayEvent extends BaseEvent {
   get dayInsets() {
     const insets: Array<Record<string, string | number>> = [];
     const renderedDays = this.renderedDays.map((day) => day.toString());
+    if (!renderedDays.length) return insets;
 
-    this.days.forEach((day) => {
-      if (!renderedDays.includes(day.toString())) return;
-      const inset = this.#createDayInset(day, renderedDays);
-      if (inset) {
-        insets.push(inset);
+    const visibleDayIndexes = this.days
+      .map((day) => renderedDays.indexOf(day.toString()))
+      .filter((dayIndex) => dayIndex >= 0)
+      .sort((a, b) => a - b);
+    if (!visibleDayIndexes.length) return insets;
+
+    const totalCols = this.daysPerRow > 0 ? this.daysPerRow : renderedDays.length;
+    const rowSegments = new Map<number, { startColIndex: number; endColIndex: number }>();
+
+    visibleDayIndexes.forEach((dayIndex) => {
+      const rowIndex = this.daysPerRow > 0 ? Math.floor(dayIndex / this.daysPerRow) : 0;
+      const colIndex = this.daysPerRow > 0 ? dayIndex % this.daysPerRow : dayIndex;
+      const existingSegment = rowSegments.get(rowIndex);
+
+      if (!existingSegment) {
+        rowSegments.set(rowIndex, { startColIndex: colIndex, endColIndex: colIndex });
+        return;
       }
+
+      existingSegment.startColIndex = Math.min(existingSegment.startColIndex, colIndex);
+      existingSegment.endColIndex = Math.max(existingSegment.endColIndex, colIndex);
     });
+
+    Array.from(rowSegments.entries())
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([rowIndex, segment]) => {
+        const widthInColumns = segment.endColIndex - segment.startColIndex + 1;
+        insets.push(
+          this.#createRowInset(
+            rowIndex,
+            segment.startColIndex,
+            widthInColumns,
+            totalCols,
+            renderedDays
+          )
+        );
+      });
 
     return insets;
   }
@@ -330,7 +360,7 @@ export class AllDayEvent extends BaseEvent {
 
   render() {
     const dayInsets = this.dayInsets;
-    const canResizeStart = dayInsets.length > 1;
+    const canResizeStart = this.days.length > 1;
     const colorStyles = getEventColorStyles(this.color);
     const isDragging = this.interactionController.isDragging;
     const hasOffset = this.dragOffsetX !== 0 || this.dragOffsetY !== 0;
