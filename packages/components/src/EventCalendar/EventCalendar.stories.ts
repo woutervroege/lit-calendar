@@ -196,7 +196,7 @@ const meta: Meta = {
     snapInterval: 30,
     events: sampleEvents,
   },
-  render: (args) => {
+  render: (args, context) => {
     const el = document.createElement("event-calendar");
     el.setAttribute("start-date", args.startDate);
     el.setAttribute("days", String(args.days));
@@ -211,6 +211,12 @@ const meta: Meta = {
     }
     if (args.timezone) {
       el.setAttribute("timezone", args.timezone);
+    }
+    const backgroundValue = context.globals?.backgrounds?.value;
+    if (backgroundValue === "dark") {
+      el.setAttribute("theme", "dark");
+    } else {
+      el.setAttribute("theme", "light");
     }
     el.setAttribute("style", "--event-height: 32px; --days-per-row: 7");
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;

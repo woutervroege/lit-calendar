@@ -3,8 +3,8 @@
   width: 100%;
   height: 100%;
   --line: 1px;
-  --line-color: color-mix(in oklab, CanvasText 7%, transparent);
-  --day-name-color: color-mix(in oklab, CanvasText 30%, transparent);
+  --line-color: rgb(15 23 42 / 14%);
+  --day-name-color: rgb(15 23 42 / 72%);
   --current-day-bg: #ff0000;
   --current-day-color: white;
   --current-time-line-color: red;
@@ -20,15 +20,21 @@
 @media (prefers-color-scheme: dark) {
   :host {
     /* Increase contrast in dark mode for grid + day labels. */
-    --line-color: color-mix(in oklab, CanvasText 14%, transparent);
-    --day-name-color: color-mix(in oklab, CanvasText 70%, transparent);
+    --line-color: rgb(255 255 255 / 16%);
+    --day-name-color: rgb(255 255 255 / 72%);
   }
 }
 
 :host([theme="dark"]),
 :host([data-theme="dark"]) {
-  --line-color: color-mix(in oklab, CanvasText 14%, transparent);
-  --day-name-color: color-mix(in oklab, CanvasText 70%, transparent);
+  --line-color: rgb(255 255 255 / 16%);
+  --day-name-color: rgb(255 255 255 / 72%);
+}
+
+:host([theme="light"]),
+:host([data-theme="light"]) {
+  --line-color: rgb(15 23 42 / 14%);
+  --day-name-color: rgb(15 23 42 / 72%);
 }
 
 section {
