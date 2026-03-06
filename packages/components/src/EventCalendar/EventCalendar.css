@@ -2,9 +2,12 @@
   display: block;
   width: 100%;
   height: 100%;
+  color-scheme: light dark;
   --line: 1px;
-  --line-color: rgb(15 23 42 / 14%);
-  --day-name-color: rgb(15 23 42 / 72%);
+  --grid-line-color: light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%));
+  --day-name-color: light-dark(rgb(15 23 42 / 72%), rgb(255 255 255 / 72%));
+  --event-target-ghost-color: light-dark(rgb(15 23 42 / 10%), rgb(255 255 255 / 12%));
+  --line-color: var(--grid-line-color);
   --current-day-bg: #ff0000;
   --current-day-color: white;
   --current-time-line-color: red;
@@ -15,26 +18,6 @@
   --days-per-row: 7;
   /* Vertical space reserved for per-cell day number labels in all-day mode. */
   --all-day-day-number-space: 36px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :host {
-    /* Increase contrast in dark mode for grid + day labels. */
-    --line-color: rgb(255 255 255 / 16%);
-    --day-name-color: rgb(255 255 255 / 72%);
-  }
-}
-
-:host([theme="dark"]),
-:host([data-theme="dark"]) {
-  --line-color: rgb(255 255 255 / 16%);
-  --day-name-color: rgb(255 255 255 / 72%);
-}
-
-:host([theme="light"]),
-:host([data-theme="light"]) {
-  --line-color: rgb(15 23 42 / 14%);
-  --day-name-color: rgb(15 23 42 / 72%);
 }
 
 section {
@@ -56,7 +39,7 @@ section::before {
   top: var(--hover-top, 0);
   width: var(--hover-width, 0);
   height: var(--hover-height, 0);
-  background: var(--line-color);
+  background: var(--event-target-ghost-color, var(--line-color));
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
