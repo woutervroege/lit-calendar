@@ -5,7 +5,7 @@ This package uses the following convention:
 - Public, supported tokens: `--lc-*`
 - Internal implementation tokens: `--_lc-*` (private, not stable)
 
-## EventCalendar (`event-calendar`)
+## CalendarView (`calendar-view`)
 
 - `--lc-current-day-color`
 - `--lc-event-height`

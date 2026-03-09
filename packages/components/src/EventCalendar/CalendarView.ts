@@ -6,7 +6,7 @@ import { keyed } from "lit/directives/keyed.js";
 import { styleMap } from "lit/directives/style-map.js";
 import "../TimedEvent/TimedEvent.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
-import componentStyle from "./EventCalendar.css?inline";
+import componentStyle from "./CalendarView.css?inline";
 import "../TimedEvent/AllDayEvent.js";
 import {
   type CalendarViewContextValue,
@@ -33,8 +33,8 @@ type EventInput = {
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;
 
-@customElement("event-calendar")
-export class EventCalendar extends BaseElement {
+@customElement("calendar-view")
+export class CalendarView extends BaseElement {
   #startDate?: string;
   #currentTime?: string;
   #timezone?: string;

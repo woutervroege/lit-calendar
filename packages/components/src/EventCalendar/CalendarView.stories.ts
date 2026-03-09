@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./EventCalendar.js";
+import "./CalendarView.js";
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
 type StoryEvent = {
@@ -18,7 +18,7 @@ type StoryEvent = {
 };
 
 type StoryEventEntry = [id: string, event: StoryEvent];
-type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
+type StoryCalendarViewElement = HTMLElement & { events: Map<string, StoryEvent> };
 
 const sampleEvents: StoryEventEntry[] = [
   [
@@ -194,8 +194,8 @@ const calendarCssProps = {
 } as const;
 
 const meta: Meta = {
-  title: "EventCalendar/EventCalendar",
-  component: "event-calendar",
+  title: "CalendarView/CalendarView",
+  component: "calendar-view",
   tags: ["autodocs"],
   parameters: {
     cssprops: calendarCssProps,
@@ -227,7 +227,7 @@ const meta: Meta = {
     events: sampleEvents,
   },
   render: (args) => {
-    const el = document.createElement("event-calendar") as StoryEventCalendarElement;
+    const el = document.createElement("calendar-view") as StoryCalendarViewElement;
     el.setAttribute("start-date", args.startDate);
     el.setAttribute("days", String(args.days));
     el.setAttribute("variant", args.variant);
