@@ -107,12 +107,7 @@ time.current-day {
 }
 
 .hour-labels {
-  display: flex;
-  flex: 0 0 auto;
   flex-direction: column;
-  height: 100%;
-  pointer-events: none;
-  margin-top: -9px;
 }
 .calendar-layout.with-time-labels {
   gap: var(--_lc-time-label-gap, 6px);

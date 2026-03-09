@@ -449,7 +449,7 @@ export class CalendarView extends BaseElement {
 
   #renderTimeLabels() {
     return html`
-      <div class="hour-labels">
+      <div class="hour-labels flex flex-col flex-1 h-full pointer-events-none -mt-2">
         ${Array.from({ length: this.hours }, (_, hour) => {
           const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.locale, {
             hour: "2-digit",
