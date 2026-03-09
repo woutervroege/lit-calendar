@@ -44,7 +44,7 @@ export class CalendarView extends BaseElement {
   #snapInterval: number = TimedEventInteractionController.snapInterval;
   declare events?: EventsMap;
   variant: "timed" | "all-day" = "timed";
-  dayNumbersHidden = false;
+  labelsHidden = false;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
@@ -87,7 +87,7 @@ export class CalendarView extends BaseElement {
           toAttribute: (v: string): string => v,
         },
       },
-      dayNumbersHidden: { type: Boolean, attribute: "day-numbers-hidden", reflect: true },
+      labelsHidden: { type: Boolean, attribute: "labels-hidden", reflect: true },
       locale: { type: String },
       timezone: { type: String },
       snapInterval: { type: Number, attribute: "snap-interval" },
@@ -328,7 +328,7 @@ export class CalendarView extends BaseElement {
             class="relative flex-1 flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
             style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
             ?data-drag-hover=${this.#dragHoverDayIndex !== null}>
-            ${this.variant === "all-day" && !this.dayNumbersHidden ? this.#renderDayNumbers() : ""}
+            ${this.variant === "all-day" && !this.labelsHidden ? this.#renderDayNumbers() : ""}
             ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
 
             ${this.#sortedEvents.map(
