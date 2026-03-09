@@ -16,10 +16,14 @@
   --_lc-event-card-bg-default: var(--_lc-event-bg);
 }
 
-/* When any event-card is hovered, expose hover background so all segments show hover state */
-:host .interaction-surface:has(event-card:hover):not(:focus):not(:focus-visible),
-:host .interaction-surface:has(event-card:active):not(:focus):not(:focus-visible) {
+/* Hover state for all segments when any segment is hovered. */
+:host .interaction-surface:has(event-card:hover):not(:focus):not(:focus-visible) {
   --_lc-event-card-bg-active: var(--_lc-event-bg-hover);
+}
+
+/* Pressed state between hover and focus brightness. */
+:host .interaction-surface:has(event-card:active):not(:focus):not(:focus-visible) {
+  --_lc-event-card-bg-active: var(--_lc-event-bg-active, var(--_lc-event-bg-hover));
 }
 
 /* Apply the same visual focus state for keyboard and pointer focus. */
