@@ -1,14 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { ContextProvider } from "@lit/context";
 import { html, type PropertyValues, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
-import { ContextProvider } from "@lit/context";
 import "../TimedEvent/TimedEvent.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import componentStyle from "./EventCalendar.css?inline";
 import "../TimedEvent/AllDayEvent.js";
+import {
+  type CalendarViewContextValue,
+  calendarViewContext,
+} from "../context/CalendarViewContext.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
-import { calendarViewContext, type CalendarViewContextValue } from "../context/CalendarViewContext.js";
+import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
 type EventInput = {
   /**
@@ -90,14 +94,8 @@ export class EventCalendar extends BaseElement {
         converter: {
           fromAttribute: (v: string | null): string | undefined => v ?? undefined,
           toAttribute: (
-            v:
-              | Temporal.PlainDateTime
-              | Temporal.ZonedDateTime
-              | string
-              | null
-              | undefined
-          ): string | null =>
-            v ? v.toString() : null,
+            v: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | null | undefined
+          ): string | null => (v ? v.toString() : null),
         },
       },
     } as const;
@@ -156,9 +154,11 @@ export class EventCalendar extends BaseElement {
     return this.#toPlainDateTime(this.#currentTime);
   }
 
-  set currentTime(
-    currentTime: Temporal.PlainDateTime | Temporal.ZonedDateTime | string | undefined
-  ) {
+  set currentTime(currentTime:
+    | Temporal.PlainDateTime
+    | Temporal.ZonedDateTime
+    | string
+    | undefined) {
     this.#currentTime = currentTime?.toString();
   }
 
@@ -235,7 +235,10 @@ export class EventCalendar extends BaseElement {
       attributeFilter: ["style", "class"],
     });
     if (document.body) {
-      this.#styleObserver.observe(document.body, { attributes: true, attributeFilter: ["style", "class"] });
+      this.#styleObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["style", "class"],
+      });
     }
   }
 
@@ -320,11 +323,12 @@ export class EventCalendar extends BaseElement {
             ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
 
             ${this.#sortedEvents.map(
-              ([, event]) => html`
+              ([id, event]) => html`
                 ${
                   this.variant === "all-day"
                     ? html`
                 <all-day-event
+                    event-id=${id}
                     start=${this.#toEventDateTimeString(event.start)}
                     end=${this.#toEventDateTimeString(event.end)}
                     summary=${event.summary}
@@ -332,17 +336,18 @@ export class EventCalendar extends BaseElement {
                     .renderedDays=${this.days}
                     .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                     .gridRows=${this.#isMonthView ? this.gridRows : 1}
-                    @update=${() => this.requestUpdate("events")}
+                    @update=${this.#handleEventUpdate}
                 ></all-day-event>
                 `
                     : html`
                 <timed-event
+                    event-id=${id}
                     start=${this.#toEventDateTimeString(event.start)}
                     end=${this.#toEventDateTimeString(event.end)}
                     summary=${event.summary}
                     color=${event.color}
                     .renderedDays=${this.days as unknown as never[]}
-                    @update=${() => this.requestUpdate("events")}
+                    @update=${this.#handleEventUpdate}
                 ></timed-event>
                 `
                 }
@@ -352,6 +357,16 @@ export class EventCalendar extends BaseElement {
         </section>
     `;
   }
+
+  #handleEventUpdate = (event: Event) => {
+    this.dispatchEvent(
+      new CustomEvent("event-modified", {
+        detail: event.target as BaseEvent,
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
 
   #renderDayNumbers() {
     const cols = this.#isMonthView ? this.daysPerRow : this.#days;
@@ -379,9 +394,9 @@ export class EventCalendar extends BaseElement {
 
       return html`
         <time
-          class="absolute p-1 text-sm mt-2 z-0 font-medium rounded-full flex justify-center items-center ${monthPrefix ? "min-w-6 px-2" : "w-6" } h-6 ${isCurrentDay
-            ? "current-day"
-            : ""}"
+          class="absolute p-1 text-sm mt-2 z-0 font-medium rounded-full flex justify-center items-center ${monthPrefix ? "min-w-6 px-2" : "w-6"} h-6 ${
+            isCurrentDay ? "current-day" : ""
+          }"
           datetime=${day.toString()}
           style=${styleMap({
             right: `calc(${right}% + 6px)`,
@@ -400,7 +415,9 @@ export class EventCalendar extends BaseElement {
 
     const currentDateTime = this.currentTime;
     const currentDay = currentDateTime.toPlainDate();
-    const currentDayIndex = days.findIndex((day) => Temporal.PlainDate.compare(day, currentDay) === 0);
+    const currentDayIndex = days.findIndex(
+      (day) => Temporal.PlainDate.compare(day, currentDay) === 0
+    );
     if (currentDayIndex < 0) return "";
 
     const hourFloat =
@@ -449,18 +466,12 @@ export class EventCalendar extends BaseElement {
   #compareEventsForRenderOrder([, a]: EventEntry, [, b]: EventEntry): number {
     const aStart = this.#toPlainDateTime(a.start);
     const bStart = this.#toPlainDateTime(b.start);
-    const startDiff = Temporal.PlainDateTime.compare(
-      aStart,
-      bStart
-    );
+    const startDiff = Temporal.PlainDateTime.compare(aStart, bStart);
     if (startDiff !== 0) return startDiff;
 
     const aEnd = this.#toPlainDateTime(a.end);
     const bEnd = this.#toPlainDateTime(b.end);
-    const endDiff = Temporal.PlainDateTime.compare(
-      aEnd,
-      bEnd
-    );
+    const endDiff = Temporal.PlainDateTime.compare(aEnd, bEnd);
     if (endDiff !== 0) return endDiff;
 
     return a.summary.localeCompare(b.summary);

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./EventCalendar.js";
+import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
 type StoryEvent = {
   /**
@@ -17,6 +18,7 @@ type StoryEvent = {
 };
 
 type StoryEventEntry = [id: string, event: StoryEvent];
+type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
 
 const sampleEvents: StoryEventEntry[] = [
   [
@@ -225,7 +227,7 @@ const meta: Meta = {
     events: sampleEvents,
   },
   render: (args) => {
-    const el = document.createElement("event-calendar");
+    const el = document.createElement("event-calendar") as StoryEventCalendarElement;
     el.setAttribute("start-date", args.startDate);
     el.setAttribute("days", String(args.days));
     el.setAttribute("variant", args.variant);
@@ -241,7 +243,29 @@ const meta: Meta = {
       el.setAttribute("timezone", args.timezone);
     }
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
-    (el as unknown as { events: Map<string, StoryEvent> }).events = new Map(entries);
+    el.events = new Map(entries);
+    el.addEventListener("event-modified", (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as BaseEvent | null;
+      if (!detail?.eventId) return;
+
+      const current = el.events.get(detail.eventId);
+      if (!current) return;
+
+      el.events = new Map(el.events).set(detail.eventId, {
+        ...current,
+        start: detail.start?.toString() ?? current.start,
+        end: detail.end?.toString() ?? current.end,
+        summary: detail.summary,
+        color: detail.color,
+      });
+
+      console.info("event-modified", {
+        eventId: detail.eventId,
+        start: detail.start?.toString() ?? null,
+        end: detail.end?.toString() ?? null,
+      });
+    });
     return el;
   },
 };

@@ -38,6 +38,9 @@ export abstract class BaseEvent extends BaseElement {
   @property({ type: String })
   color = "";
 
+  @property({ type: String, attribute: "event-id" })
+  eventId = "";
+
   static get properties() {
     return {
       start: { type: String },
@@ -45,6 +48,7 @@ export abstract class BaseEvent extends BaseElement {
       locale: { type: String },
       timezone: { type: String },
       currentTime: { type: String, attribute: "current-time" },
+      eventId: { type: String, attribute: "event-id" },
     } as const;
   }
 
