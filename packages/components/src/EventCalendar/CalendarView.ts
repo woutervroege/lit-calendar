@@ -282,6 +282,7 @@ export class CalendarView extends BaseElement {
 
   render() {
     const hoverStyle: Record<string, string> = {};
+    const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
 
     if (this.#dragHoverDayIndex !== null) {
       if (this.variant === "all-day") {
@@ -323,54 +324,56 @@ export class CalendarView extends BaseElement {
     }
 
     return html`
-
+      <div class="calendar-layout ${showTimedLabels ? "with-time-labels" : ""}">
+        ${showTimedLabels ? this.#renderTimeLabels() : ""}
         <section
-            class="relative flex-1 flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
-            style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
-            ?data-drag-hover=${this.#dragHoverDayIndex !== null}>
-            ${this.variant === "all-day" && !this.labelsHidden ? this.#renderDayNumbers() : ""}
-            ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
+          class="calendar-grid relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
+          style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
+          ?data-drag-hover=${this.#dragHoverDayIndex !== null}
+        >
+          ${this.variant === "all-day" && !this.labelsHidden ? this.#renderDayNumbers() : ""}
+          ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
 
-            ${this.#sortedEvents.map(
-              ([id, event]) => html`
-                ${keyed(
-                  id,
-                  this.variant === "all-day"
-                    ? html`
-                <all-day-event
-                    event-id=${id}
-                    start=${this.#toEventDateTimeString(event.start)}
-                    end=${this.#toEventDateTimeString(event.end)}
-                    summary=${event.summary}
-                    color=${event.color}
-                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
-                    .renderedDays=${this.days}
-                    .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
-                    .gridRows=${this.#isMonthView ? this.gridRows : 1}
-                    @update=${this.#handleEventUpdate}
-                    @delete=${this.#handleEventDelete}
-                ></all-day-event>
-                `
-                    : html`
-                <timed-event
-                    event-id=${id}
-                    start=${this.#toEventDateTimeString(event.start)}
-                    end=${this.#toEventDateTimeString(event.end)}
-                    summary=${event.summary}
-                    color=${event.color}
-                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
-                    .renderedDays=${this.days as unknown as never[]}
-                    @update=${this.#handleEventUpdate}
-                    @delete=${this.#handleEventDelete}
-                ></timed-event>
-                `
-                )}
-                `
-            )}
-
+          ${this.#sortedEvents.map(
+            ([id, event]) => html`
+              ${keyed(
+                id,
+                this.variant === "all-day"
+                  ? html`
+                      <all-day-event
+                        event-id=${id}
+                        start=${this.#toEventDateTimeString(event.start)}
+                        end=${this.#toEventDateTimeString(event.end)}
+                        summary=${event.summary}
+                        color=${event.color}
+                        ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                        ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
+                        .renderedDays=${this.days}
+                        .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
+                        .gridRows=${this.#isMonthView ? this.gridRows : 1}
+                        @update=${this.#handleEventUpdate}
+                        @delete=${this.#handleEventDelete}
+                      ></all-day-event>
+                    `
+                  : html`
+                      <timed-event
+                        event-id=${id}
+                        start=${this.#toEventDateTimeString(event.start)}
+                        end=${this.#toEventDateTimeString(event.end)}
+                        summary=${event.summary}
+                        color=${event.color}
+                        ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                        ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
+                        .renderedDays=${this.days as unknown as never[]}
+                        @update=${this.#handleEventUpdate}
+                        @delete=${this.#handleEventDelete}
+                      ></timed-event>
+                    `
+              )}
+            `
+          )}
         </section>
+      </div>
     `;
   }
 
@@ -442,6 +445,27 @@ export class CalendarView extends BaseElement {
         </time>
       `;
     });
+  }
+
+  #renderTimeLabels() {
+    return html`
+      <div class="hour-labels">
+        ${Array.from({ length: this.hours }, (_, hour) => {
+          const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.locale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          return html`
+            <div class="hour-label-row">
+              <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
+                ${label}
+              </time>
+            </div>
+          `;
+        })}
+      </div>
+    `;
   }
 
   #renderCurrentTimeIndicator() {
