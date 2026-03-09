@@ -273,7 +273,11 @@ const meta: Meta = {
       if (!el.events.has(detail.eventId)) return;
 
       const nextEvents = new Map(el.events);
-      nextEvents.delete(detail.eventId);
+
+      const doDelete = confirm("Are you sure you want to delete this event?");
+      if (doDelete) {
+        nextEvents.delete(detail.eventId);
+      }
       el.events = nextEvents;
 
       console.info("event-deleted", { eventId: detail.eventId });

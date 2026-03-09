@@ -50,6 +50,7 @@ export class EventCalendar extends BaseElement {
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
   #styleObserver?: MutationObserver;
   #lastDaysPerRowToken = "";
+  #optimisticallyDeletingEventIds = new Set<string>();
 
   get #sortedEvents(): EventEntry[] {
     const events = this.#eventsForVariant;
@@ -138,6 +139,13 @@ export class EventCalendar extends BaseElement {
     ) {
       this.#updateCalendarViewContext();
     }
+  }
+
+  protected willUpdate(changedProperties: PropertyValues<this>) {
+    super.willUpdate(changedProperties);
+    if (!changedProperties.has("events")) return;
+    // External state (confirm/cancel) has caught up; reset optimistic delete visuals.
+    this.#optimisticallyDeletingEventIds.clear();
   }
 
   get startDate(): Temporal.PlainDate {
@@ -335,6 +343,8 @@ export class EventCalendar extends BaseElement {
                     end=${this.#toEventDateTimeString(event.end)}
                     summary=${event.summary}
                     color=${event.color}
+                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
                     .renderedDays=${this.days}
                     .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                     .gridRows=${this.#isMonthView ? this.gridRows : 1}
@@ -349,6 +359,8 @@ export class EventCalendar extends BaseElement {
                     end=${this.#toEventDateTimeString(event.end)}
                     summary=${event.summary}
                     color=${event.color}
+                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
                     .renderedDays=${this.days as unknown as never[]}
                     @update=${this.#handleEventUpdate}
                     @delete=${this.#handleEventDelete}
@@ -375,10 +387,12 @@ export class EventCalendar extends BaseElement {
   #handleEventDelete = (event: Event) => {
     const target = event.target as BaseEvent | null;
     if (!target) return;
+    if (target.eventId) {
+      this.#optimisticallyDeletingEventIds.add(target.eventId);
+      this.requestUpdate();
+    }
 
-    // Optimistic visual removal while external state catches up.
-    target.hidden = true;
-    target.inert = true;
+    // Emit deletion request; parent state confirms/cancels via next `events` update.
 
     this.dispatchEvent(
       new CustomEvent("event-deleted", {
