@@ -51,6 +51,9 @@ export class CalendarView extends BaseElement {
   #styleObserver?: MutationObserver;
   #lastDaysPerRowToken = "";
   #optimisticallyDeletingEventIds = new Set<string>();
+  #sectionHeightPx = 0;
+  #resizeObserver?: ResizeObserver;
+  #resizeSyncRafId: number | null = null;
 
   get #sortedEvents(): EventEntry[] {
     const events = this.#eventsForVariant;
@@ -121,11 +124,14 @@ export class CalendarView extends BaseElement {
     super.connectedCallback();
     this.#updateCalendarViewContext();
     this.#startStyleObserver();
+    this.#startResizeObserver();
     this.addEventListener("interaction-drag-hover", this.#handleDragHover as EventListener);
   }
 
   disconnectedCallback() {
     this.#stopStyleObserver();
+    this.#stopResizeObserver();
+    this.#cancelScheduledResizeSync();
     this.removeEventListener("interaction-drag-hover", this.#handleDragHover as EventListener);
     super.disconnectedCallback();
   }
@@ -139,6 +145,7 @@ export class CalendarView extends BaseElement {
     ) {
       this.#updateCalendarViewContext();
     }
+    this.#syncSectionHeight();
   }
 
   protected willUpdate(changedProperties: PropertyValues<this>) {
@@ -256,6 +263,43 @@ export class CalendarView extends BaseElement {
     this.#styleObserver = undefined;
   }
 
+  #startResizeObserver() {
+    if (typeof ResizeObserver === "undefined") return;
+    this.#resizeObserver = new ResizeObserver(() => this.#scheduleSectionHeightSync());
+    this.#resizeObserver.observe(this);
+  }
+
+  #stopResizeObserver() {
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = undefined;
+  }
+
+  #scheduleSectionHeightSync() {
+    if (this.variant !== "all-day") return;
+    if (this.#resizeSyncRafId !== null || typeof requestAnimationFrame === "undefined") return;
+    this.#resizeSyncRafId = requestAnimationFrame(() => {
+      this.#resizeSyncRafId = null;
+      this.#syncSectionHeight();
+    });
+  }
+
+  #cancelScheduledResizeSync() {
+    if (this.#resizeSyncRafId === null || typeof cancelAnimationFrame === "undefined") return;
+    cancelAnimationFrame(this.#resizeSyncRafId);
+    this.#resizeSyncRafId = null;
+  }
+
+  #syncSectionHeight() {
+    if (this.variant !== "all-day") return;
+    const section = this.renderRoot.querySelector("section");
+    if (!section) return;
+    const nextHeight = section.getBoundingClientRect().height;
+    if (!Number.isFinite(nextHeight)) return;
+    if (Math.abs(nextHeight - this.#sectionHeightPx) < 0.5) return;
+    this.#sectionHeightPx = nextHeight;
+    this.requestUpdate();
+  }
+
   /** True when all-day and we have more days than columns (multi-row grid). */
   get #isMonthView(): boolean {
     return Boolean(this.variant === "all-day" && this.#days > this.daysPerRow);
@@ -323,6 +367,8 @@ export class CalendarView extends BaseElement {
       }
     }
 
+    const allDayOverflow = this.#getAllDayOverflowLayout();
+
     return html`
       <div class="calendar-layout flex h-full min-h-0 ${showTimedLabels ? "with-time-labels" : ""}">
         ${showTimedLabels ? this.#renderTimeLabels() : ""}
@@ -351,6 +397,7 @@ export class CalendarView extends BaseElement {
                         .renderedDays=${this.days}
                         .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                         .gridRows=${this.#isMonthView ? this.gridRows : 1}
+                        .maxVisibleRows=${allDayOverflow.maxVisibleRows}
                         @update=${this.#handleEventUpdate}
                         @delete=${this.#handleEventDelete}
                       ></all-day-event>
@@ -372,9 +419,57 @@ export class CalendarView extends BaseElement {
               )}
             `
           )}
+          ${this.variant === "all-day" ? this.#renderAllDayOverflowIndicators(allDayOverflow) : ""}
         </section>
       </div>
     `;
+  }
+
+  #renderAllDayOverflowIndicators(layout: {
+    maxVisibleRows: number;
+    hiddenCountsByDay: Map<number, number>;
+  }) {
+    const dayCount = this.days.length;
+    if (!dayCount || this.#days <= 0) return "";
+    if (layout.maxVisibleRows < 0) return "";
+    const cols = this.#isMonthView ? this.daysPerRow : this.#days;
+    if (cols <= 0) return "";
+
+    const rowHeightPx = this.#getAllDayRowHeightPx();
+    if (!Number.isFinite(rowHeightPx)) return "";
+    const topOffsetPx = this.#getAllDayDayNumberOffsetPx();
+    const eventHeightPx = this.#getAllDayEventHeightPx();
+    const indicatorHeightPx = this.#getAllDayOverflowIndicatorHeightPx();
+    const overflowTopPx = topOffsetPx + eventHeightPx * layout.maxVisibleRows;
+    const indicatorOffsetWithinRowPx = Math.max(
+      0,
+      Math.min(overflowTopPx, rowHeightPx - indicatorHeightPx)
+    );
+
+    return Array.from(layout.hiddenCountsByDay.entries())
+      .filter(([, hiddenCount]) => hiddenCount > 0)
+      .map(([dayIndex, hiddenCount]) => {
+        const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
+        const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
+        const left = (colIndex / cols) * 100;
+        const top = rowIndex * rowHeightPx + indicatorOffsetWithinRowPx;
+        const width = 100 / cols;
+        const label = `+${hiddenCount} more`;
+
+        return html`
+          <div
+            class="absolute z-[3] text-xs font-medium leading-tight text-left px-[8px] pt-1 pointer-events-none whitespace-nowrap overflow-hidden text-ellipsis text-[var(--_lc-grid-line-day-color)]"
+            style=${styleMap({
+              left: `${left}%`,
+              top: `${top}px`,
+              width: `${width}%`,
+            })}
+            aria-hidden="true"
+          >
+            ${label}
+          </div>
+        `;
+      });
   }
 
   #handleEventUpdate = (event: Event) => {
@@ -523,6 +618,21 @@ export class CalendarView extends BaseElement {
   };
 
   #compareEventsForRenderOrder([, a]: EventEntry, [, b]: EventEntry): number {
+    if (this.variant === "all-day") {
+      const aStartDate = this.#toPlainDateTime(a.start).toPlainDate();
+      const bStartDate = this.#toPlainDateTime(b.start).toPlainDate();
+      const startDateDiff = Temporal.PlainDate.compare(aStartDate, bStartDate);
+      if (startDateDiff !== 0) return startDateDiff;
+
+      // Match AllDayEvent.siblings ordering: compare by exclusive end date.
+      const aEndDate = this.#toPlainDateTime(a.end).subtract({ nanoseconds: 1 }).toPlainDate();
+      const bEndDate = this.#toPlainDateTime(b.end).subtract({ nanoseconds: 1 }).toPlainDate();
+      const endDateDiff = Temporal.PlainDate.compare(aEndDate, bEndDate);
+      if (endDateDiff !== 0) return endDateDiff;
+
+      return a.summary.localeCompare(b.summary);
+    }
+
     const aStart = this.#toPlainDateTime(a.start);
     const bStart = this.#toPlainDateTime(b.start);
     const startDiff = Temporal.PlainDateTime.compare(aStart, bStart);
@@ -575,6 +685,158 @@ export class CalendarView extends BaseElement {
 
   get #eventsAsEntries(): EventEntry[] {
     return Array.from(this.events?.entries() ?? []);
+  }
+
+  #getAllDayOverflowLayout(): { maxVisibleRows: number; hiddenCountsByDay: Map<number, number> } {
+    if (this.variant !== "all-day") {
+      return { maxVisibleRows: Number.POSITIVE_INFINITY, hiddenCountsByDay: new Map() };
+    }
+
+    const maxRowsByHeight = this.#getMaxRowsPerCellByHeight();
+    if (!Number.isFinite(maxRowsByHeight)) {
+      return { maxVisibleRows: Number.POSITIVE_INFINITY, hiddenCountsByDay: new Map() };
+    }
+    if (maxRowsByHeight <= 0) {
+      return {
+        maxVisibleRows: 0,
+        hiddenCountsByDay: this.#computeHiddenAllDayCountsByDay(0),
+      };
+    }
+
+    const initialHidden = this.#computeHiddenAllDayCountsByDay(maxRowsByHeight);
+    return { maxVisibleRows: maxRowsByHeight, hiddenCountsByDay: initialHidden };
+  }
+
+  #getMaxRowsPerCellByHeight(): number {
+    const availableHeight = this.#getAllDayAvailableHeightPx();
+    if (!Number.isFinite(availableHeight)) return Number.POSITIVE_INFINITY;
+    const eventHeight = this.#getAllDayEventHeightPx();
+    if (eventHeight <= 0) return Number.POSITIVE_INFINITY;
+    return Math.max(0, Math.floor(availableHeight / eventHeight));
+  }
+
+  #getAllDayAvailableHeightPx(): number {
+    const sectionHeight = this.#sectionHeightPx;
+    if (sectionHeight <= 0) return Number.POSITIVE_INFINITY;
+    const rowHeight = this.#isMonthView ? sectionHeight / this.gridRows : sectionHeight;
+    if (rowHeight <= 0) return Number.POSITIVE_INFINITY;
+    return rowHeight - this.#getAllDayDayNumberOffsetPx();
+  }
+
+  #getAllDayRowHeightPx(): number {
+    const sectionHeight = this.#sectionHeightPx;
+    if (sectionHeight <= 0) return Number.POSITIVE_INFINITY;
+    return this.#isMonthView ? sectionHeight / this.gridRows : sectionHeight;
+  }
+
+  #getAllDayEventHeightPx(): number {
+    const value = getComputedStyle(this).getPropertyValue("--_lc-event-height").trim();
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 32;
+  }
+
+  #getAllDayDayNumberOffsetPx(): number {
+    if (this.labelsHidden) return 0;
+    const value = getComputedStyle(this).getPropertyValue("--_lc-all-day-day-number-space").trim();
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 36;
+  }
+
+  #getAllDayOverflowIndicatorHeightPx(): number {
+    // Matches text-xs + leading-tight with single-line label.
+    return 16;
+  }
+
+  #computeHiddenAllDayCountsByDay(maxVisibleRows: number): Map<number, number> {
+    const hiddenCountsByDay = new Map<number, number>();
+    const renderedDays = this.days;
+    if (!renderedDays.length) return hiddenCountsByDay;
+
+    const renderedDayKeys = renderedDays.map((day) => day.toString());
+    const totalDays = renderedDayKeys.length;
+    const cols = this.#isMonthView ? this.daysPerRow : totalDays;
+    if (cols <= 0) return hiddenCountsByDay;
+
+    const visibleEvents = this.#sortedEvents.filter(
+      ([id]) => !this.#optimisticallyDeletingEventIds.has(id)
+    );
+    const placedSegmentsByRow = new Map<
+      number,
+      Array<{ stackIndex: number; startColIndex: number; endColIndex: number }>
+    >();
+
+    for (const [, event] of visibleEvents) {
+      const eventDays = this.#expandEventDays(event);
+      const visibleIndexes = eventDays
+        .map((day) => renderedDayKeys.indexOf(day.toString()))
+        .filter((dayIndex) => dayIndex >= 0)
+        .sort((a, b) => a - b);
+      if (!visibleIndexes.length) continue;
+      const eventFirstVisibleDayIndex = visibleIndexes[0];
+      let hasCountedHiddenEvent = false;
+
+      const segmentsByRow = new Map<number, { startColIndex: number; endColIndex: number }>();
+      for (const dayIndex of visibleIndexes) {
+        const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
+        const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
+        const existing = segmentsByRow.get(rowIndex);
+        if (!existing) {
+          segmentsByRow.set(rowIndex, { startColIndex: colIndex, endColIndex: colIndex });
+          continue;
+        }
+        existing.startColIndex = Math.min(existing.startColIndex, colIndex);
+        existing.endColIndex = Math.max(existing.endColIndex, colIndex);
+      }
+
+      for (const [rowIndex, segment] of segmentsByRow) {
+        const rowSegments = placedSegmentsByRow.get(rowIndex) ?? [];
+        const occupied = new Set<number>();
+
+        for (const placedSegment of rowSegments) {
+          const overlaps =
+            placedSegment.startColIndex <= segment.endColIndex &&
+            placedSegment.endColIndex >= segment.startColIndex;
+          if (!overlaps) continue;
+          occupied.add(placedSegment.stackIndex);
+        }
+
+        let stackIndex = 0;
+        while (occupied.has(stackIndex)) stackIndex += 1;
+
+        rowSegments.push({
+          stackIndex,
+          startColIndex: segment.startColIndex,
+          endColIndex: segment.endColIndex,
+        });
+        placedSegmentsByRow.set(rowIndex, rowSegments);
+
+        if (stackIndex < maxVisibleRows) continue;
+        if (hasCountedHiddenEvent) continue;
+        hasCountedHiddenEvent = true;
+        const segmentStartDayIndex = eventFirstVisibleDayIndex;
+        hiddenCountsByDay.set(
+          segmentStartDayIndex,
+          (hiddenCountsByDay.get(segmentStartDayIndex) ?? 0) + 1
+        );
+      }
+    }
+
+    return hiddenCountsByDay;
+  }
+
+  #expandEventDays(event: EventInput): Temporal.PlainDate[] {
+    const start = this.#toPlainDateTime(event.start).toPlainDate();
+    const endDateTime = this.#toPlainDateTime(event.end);
+    // Match AllDayEvent semantics in all-day view: end is treated as exclusive.
+    const inclusiveEnd = endDateTime.subtract({ nanoseconds: 1 }).toPlainDate();
+    const days: Temporal.PlainDate[] = [];
+
+    let cursor = start;
+    while (Temporal.PlainDate.compare(cursor, inclusiveEnd) <= 0) {
+      days.push(cursor);
+      cursor = cursor.add({ days: 1 });
+    }
+    return days;
   }
 
   #updateCalendarViewContext() {

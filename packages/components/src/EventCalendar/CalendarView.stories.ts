@@ -117,8 +117,8 @@ const sampleEvents: StoryEventEntry[] = [
     "event-meeting-john-20250110",
     {
       uid: "meeting-with-john@example.test",
-      start: "2025-01-10",
-      end: "2025-01-11",
+      start: "2025-01-08",
+      end: "2025-01-09",
       summary: "Meeting with John",
       color: "#E05ADD",
     },

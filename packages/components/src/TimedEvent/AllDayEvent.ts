@@ -19,6 +19,9 @@ export class AllDayEvent extends BaseEvent {
   @property({ type: Number })
   gridRows: number = 1;
 
+  @property({ type: Number })
+  maxVisibleRows: number = Number.POSITIVE_INFINITY;
+
   constructor() {
     super({ mode: "all-day" });
   }
@@ -146,31 +149,24 @@ export class AllDayEvent extends BaseEvent {
     widthInColumns: number,
     cols: number,
     renderedDays: string[]
-  ): Record<string, string | number> {
+  ): { style: Record<string, string | number>; rowIndex: number; stackIndex: number } {
     const left = (startColIndex / cols) * 100;
     const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
     const top = this.#getTopPosition(rowIndex, stackIndex);
 
     return {
-      top,
-      height: `var(--_lc-event-height, 32px)`,
-      "--_lc-left": `${left}%`,
-      "--_lc-width": widthInColumns,
-      "--_lc-margin-left": 0,
-      "--_lc-indentation": "0px",
-      "--_lc-z-index": 1,
+      rowIndex,
+      stackIndex,
+      style: {
+        top,
+        height: `var(--_lc-event-height, 32px)`,
+        "--_lc-left": `${left}%`,
+        "--_lc-width": widthInColumns,
+        "--_lc-margin-left": 0,
+        "--_lc-indentation": "0px",
+        "--_lc-z-index": 1,
+      },
     };
-  }
-
-  #getGridPosition(dayIndex: number, totalRenderedDays: number): {
-    cols: number;
-    rowIndex: number;
-    colIndex: number;
-  } {
-    const cols = this.daysPerRow > 0 ? this.daysPerRow : totalRenderedDays;
-    const rowIndex = this.daysPerRow > 0 ? Math.floor(dayIndex / this.daysPerRow) : 0;
-    const colIndex = this.daysPerRow > 0 ? dayIndex % this.daysPerRow : dayIndex;
-    return { cols, rowIndex, colIndex };
   }
 
   #getStackIndexForPosition(renderedDays: string[], rowIndex: number): number {
@@ -190,7 +186,11 @@ export class AllDayEvent extends BaseEvent {
   }
 
   get dayInsets() {
-    const insets: Array<Record<string, string | number>> = [];
+    const insets: Array<{
+      style: Record<string, string | number>;
+      rowIndex: number;
+      stackIndex: number;
+    }> = [];
     const renderedDays = this.renderedDays.map((day) => day.toString());
     if (!renderedDays.length) return insets;
 
@@ -360,17 +360,26 @@ export class AllDayEvent extends BaseEvent {
   }
 
   #renderEventCards(
-    dayInsets: Array<Record<string, string | number>>,
+    dayInsets: Array<{
+      style: Record<string, string | number>;
+      rowIndex: number;
+      stackIndex: number;
+    }>,
     canResizeStart: boolean
   ) {
+    const visibleDayInsets = dayInsets.filter(
+      ({ stackIndex }) => stackIndex < this.maxVisibleRows || !Number.isFinite(this.maxVisibleRows)
+    );
+    if (!visibleDayInsets.length) return "";
+
     const startsBeforeVisibleRange = this.#startsBeforeVisibleRange();
     const endsAfterVisibleRange = this.#endsAfterVisibleRange();
 
-    return dayInsets.map((inset, index) =>
+    return visibleDayInsets.map((inset, index) =>
       this.#renderEventCard(
         inset,
         index,
-        dayInsets.length,
+        visibleDayInsets.length,
         canResizeStart,
         startsBeforeVisibleRange,
         endsAfterVisibleRange
@@ -379,7 +388,7 @@ export class AllDayEvent extends BaseEvent {
   }
 
   #renderEventCard(
-    inset: Record<string, string | number>,
+    inset: { style: Record<string, string | number>; rowIndex: number; stackIndex: number },
     index: number,
     total: number,
     canResizeStart: boolean,
@@ -397,7 +406,7 @@ export class AllDayEvent extends BaseEvent {
         time=${isFirst ? this.displayTime : ""}
         segment-direction="horizontal"
         ?past=${this.isPast}
-        style=${styleMap(inset)}
+        style=${styleMap(inset.style)}
         ?first-segment=${hasRoundedStart}
         ?last-segment=${hasRoundedEnd}
       >
