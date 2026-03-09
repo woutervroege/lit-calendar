@@ -324,10 +324,10 @@ export class CalendarView extends BaseElement {
     }
 
     return html`
-      <div class="calendar-layout ${showTimedLabels ? "with-time-labels" : ""}">
+      <div class="calendar-layout flex h-full min-h-0 ${showTimedLabels ? "with-time-labels" : ""}">
         ${showTimedLabels ? this.#renderTimeLabels() : ""}
         <section
-          class="calendar-grid relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
+          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
         >
@@ -457,8 +457,8 @@ export class CalendarView extends BaseElement {
           });
 
           return html`
-            <div class="hour-label-row">
-              <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
+            <div class="flex justify-end items-start flex-1">
+              <time class="block text-xs leading-none font-medium whitespace-nowrap pointer-events-none text-end" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
                 ${label}
               </time>
             </div>
