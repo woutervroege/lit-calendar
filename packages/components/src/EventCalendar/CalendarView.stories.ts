@@ -214,7 +214,7 @@ const meta: Meta = {
       description: "IANA timezone",
     },
     variant: { control: "select", options: ["timed", "all-day"] },
-    dayNumbersHidden: { control: "boolean", description: "Hide day number labels" },
+    labelsHidden: { control: "boolean", description: "Hide day number labels" },
     snapInterval: { control: { type: "number", min: 5, max: 60, step: 5 } },
   },
   args: {
@@ -222,7 +222,7 @@ const meta: Meta = {
     days: 7,
     variant: "timed",
     timezone: "Europe/Amsterdam",
-    dayNumbersHidden: false,
+    labelsHidden: false,
     snapInterval: 30,
     events: sampleEvents,
   },
@@ -235,7 +235,7 @@ const meta: Meta = {
     if (args.currentTime) {
       el.setAttribute("current-time", args.currentTime);
     }
-    el.toggleAttribute("day-numbers-hidden", Boolean(args.dayNumbersHidden));
+    el.toggleAttribute("labels-hidden", Boolean(args.labelsHidden));
     if (args.locale) {
       el.setAttribute("locale", args.locale);
     }

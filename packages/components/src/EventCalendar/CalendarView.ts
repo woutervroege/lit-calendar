@@ -44,7 +44,7 @@ export class CalendarView extends BaseElement {
   #snapInterval: number = TimedEventInteractionController.snapInterval;
   declare events?: EventsMap;
   variant: "timed" | "all-day" = "timed";
-  dayNumbersHidden = false;
+  labelsHidden = false;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
@@ -87,7 +87,7 @@ export class CalendarView extends BaseElement {
           toAttribute: (v: string): string => v,
         },
       },
-      dayNumbersHidden: { type: Boolean, attribute: "day-numbers-hidden", reflect: true },
+      labelsHidden: { type: Boolean, attribute: "labels-hidden", reflect: true },
       locale: { type: String },
       timezone: { type: String },
       snapInterval: { type: Number, attribute: "snap-interval" },
@@ -282,6 +282,7 @@ export class CalendarView extends BaseElement {
 
   render() {
     const hoverStyle: Record<string, string> = {};
+    const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
 
     if (this.#dragHoverDayIndex !== null) {
       if (this.variant === "all-day") {
@@ -323,54 +324,56 @@ export class CalendarView extends BaseElement {
     }
 
     return html`
-
+      <div class="calendar-layout flex h-full min-h-0 ${showTimedLabels ? "with-time-labels" : ""}">
+        ${showTimedLabels ? this.#renderTimeLabels() : ""}
         <section
-            class="relative flex-1 flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
-            style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
-            ?data-drag-hover=${this.#dragHoverDayIndex !== null}>
-            ${this.variant === "all-day" && !this.dayNumbersHidden ? this.#renderDayNumbers() : ""}
-            ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
+          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
+          style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
+          ?data-drag-hover=${this.#dragHoverDayIndex !== null}
+        >
+          ${this.variant === "all-day" && !this.labelsHidden ? this.#renderDayNumbers() : ""}
+          ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
 
-            ${this.#sortedEvents.map(
-              ([id, event]) => html`
-                ${keyed(
-                  id,
-                  this.variant === "all-day"
-                    ? html`
-                <all-day-event
-                    event-id=${id}
-                    start=${this.#toEventDateTimeString(event.start)}
-                    end=${this.#toEventDateTimeString(event.end)}
-                    summary=${event.summary}
-                    color=${event.color}
-                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
-                    .renderedDays=${this.days}
-                    .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
-                    .gridRows=${this.#isMonthView ? this.gridRows : 1}
-                    @update=${this.#handleEventUpdate}
-                    @delete=${this.#handleEventDelete}
-                ></all-day-event>
-                `
-                    : html`
-                <timed-event
-                    event-id=${id}
-                    start=${this.#toEventDateTimeString(event.start)}
-                    end=${this.#toEventDateTimeString(event.end)}
-                    summary=${event.summary}
-                    color=${event.color}
-                    ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-                    ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
-                    .renderedDays=${this.days as unknown as never[]}
-                    @update=${this.#handleEventUpdate}
-                    @delete=${this.#handleEventDelete}
-                ></timed-event>
-                `
-                )}
-                `
-            )}
-
+          ${this.#sortedEvents.map(
+            ([id, event]) => html`
+              ${keyed(
+                id,
+                this.variant === "all-day"
+                  ? html`
+                      <all-day-event
+                        event-id=${id}
+                        start=${this.#toEventDateTimeString(event.start)}
+                        end=${this.#toEventDateTimeString(event.end)}
+                        summary=${event.summary}
+                        color=${event.color}
+                        ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                        ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
+                        .renderedDays=${this.days}
+                        .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
+                        .gridRows=${this.#isMonthView ? this.gridRows : 1}
+                        @update=${this.#handleEventUpdate}
+                        @delete=${this.#handleEventDelete}
+                      ></all-day-event>
+                    `
+                  : html`
+                      <timed-event
+                        event-id=${id}
+                        start=${this.#toEventDateTimeString(event.start)}
+                        end=${this.#toEventDateTimeString(event.end)}
+                        summary=${event.summary}
+                        color=${event.color}
+                        ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
+                        ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
+                        .renderedDays=${this.days as unknown as never[]}
+                        @update=${this.#handleEventUpdate}
+                        @delete=${this.#handleEventDelete}
+                      ></timed-event>
+                    `
+              )}
+            `
+          )}
         </section>
+      </div>
     `;
   }
 
@@ -442,6 +445,27 @@ export class CalendarView extends BaseElement {
         </time>
       `;
     });
+  }
+
+  #renderTimeLabels() {
+    return html`
+      <div class="hour-labels flex flex-col flex-0 h-full pointer-events-none -mt-2">
+        ${Array.from({ length: this.hours }, (_, hour) => {
+          const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.locale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          return html`
+            <div class="flex justify-end items-start flex-1">
+              <time class="block text-xs leading-none font-medium whitespace-nowrap pointer-events-none text-end" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
+                ${label}
+              </time>
+            </div>
+          `;
+        })}
+      </div>
+    `;
   }
 
   #renderCurrentTimeIndicator() {
