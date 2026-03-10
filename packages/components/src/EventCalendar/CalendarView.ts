@@ -54,6 +54,7 @@ export class CalendarView extends BaseElement {
   #sectionHeightPx = 0;
   #resizeObserver?: ResizeObserver;
   #resizeSyncRafId: number | null = null;
+  #lastObservedHostHeightPx = 0;
 
   get #sortedEvents(): EventEntry[] {
     const events = this.#eventsForVariant;
@@ -145,7 +146,7 @@ export class CalendarView extends BaseElement {
     ) {
       this.#updateCalendarViewContext();
     }
-    this.#syncSectionHeight();
+    this.#scheduleSectionHeightSync();
   }
 
   protected willUpdate(changedProperties: PropertyValues<this>) {
@@ -265,13 +266,23 @@ export class CalendarView extends BaseElement {
 
   #startResizeObserver() {
     if (typeof ResizeObserver === "undefined") return;
-    this.#resizeObserver = new ResizeObserver(() => this.#scheduleSectionHeightSync());
+    if (this.#resizeObserver) return;
+    this.#resizeObserver = new ResizeObserver((entries) => {
+      if (this.variant !== "all-day") return;
+      const nextHeight = entries[0]?.contentRect.height;
+      if (!Number.isFinite(nextHeight)) return;
+      if (Math.abs(nextHeight - this.#lastObservedHostHeightPx) < 0.5) return;
+      this.#lastObservedHostHeightPx = nextHeight;
+      this.#scheduleSectionHeightSync();
+    });
     this.#resizeObserver.observe(this);
+    this.#scheduleSectionHeightSync();
   }
 
   #stopResizeObserver() {
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = undefined;
+    this.#lastObservedHostHeightPx = 0;
   }
 
   #scheduleSectionHeightSync() {
@@ -291,13 +302,14 @@ export class CalendarView extends BaseElement {
 
   #syncSectionHeight() {
     if (this.variant !== "all-day") return;
+    if (!this.isConnected) return;
     const section = this.renderRoot.querySelector("section");
     if (!section) return;
     const nextHeight = section.getBoundingClientRect().height;
     if (!Number.isFinite(nextHeight)) return;
     if (Math.abs(nextHeight - this.#sectionHeightPx) < 0.5) return;
     this.#sectionHeightPx = nextHeight;
-    this.requestUpdate();
+    if (!this.isUpdatePending) this.requestUpdate();
   }
 
   /** True when all-day and we have more days than columns (multi-row grid). */
