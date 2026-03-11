@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarYearView.js";
 import { localeOptions, type StoryEvent, sampleEvents, timezoneOptions } from "./storyData.js";
+import { calendarCssProps } from "./calendarCssProps.js";
 
 type StoryCalendarYearViewElement = HTMLElement & { events: Map<string, StoryEvent> };
 
@@ -8,6 +9,9 @@ const meta: Meta = {
   title: "CalendarView/CalendarYearView",
   component: "calendar-year-view",
   tags: ["autodocs"],
+  parameters: {
+    cssprops: calendarCssProps,
+  },
   argTypes: {
     year: { control: { type: "number", min: 1900, max: 2100 } },
     weekStart: {

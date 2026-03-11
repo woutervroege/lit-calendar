@@ -6,6 +6,7 @@ import {
   weekSplitEvents,
   type WeekStoryEvent,
 } from "./storyData.js";
+import { calendarCssProps } from "./calendarCssProps.js";
 
 type StoryCalendarWeekViewElement = HTMLElement & { events: Map<string, WeekStoryEvent> };
 
@@ -13,6 +14,9 @@ const meta: Meta = {
   title: "CalendarView/CalendarWeekView",
   component: "calendar-week-view",
   tags: ["autodocs"],
+  parameters: {
+    cssprops: calendarCssProps,
+  },
   argTypes: {
     weekNumber: { control: { type: "number", min: 1, max: 53 } },
     year: { control: { type: "number", min: 1900, max: 2100 } },

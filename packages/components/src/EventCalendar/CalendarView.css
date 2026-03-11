@@ -4,7 +4,7 @@
   height: calc(var(--_lc-host-height-factor, 1) * 100%);
   color-scheme: light dark;
   /* Public API: only these 4 vars are supported. */
-  --_lc-current-day-color: var(--lc-current-day-color, #ff0000);
+  --_lc-current-day-color: var(--lc-higlight-color, #ff0000);
   --_lc-event-height: var(--lc-event-height, 32px);
   --_lc-days-per-row: var(--lc-days-per-row, 7);
   --_lc-grid-base-color: var(--lc-grid-base-color, light-dark(#111, #fff));

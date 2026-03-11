@@ -97,7 +97,7 @@ export class CalendarYearView extends BaseElement {
           font-size: 17px;
           font-weight: 600;
           line-height: 1.2;
-          color: var(--_lc-current-day-color, #ff0000);
+          color: var(--lc-higlight-color, #ff0000);
         }
 
         @container (max-width: 1520px) {
