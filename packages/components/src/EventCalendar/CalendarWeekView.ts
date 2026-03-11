@@ -3,6 +3,7 @@ import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./CalendarView.js";
 import "./CalendarTimeSidebar.js";
+import "./CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import { getLocaleWeekInfo } from "../utils/Locale.js";
 
@@ -101,7 +102,7 @@ export class CalendarWeekView extends BaseElement {
         .week-layout {
           display: grid;
           grid-template-columns: var(--_lc-time-sidebar-width, 56px) 1fr;
-          grid-template-rows: var(--_lc-all-day-row-height, 120px) 1fr;
+          grid-template-rows: var(--_lc-weekday-header-height, 26px) var(--_lc-all-day-row-height, 120px) 1fr;
           column-gap: var(--_lc-time-label-gap, 6px);
           row-gap: 0;
           position: relative;
@@ -115,16 +116,28 @@ export class CalendarWeekView extends BaseElement {
           position: absolute;
           left: 0;
           right: 0;
-          top: var(--_lc-all-day-row-height, 120px);
+          top: calc(
+            var(--_lc-weekday-header-height, 26px) + var(--_lc-all-day-row-height, 120px)
+          );
           border-top: var(--_lc-week-section-divider-width, 3px) solid
             var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
           pointer-events: none;
           z-index: 1;
         }
 
-        .all-day-sidebar-label {
+        .weekday-sidebar-spacer {
           grid-column: 1;
           grid-row: 1;
+        }
+
+        .weekday-header {
+          grid-column: 2;
+          grid-row: 1;
+        }
+
+        .all-day-sidebar-label {
+          grid-column: 1;
+          grid-row: 2;
           display: flex;
           justify-content: flex-end;
           align-items: flex-start;
@@ -140,14 +153,14 @@ export class CalendarWeekView extends BaseElement {
 
         .all-day {
           grid-column: 2;
-          grid-row: 1;
+          grid-row: 2;
           height: 100%;
           min-height: 120px;
         }
 
         .timed-scroll {
           grid-column: 1 / 3;
-          grid-row: 2;
+          grid-row: 3;
           display: block;
           height: calc(100% - var(--_lc-week-timed-top-offset, 8px));
           min-height: 0;
@@ -235,6 +248,13 @@ export class CalendarWeekView extends BaseElement {
 
     return html`
       <div class="week-layout">
+        <div class="weekday-sidebar-spacer" aria-hidden="true"></div>
+        <calendar-weekday-header
+          class="weekday-header"
+          .locale=${this.locale}
+          .weekStart=${this.weekStart}
+          .days=${this.daysPerWeek}
+        ></calendar-weekday-header>
         <div class="all-day-sidebar-label" aria-hidden="true">All-day</div>
         <calendar-view
           class="all-day"

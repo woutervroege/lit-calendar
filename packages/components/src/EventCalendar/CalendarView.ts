@@ -57,9 +57,18 @@ export class CalendarView extends BaseElement {
   #sectionHeightPx = 0;
   #resizeObserver?: ResizeObserver;
   #resizeSyncRafId: number | null = null;
+  #resizeDebounceTimerId: number | null = null;
+  #resizeDebounceDelayMs = 180;
   #lastObservedHostHeightPx = 0;
+  #lastObservedHostWidthPx = 0;
+  #isCompactMonth = false;
+  #lastMaxVisibleRowsByHeight: number | null = null;
   #lastDayLabelTap: { dayIndex: number; timestamp: number } | null = null;
   #lastDayLabelTapMaxDelayMs = 350;
+  #cachedDaysKey = "";
+  #cachedDays: Temporal.PlainDate[] = [];
+  #cachedEventEntriesSource?: EventsMap;
+  #cachedEventEntries: EventEntry[] = [];
 
   get #sortedEvents(): EventEntry[] {
     const events = this.#eventsForVariant;
@@ -195,10 +204,18 @@ export class CalendarView extends BaseElement {
   }
 
   get days(): Temporal.PlainDate[] {
+    const startDate = this.startDate;
+    const cacheKey = `${startDate.toString()}|${this.#days}`;
+    if (cacheKey === this.#cachedDaysKey) {
+      return this.#cachedDays;
+    }
+
     const values: Temporal.PlainDate[] = [];
     for (let i = 0; i < this.#days; i++) {
-      values.push(this.startDate.add({ days: i }));
+      values.push(startDate.add({ days: i }));
     }
+    this.#cachedDaysKey = cacheKey;
+    this.#cachedDays = values;
     return values;
   }
 
@@ -281,11 +298,15 @@ export class CalendarView extends BaseElement {
     if (this.#resizeObserver) return;
     this.#resizeObserver = new ResizeObserver((entries) => {
       if (this.variant !== "all-day") return;
+      const nextWidth = entries[0]?.contentRect.width;
+      if (Number.isFinite(nextWidth) && Math.abs(nextWidth - this.#lastObservedHostWidthPx) >= 0.5) {
+        this.#lastObservedHostWidthPx = nextWidth;
+      }
       const nextHeight = entries[0]?.contentRect.height;
-      if (!Number.isFinite(nextHeight)) return;
-      if (Math.abs(nextHeight - this.#lastObservedHostHeightPx) < 0.5) return;
-      this.#lastObservedHostHeightPx = nextHeight;
-      this.#scheduleSectionHeightSync();
+      if (Number.isFinite(nextHeight) && Math.abs(nextHeight - this.#lastObservedHostHeightPx) >= 0.5) {
+        this.#lastObservedHostHeightPx = nextHeight;
+      }
+      this.#scheduleDebouncedResizeSync();
     });
     this.#resizeObserver.observe(this);
     this.#scheduleSectionHeightSync();
@@ -295,6 +316,27 @@ export class CalendarView extends BaseElement {
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = undefined;
     this.#lastObservedHostHeightPx = 0;
+    this.#lastObservedHostWidthPx = 0;
+    this.#isCompactMonth = false;
+  }
+
+  #scheduleDebouncedResizeSync() {
+    if (typeof window === "undefined") return;
+    if (this.#resizeDebounceTimerId !== null) {
+      window.clearTimeout(this.#resizeDebounceTimerId);
+    }
+    this.#resizeDebounceTimerId = window.setTimeout(() => {
+      this.#resizeDebounceTimerId = null;
+      this.#syncCompactMonthState(this.#lastObservedHostWidthPx);
+      this.#scheduleSectionHeightSync();
+    }, this.#resizeDebounceDelayMs);
+  }
+
+  #cancelDebouncedResizeSync() {
+    if (typeof window === "undefined") return;
+    if (this.#resizeDebounceTimerId === null) return;
+    window.clearTimeout(this.#resizeDebounceTimerId);
+    this.#resizeDebounceTimerId = null;
   }
 
   #scheduleSectionHeightSync() {
@@ -307,6 +349,7 @@ export class CalendarView extends BaseElement {
   }
 
   #cancelScheduledResizeSync() {
+    this.#cancelDebouncedResizeSync();
     if (this.#resizeSyncRafId === null || typeof cancelAnimationFrame === "undefined") return;
     cancelAnimationFrame(this.#resizeSyncRafId);
     this.#resizeSyncRafId = null;
@@ -320,13 +363,48 @@ export class CalendarView extends BaseElement {
     const nextHeight = section.getBoundingClientRect().height;
     if (!Number.isFinite(nextHeight)) return;
     if (Math.abs(nextHeight - this.#sectionHeightPx) < 0.5) return;
+    const previousMaxVisibleRows = this.#lastMaxVisibleRowsByHeight;
     this.#sectionHeightPx = nextHeight;
+    const nextMaxVisibleRows = this.#getMaxRowsPerCellByHeight();
+    this.#lastMaxVisibleRowsByHeight = nextMaxVisibleRows;
+    if (previousMaxVisibleRows === nextMaxVisibleRows) return;
     if (!this.isUpdatePending) this.requestUpdate();
   }
 
   /** True when all-day and we have more days than columns (multi-row grid). */
   get #isMonthView(): boolean {
     return Boolean(this.variant === "all-day" && this.#days > this.daysPerRow);
+  }
+
+  get #isCompactMonthView(): boolean {
+    return this.#isMonthView && this.#isCompactMonth;
+  }
+
+  #getCompactMonthMaxInlineSizePx(): number {
+    const rawValue = getComputedStyle(this)
+      .getPropertyValue("--_lc-compact-month-max-inline-size")
+      .trim();
+    const parsedValue = parseFloat(rawValue);
+    return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 480;
+  }
+
+  #syncCompactMonthState(observedWidth?: number) {
+    if (!this.#isMonthView) {
+      if (!this.#isCompactMonth) return;
+      this.#isCompactMonth = false;
+      this.requestUpdate();
+      return;
+    }
+
+    const width =
+      observedWidth ??
+      (this.#lastObservedHostWidthPx ||
+        this.getBoundingClientRect().width ||
+        Number.POSITIVE_INFINITY);
+    const shouldBeCompact = width <= this.#getCompactMonthMaxInlineSizePx();
+    if (shouldBeCompact === this.#isCompactMonth) return;
+    this.#isCompactMonth = shouldBeCompact;
+    this.requestUpdate();
   }
 
   get gridRows(): number {
@@ -355,6 +433,7 @@ export class CalendarView extends BaseElement {
   render() {
     const hoverStyle: Record<string, string> = {};
     const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
+    const compactMonthView = this.#isCompactMonthView;
 
     if (this.#dragHoverDayIndex !== null) {
       if (this.variant === "all-day") {
@@ -409,7 +488,7 @@ export class CalendarView extends BaseElement {
             `
           : ""}
         <section
-          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
+          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
         >
@@ -445,7 +524,7 @@ export class CalendarView extends BaseElement {
                 summary=${event.summary}
                 color=${event.color}
                 ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-                ?inert=${this.#optimisticallyDeletingEventIds.has(id)}
+                ?inert=${this.#optimisticallyDeletingEventIds.has(id) || this.#isCompactMonthView}
                 .renderedDays=${this.days}
                 .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                 .gridRows=${this.#isMonthView ? this.gridRows : 1}
@@ -560,10 +639,20 @@ export class CalendarView extends BaseElement {
       .filter((cell) => cell !== null);
   }
 
+  #isOutsideVisibleMonth(day: Temporal.PlainDate): boolean {
+    if (!this.#isMonthView) return false;
+    const days = this.days;
+    if (!days.length) return false;
+    const anchorDay = days[Math.floor(days.length / 2)];
+    if (!anchorDay) return false;
+    return day.month !== anchorDay.month || day.year !== anchorDay.year;
+  }
+
   #renderAllDayOverflowIndicators(layout: {
     maxVisibleRows: number;
     hiddenCountsByDay: Map<number, number>;
   }) {
+    if (this.#isCompactMonthView) return "";
     const dayCount = this.days.length;
     if (!dayCount || this.#days <= 0) return "";
     if (layout.maxVisibleRows < 0) return "";
@@ -652,10 +741,11 @@ export class CalendarView extends BaseElement {
     const right = ((cols - colIndex - 1) / cols) * 100;
     const left = (colIndex / cols) * 100;
     const top = this.#isMonthView ? (rowIndex / this.gridRows) * 100 : 0;
+    const compactMonthView = this.#isCompactMonthView;
     const previousDay = dayIndex > 0 ? days[dayIndex - 1] : null;
     const startsNewMonth =
       previousDay === null || previousDay.month !== day.month || previousDay.year !== day.year;
-    const monthPrefix = startsNewMonth
+    const monthPrefix = startsNewMonth && !compactMonthView
       ? `${monthFormatter.format(new Date(Date.UTC(day.year, day.month - 1, day.day)))} `
       : "";
     const label = `${monthPrefix}${dayFormatter.format(day.day)}`;
@@ -663,20 +753,34 @@ export class CalendarView extends BaseElement {
     const fullDateLabel = fullDateFormatter.format(
       new Date(Date.UTC(day.year, day.month - 1, day.day))
     );
+    const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
+    const compactColCenter = ((colIndex + 0.5) / cols) * 100;
+    const compactRtlColCenter = ((cols - colIndex - 0.5) / cols) * 100;
 
     return html`
       <button
         type="button"
-        class="day-label absolute p-1 text-sm mt-2 z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none ${
+        class="day-label absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none ${
+          compactMonthView ? "" : "mt-2"
+        } ${
           monthPrefix ? "min-w-6 px-2" : "w-6"
         } h-6 ${
           isCurrentDay ? "current-day" : ""
+        } ${
+          outsideVisibleMonth ? "outside-month-day-label" : ""
         }"
         aria-label=${fullDateLabel}
         aria-current=${isCurrentDay ? "date" : undefined}
         style=${styleMap({
-          [isRtl ? "right" : "left"]: `calc(${isRtl ? right : left}% + 6px)`,
-          top: `${top}%`,
+          [isRtl ? "right" : "left"]: compactMonthView
+            ? `${isRtl ? compactRtlColCenter : compactColCenter}%`
+            : `calc(${isRtl ? right : left}% + 6px)`,
+          top: compactMonthView ? `calc(${top}% + 6px)` : `${top}%`,
+          transform: compactMonthView
+            ? isRtl
+              ? "translateX(50%)"
+              : "translateX(-50%)"
+            : "",
         })}
         @dblclick=${(event: MouseEvent) => this.#handleDayLabelDoubleClick(day, dayIndex, event)}
         @pointerup=${(event: PointerEvent) => this.#handleDayLabelPointerUp(day, dayIndex, event)}
@@ -858,7 +962,12 @@ export class CalendarView extends BaseElement {
   }
 
   get #eventsAsEntries(): EventEntry[] {
-    return Array.from(this.events?.entries() ?? []);
+    if (this.events === this.#cachedEventEntriesSource) {
+      return this.#cachedEventEntries;
+    }
+    this.#cachedEventEntriesSource = this.events;
+    this.#cachedEventEntries = Array.from(this.events?.entries() ?? []);
+    return this.#cachedEventEntries;
   }
 
   #getAllDayOverflowLayout(): { maxVisibleRows: number; hiddenCountsByDay: Map<number, number> } {
@@ -904,21 +1013,25 @@ export class CalendarView extends BaseElement {
   }
 
   #getAllDayEventHeightPx(): number {
-    const value = getComputedStyle(this).getPropertyValue("--_lc-event-height").trim();
-    const parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 32;
+    return this.#readSectionCssNumber("--_lc-event-height", 32);
   }
 
   #getAllDayDayNumberOffsetPx(): number {
     if (this.labelsHidden) return 0;
-    const value = getComputedStyle(this).getPropertyValue("--_lc-all-day-day-number-space").trim();
-    const parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 36;
+    return this.#readSectionCssNumber("--_lc-all-day-day-number-space", 36);
   }
 
   #getAllDayOverflowIndicatorHeightPx(): number {
     // Matches text-xs + leading-tight with single-line label.
     return 16;
+  }
+
+  #readSectionCssNumber(propertyName: string, fallback: number): number {
+    const section = this.renderRoot.querySelector("section");
+    const styleTarget = section ?? this;
+    const rawValue = getComputedStyle(styleTarget).getPropertyValue(propertyName).trim();
+    const parsedValue = parseFloat(rawValue);
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
   }
 
   #computeHiddenAllDayCountsByDay(maxVisibleRows: number): Map<number, number> {
@@ -1029,6 +1142,12 @@ export class CalendarView extends BaseElement {
 
   protected willUpdate(changedProperties: PropertyValues<this>) {
     super.willUpdate(changedProperties);
+    if (
+      changedProperties.has("days") ||
+      changedProperties.has("variant")
+    ) {
+      this.#syncCompactMonthState();
+    }
     if (!changedProperties.has("events")) {
       if (
         changedProperties.has("variant") ||

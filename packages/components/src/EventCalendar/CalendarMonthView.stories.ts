@@ -6,6 +6,7 @@ import {
   timezoneOptions,
   type StoryEvent,
 } from "./storyData.js";
+import { calendarCssProps } from "./calendarCssProps.js";
 
 type StoryCalendarMonthViewElement = HTMLElement & { events: Map<string, StoryEvent> };
 
@@ -13,6 +14,9 @@ const meta: Meta = {
   title: "CalendarView/CalendarMonthView",
   component: "calendar-month-view",
   tags: ["autodocs"],
+  parameters: {
+    cssprops: calendarCssProps,
+  },
   argTypes: {
     month: { control: { type: "number", min: 1, max: 12 } },
     year: { control: { type: "number", min: 1900, max: 2100 } },

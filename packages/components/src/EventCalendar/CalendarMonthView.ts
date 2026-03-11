@@ -1,7 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { html } from "lit";
+import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./CalendarView.js";
+import "./CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import { getLocaleWeekInfo } from "../utils/Locale.js";
 
@@ -67,6 +68,32 @@ export class CalendarMonthView extends BaseElement {
     } as const;
   }
 
+  static get styles() {
+    return [
+      ...BaseElement.styles,
+      css`
+        :host {
+          display: block;
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+        }
+
+        .month-layout {
+          display: grid;
+          grid-template-rows: auto 1fr;
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+        }
+
+        .month-grid {
+          min-height: 0;
+        }
+      `,
+    ];
+  }
+
   get startDate(): Temporal.PlainDate {
     const firstOfMonth = Temporal.PlainDate.from({
       year: this.year,
@@ -93,18 +120,26 @@ export class CalendarMonthView extends BaseElement {
 
   render() {
     return html`
-      <calendar-view
-        start-date=${this.startDate.toString()}
-        days="42"
-        variant="all-day"
-        .events=${this.events}
-        .locale=${this.locale}
-        .timezone=${this.timezone}
-        .currentTime=${this.currentTime}
-        .labelsHidden=${false}
-        @event-modified=${this.#reemit}
-        @event-deleted=${this.#reemit}
-      ></calendar-view>
+      <div class="month-layout">
+        <calendar-weekday-header
+          .locale=${this.locale}
+          .weekStart=${this.weekStart}
+          days="7"
+        ></calendar-weekday-header>
+        <calendar-view
+          class="month-grid"
+          start-date=${this.startDate.toString()}
+          days="42"
+          variant="all-day"
+          .events=${this.events}
+          .locale=${this.locale}
+          .timezone=${this.timezone}
+          .currentTime=${this.currentTime}
+          .labelsHidden=${false}
+          @event-modified=${this.#reemit}
+          @event-deleted=${this.#reemit}
+        ></calendar-view>
+      </div>
     `;
   }
 

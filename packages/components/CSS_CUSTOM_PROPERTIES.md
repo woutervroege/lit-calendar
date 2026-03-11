@@ -7,7 +7,7 @@ This package uses the following convention:
 
 ## CalendarView (`calendar-view`)
 
-- `--lc-current-day-color`
+- `--lc-higlight-color`
 - `--lc-event-height`
 - `--lc-days-per-row`
 - `--lc-grid-base-color`
