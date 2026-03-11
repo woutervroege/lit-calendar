@@ -1,60 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarMonthView.js";
+import {
+  localeOptions,
+  sampleEvents,
+  timezoneOptions,
+  type StoryEvent,
+} from "./storyData.js";
 
-type StoryEvent = {
-  uid: string;
-  recurrenceId?: string;
-  start: string;
-  end: string;
-  summary: string;
-  color: string;
-};
-
-type StoryEventEntry = [id: string, event: StoryEvent];
 type StoryCalendarMonthViewElement = HTMLElement & { events: Map<string, StoryEvent> };
-
-const sampleEvents: StoryEventEntry[] = [
-  [
-    "event-meeting-20250101",
-    {
-      uid: "meeting@example.test",
-      start: "2025-01-01",
-      end: "2025-01-03",
-      summary: "Kickoff",
-      color: "#4564B5",
-    },
-  ],
-  [
-    "event-workshop-20250115",
-    {
-      uid: "workshop@example.test",
-      start: "2025-01-15",
-      end: "2025-01-18",
-      summary: "Workshop",
-      color: "#63e657",
-    },
-  ],
-];
-
-const timezoneOptions =
-  typeof Intl.supportedValuesOf === "function"
-    ? Intl.supportedValuesOf("timeZone")
-    : ["UTC", "Europe/Amsterdam", "America/New_York", "Asia/Tokyo"];
-
-const localeOptions = [
-  "en-US",
-  "en-GB",
-  "nl-NL",
-  "de-DE",
-  "fr-FR",
-  "es-ES",
-  "it-IT",
-  "pt-BR",
-  "ja-JP",
-  "zh-CN",
-  "ar",
-  "he",
-];
 
 const meta: Meta = {
   title: "CalendarView/CalendarMonthView",

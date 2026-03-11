@@ -1,81 +1,13 @@
-import { Temporal } from "@js-temporal/polyfill";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarWeekView.js";
+import {
+  localeOptions,
+  timezoneOptions,
+  weekSplitEvents,
+  type WeekStoryEvent,
+} from "./storyData.js";
 
-type StoryEvent = {
-  uid: string;
-  recurrenceId?: string;
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  summary: string;
-  color: string;
-};
-
-type StoryEventEntry = [id: string, event: StoryEvent];
-type StoryCalendarWeekViewElement = HTMLElement & { events: Map<string, StoryEvent> };
-
-const sampleEvents: StoryEventEntry[] = [
-  [
-    "event-all-day-offsite",
-    {
-      uid: "offsite@example.test",
-      start: Temporal.PlainDate.from("2025-01-06"),
-      end: Temporal.PlainDate.from("2025-01-08"),
-      summary: "Offsite",
-      color: "#4564B5",
-    },
-  ],
-  [
-    "event-all-day-workshop",
-    {
-      uid: "workshop@example.test",
-      start: Temporal.PlainDate.from("2025-01-09"),
-      end: Temporal.PlainDate.from("2025-01-10"),
-      summary: "Workshop",
-      color: "#63e657",
-    },
-  ],
-  [
-    "event-timed-plain",
-    {
-      uid: "timed-plain@example.test",
-      start: Temporal.PlainDateTime.from("2025-01-07T10:00:00"),
-      end: Temporal.PlainDateTime.from("2025-01-07T11:30:00"),
-      summary: "Design Review",
-      color: "#ff0000",
-    },
-  ],
-  [
-    "event-timed-zoned",
-    {
-      uid: "timed-zoned@example.test",
-      start: Temporal.ZonedDateTime.from("2025-01-08T14:00:00+01:00[Europe/Amsterdam]"),
-      end: Temporal.ZonedDateTime.from("2025-01-08T15:00:00+01:00[Europe/Amsterdam]"),
-      summary: "Amsterdam Call",
-      color: "#9f3cfa",
-    },
-  ],
-];
-
-const timezoneOptions =
-  typeof Intl.supportedValuesOf === "function"
-    ? Intl.supportedValuesOf("timeZone")
-    : ["UTC", "Europe/Amsterdam", "America/New_York", "Asia/Tokyo"];
-
-const localeOptions = [
-  "en-US",
-  "en-GB",
-  "nl-NL",
-  "de-DE",
-  "fr-FR",
-  "es-ES",
-  "it-IT",
-  "pt-BR",
-  "ja-JP",
-  "zh-CN",
-  "ar",
-  "he",
-];
+type StoryCalendarWeekViewElement = HTMLElement & { events: Map<string, WeekStoryEvent> };
 
 const meta: Meta = {
   title: "CalendarView/CalendarWeekView",
@@ -106,7 +38,7 @@ const meta: Meta = {
     locale: "en-US",
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-07T13:00:00",
-    events: sampleEvents,
+    events: weekSplitEvents,
   },
   render: (args) => {
     const el = document.createElement("calendar-week-view") as StoryCalendarWeekViewElement;
@@ -126,7 +58,7 @@ const meta: Meta = {
     if (args.currentTime) {
       el.setAttribute("current-time", args.currentTime);
     }
-    const entries = Array.isArray(args.events) ? args.events : sampleEvents;
+    const entries = Array.isArray(args.events) ? args.events : weekSplitEvents;
     el.events = new Map(entries);
     return el;
   },

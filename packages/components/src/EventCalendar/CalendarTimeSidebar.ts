@@ -66,6 +66,10 @@ export class CalendarTimeSidebar extends BaseElement {
           margin-top: -8px;
         }
 
+        :host([show-all-day-label]) .hour-labels {
+          margin-top: var(--_lc-week-timed-top-offset, 8px);
+        }
+
         .hour-label-row {
           flex: 1;
           display: flex;
@@ -97,10 +101,13 @@ export class CalendarTimeSidebar extends BaseElement {
         ${this.showAllDayLabel ? html`<div class="all-day-label">${this.allDayLabel}</div>` : ""}
         <div class="hour-labels">
           ${Array.from({ length: clampedHours }, (_, hour) => {
-            const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.#resolvedLocale, {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(
+              this.#resolvedLocale,
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              }
+            );
             return html`
               <div class="hour-label-row">
                 <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>

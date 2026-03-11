@@ -124,6 +124,7 @@ export class CalendarWeekView extends BaseElement {
           grid-row: 2;
           height: 100%;
           min-height: 0;
+          margin-top: var(--_lc-week-timed-top-offset, 8px);
         }
       `,
     ];
@@ -172,10 +173,7 @@ export class CalendarWeekView extends BaseElement {
     );
   }
 
-  #startOfWeekFor(
-    date: Temporal.PlainDate,
-    weekStart: "monday" | "sunday"
-  ): Temporal.PlainDate {
+  #startOfWeekFor(date: Temporal.PlainDate, weekStart: "monday" | "sunday"): Temporal.PlainDate {
     const weekdayOffset = weekStart === "monday" ? date.dayOfWeek - 1 : date.dayOfWeek % 7;
     return date.subtract({ days: weekdayOffset });
   }
