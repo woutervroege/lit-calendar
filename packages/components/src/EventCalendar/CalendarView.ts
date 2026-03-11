@@ -15,7 +15,7 @@ import {
 } from "../context/CalendarViewContext.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
-import { getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
+import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 
 type EventInput = {
   /**
@@ -575,6 +575,7 @@ export class CalendarView extends BaseElement {
     const days = this.days;
     const totalDays = days.length;
     const currentDay = this.currentTime.toPlainDate();
+    const isRtl = getLocaleDirection(this.locale) === "rtl";
     const monthFormatter = new Intl.DateTimeFormat(this.locale, { month: "short" });
     const dayFormatter = new Intl.NumberFormat(this.locale);
 
@@ -584,6 +585,7 @@ export class CalendarView extends BaseElement {
       const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
       const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
       const right = ((cols - colIndex - 1) / cols) * 100;
+      const left = (colIndex / cols) * 100;
       const top = this.#isMonthView ? (rowIndex / this.gridRows) * 100 : 0;
       const previousDay = dayIndex > 0 ? days[dayIndex - 1] : null;
       const startsNewMonth =
@@ -596,12 +598,14 @@ export class CalendarView extends BaseElement {
 
       return html`
         <time
-          class="absolute p-1 text-sm mt-2 z-0 font-medium rounded-full flex justify-center items-center ${monthPrefix ? "min-w-6 px-2" : "w-6"} h-6 ${
+          class="absolute p-1 text-sm mt-2 z-0 font-medium rounded-full flex justify-center items-center ${
+            monthPrefix ? "min-w-6 px-2" : "w-6"
+          } h-6 ${
             isCurrentDay ? "current-day" : ""
           }"
           datetime=${day.toString()}
           style=${styleMap({
-            right: `calc(${right}% + 6px)`,
+            [isRtl ? "right" : "left"]: `calc(${isRtl ? right : left}% + 6px)`,
             top: `${top}%`,
           })}
         >
