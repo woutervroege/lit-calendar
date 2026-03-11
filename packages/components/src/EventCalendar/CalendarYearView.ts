@@ -25,7 +25,6 @@ function isWeekdayNumber(value: number | undefined): value is WeekdayNumber {
 export class CalendarYearView extends BaseElement {
   year = Temporal.Now.plainDateISO().year;
   weekStart?: WeekdayNumber;
-  monthsPerRow = 3;
   declare events?: EventsMap;
   locale?: string;
   timezone?: string;
@@ -45,19 +44,6 @@ export class CalendarYearView extends BaseElement {
             return isWeekdayNumber(day) ? day : undefined;
           },
           toAttribute: (v: number | undefined): string | null => (v ? String(v) : null),
-        },
-      },
-      monthsPerRow: {
-        type: Number,
-        attribute: "months-per-row",
-        reflect: true,
-        converter: {
-          fromAttribute: (v: string | null): number => {
-            const n = Number(v);
-            if (!Number.isFinite(n)) return 3;
-            return Math.max(1, Math.min(6, Math.floor(n)));
-          },
-          toAttribute: (v: number): string => String(v),
         },
       },
       events: {
@@ -87,10 +73,7 @@ export class CalendarYearView extends BaseElement {
 
         .year-grid {
           display: grid;
-          grid-template-columns: repeat(
-            var(--_lc-year-grid-effective-columns, var(--_lc-year-grid-columns, 3)),
-            minmax(0, 1fr)
-          );
+          grid-template-columns: repeat(var(--_lc-year-grid-effective-columns, 4), minmax(0, 1fr));
           gap: var(--_lc-year-grid-gap, 40px);
           width: 100%;
           height: 100%;
@@ -112,13 +95,13 @@ export class CalendarYearView extends BaseElement {
           color: var(--_lc-current-day-color, #ff0000);
         }
 
-        @container (max-width: 1280px) {
+        @container (max-width: 1520px) {
           .year-grid {
             --_lc-year-grid-effective-columns: 3;
           }
         }
 
-        @container (max-width: 980px) {
+        @container (max-width: 1040px) {
           .year-grid {
             --_lc-year-grid-effective-columns: 2;
           }
@@ -129,7 +112,7 @@ export class CalendarYearView extends BaseElement {
           }
         }
 
-        @container (max-width: 640px) {
+        @container (max-width: 520px) {
           .year-grid {
             --_lc-year-grid-effective-columns: 1;
           }
@@ -161,9 +144,8 @@ export class CalendarYearView extends BaseElement {
   }
 
   render() {
-    const columns = this.monthsPerRow;
     return html`
-      <div class="year-grid" style=${`--_lc-year-grid-columns: ${columns};`}>
+      <div class="year-grid">
         ${Array.from({ length: 12 }, (_, index) => index + 1).map(
           (month) => html`
             <section class="month-card">

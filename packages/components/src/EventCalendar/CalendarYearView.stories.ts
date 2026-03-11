@@ -30,10 +30,6 @@ const meta: Meta = {
       },
       options: [1, 2, 3, 4, 5, 6, 7],
     },
-    monthsPerRow: {
-      control: { type: "number", min: 1, max: 6 },
-      description: "Number of month cards per row",
-    },
     locale: {
       control: "select",
       options: localeOptions,
@@ -49,7 +45,6 @@ const meta: Meta = {
   args: {
     year: 2025,
     weekStart: 1,
-    monthsPerRow: 3,
     locale: "en-US",
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-15T14:30:00",
@@ -63,9 +58,6 @@ const meta: Meta = {
     el.setAttribute("year", String(args.year));
     if (typeof args.weekStart === "number") {
       el.setAttribute("week-start", String(args.weekStart));
-    }
-    if (typeof args.monthsPerRow === "number") {
-      el.setAttribute("months-per-row", String(args.monthsPerRow));
     }
     if (args.locale) {
       el.setAttribute("locale", args.locale);
@@ -87,9 +79,3 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {};
-
-export const FourColumns: Story = {
-  args: {
-    monthsPerRow: 4,
-  },
-};
