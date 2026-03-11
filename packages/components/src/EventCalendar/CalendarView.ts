@@ -8,6 +8,7 @@ import "../TimedEvent/TimedEvent.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import componentStyle from "./CalendarView.css?inline";
 import "../TimedEvent/AllDayEvent.js";
+import "./CalendarTimeSidebar.js";
 import {
   type CalendarViewContextValue,
   calendarViewContext,
@@ -383,7 +384,14 @@ export class CalendarView extends BaseElement {
 
     return html`
       <div class="calendar-layout flex h-full min-h-0 ${showTimedLabels ? "with-time-labels" : ""}">
-        ${showTimedLabels ? this.#renderTimeLabels() : ""}
+        ${showTimedLabels
+          ? html`
+              <calendar-time-sidebar
+                .locale=${this.locale}
+                .hours=${this.hours}
+              ></calendar-time-sidebar>
+            `
+          : ""}
         <section
           class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""}"
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
@@ -552,27 +560,6 @@ export class CalendarView extends BaseElement {
         </time>
       `;
     });
-  }
-
-  #renderTimeLabels() {
-    return html`
-      <div class="hour-labels flex flex-col flex-0 h-full pointer-events-none">
-        ${Array.from({ length: this.hours }, (_, hour) => {
-          const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.locale, {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          return html`
-            <div class="flex justify-end items-start flex-1">
-              <time class="block text-xs leading-none font-medium whitespace-nowrap pointer-events-none text-end" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
-                ${label}
-              </time>
-            </div>
-          `;
-        })}
-      </div>
-    `;
   }
 
   #renderCurrentTimeIndicator() {

@@ -89,9 +89,22 @@ export class CalendarWeekView extends BaseElement {
           grid-template-rows: var(--_lc-all-day-row-height, 120px) 1fr;
           column-gap: var(--_lc-time-label-gap, 6px);
           row-gap: 0;
+          position: relative;
           width: 100%;
           height: 100%;
           min-height: 0;
+        }
+
+        .week-layout::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: var(--_lc-all-day-row-height, 120px);
+          border-top: var(--_lc-week-section-divider-width, 3px) solid
+            var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
+          pointer-events: none;
+          z-index: 1;
         }
 
         .sidebar {
@@ -111,8 +124,6 @@ export class CalendarWeekView extends BaseElement {
           grid-row: 2;
           height: 100%;
           min-height: 0;
-          border-top: var(--_lc-week-section-divider-width, 3px) solid
-            var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
         }
       `,
     ];
@@ -182,7 +193,12 @@ export class CalendarWeekView extends BaseElement {
   render() {
     return html`
       <div class="week-layout">
-        <calendar-time-sidebar class="sidebar" .locale=${this.locale}></calendar-time-sidebar>
+        <calendar-time-sidebar
+          class="sidebar"
+          .locale=${this.locale}
+          .hours=${24}
+          .showAllDayLabel=${true}
+        ></calendar-time-sidebar>
         <calendar-view
           class="all-day"
           start-date=${this.startDate.toString()}

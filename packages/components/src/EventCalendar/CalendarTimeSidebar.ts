@@ -6,10 +6,16 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 @customElement("calendar-time-sidebar")
 export class CalendarTimeSidebar extends BaseElement {
   locale?: string;
+  hours = 24;
+  showAllDayLabel = false;
+  allDayLabel = "All-day";
 
   static get properties() {
     return {
       locale: { type: String },
+      hours: { type: Number },
+      showAllDayLabel: { type: Boolean, attribute: "show-all-day-label", reflect: true },
+      allDayLabel: { type: String, attribute: "all-day-label" },
     } as const;
   }
 
@@ -18,16 +24,24 @@ export class CalendarTimeSidebar extends BaseElement {
       ...BaseElement.styles,
       css`
         :host {
-          display: grid;
-          grid-template-rows: var(--_lc-all-day-row-height, 120px) 1fr;
-          row-gap: 0;
-          width: var(--_lc-time-sidebar-width, 56px);
+          display: block;
+          width: var(--_lc-time-sidebar-width, auto);
+          height: 100%;
           min-height: 0;
           color: var(--_lc-grid-line-day-color, light-dark(rgb(15 23 42 / 72%), rgb(255 255 255 / 72%)));
         }
 
+        .container {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+        }
+
         .all-day-label {
           display: flex;
+          flex: 0 0 var(--_lc-all-day-row-height, 120px);
           justify-content: flex-end;
           align-items: flex-start;
           padding-top: 8px;
@@ -42,11 +56,14 @@ export class CalendarTimeSidebar extends BaseElement {
         .hour-labels {
           display: flex;
           flex-direction: column;
+          flex: 1;
           min-height: 0;
-          margin-top: -8px;
+          margin-top: 0;
           pointer-events: none;
-          border-top: var(--_lc-week-section-divider-width, 3px) solid
-            var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
+        }
+
+        :host(:not([show-all-day-label])) .hour-labels {
+          margin-top: -8px;
         }
 
         .hour-label-row {
@@ -73,22 +90,26 @@ export class CalendarTimeSidebar extends BaseElement {
   }
 
   render() {
+    const clampedHours = Math.max(0, Math.floor(this.hours));
+
     return html`
-      <div class="all-day-label">All-day</div>
-      <div class="hour-labels">
-        ${Array.from({ length: 24 }, (_, hour) => {
-          const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.#resolvedLocale, {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          return html`
-            <div class="hour-label-row">
-              <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
-                ${label}
-              </time>
-            </div>
-          `;
-        })}
+      <div class="container">
+        ${this.showAllDayLabel ? html`<div class="all-day-label">${this.allDayLabel}</div>` : ""}
+        <div class="hour-labels">
+          ${Array.from({ length: clampedHours }, (_, hour) => {
+            const label = Temporal.PlainTime.from({ hour, minute: 0 }).toLocaleString(this.#resolvedLocale, {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            return html`
+              <div class="hour-label-row">
+                <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>
+                  ${label}
+                </time>
+              </div>
+            `;
+          })}
+        </div>
       </div>
     `;
   }

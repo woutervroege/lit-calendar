@@ -140,6 +140,7 @@ export const FullWeek: Story = {};
 
 export const WorkWeek: Story = {
   args: {
-    daysPerWeek: 5,
+    daysPerWeek: 7,
+    locale: "ar"
   },
 };
