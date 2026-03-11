@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { css, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./CalendarView.js";
+import "./CalendarTimeSidebar.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 
 type EventInput = {
@@ -83,22 +84,35 @@ export class CalendarWeekView extends BaseElement {
         }
 
         .week-layout {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: var(--_lc-time-sidebar-width, 56px) 1fr;
+          grid-template-rows: var(--_lc-all-day-row-height, 120px) 1fr;
+          column-gap: var(--_lc-time-label-gap, 6px);
+          row-gap: 0;
           width: 100%;
           height: 100%;
           min-height: 0;
-          gap: 8px;
+        }
+
+        .sidebar {
+          grid-column: 1;
+          grid-row: 1 / 3;
         }
 
         .all-day {
-          flex: 0 0 120px;
+          grid-column: 2;
+          grid-row: 1;
+          height: 100%;
           min-height: 120px;
         }
 
         .timed {
-          flex: 1;
+          grid-column: 2;
+          grid-row: 2;
+          height: 100%;
           min-height: 0;
+          border-top: var(--_lc-week-section-divider-width, 3px) solid
+            var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
         }
       `,
     ];
@@ -168,6 +182,7 @@ export class CalendarWeekView extends BaseElement {
   render() {
     return html`
       <div class="week-layout">
+        <calendar-time-sidebar class="sidebar" .locale=${this.locale}></calendar-time-sidebar>
         <calendar-view
           class="all-day"
           start-date=${this.startDate.toString()}
@@ -192,7 +207,7 @@ export class CalendarWeekView extends BaseElement {
           .timezone=${this.timezone}
           .currentTime=${this.currentTime}
           .snapInterval=${this.snapInterval}
-          .labelsHidden=${false}
+          .labelsHidden=${true}
           @event-modified=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-view>
