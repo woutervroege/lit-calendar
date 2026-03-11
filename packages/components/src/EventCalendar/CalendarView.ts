@@ -48,6 +48,7 @@ export class CalendarView extends BaseElement {
   declare events?: EventsMap;
   variant: "timed" | "all-day" = "timed";
   labelsHidden = false;
+  rtl = false;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
@@ -106,6 +107,7 @@ export class CalendarView extends BaseElement {
         },
       },
       labelsHidden: { type: Boolean, attribute: "labels-hidden", reflect: true },
+      rtl: { type: Boolean, reflect: true },
       locale: { type: String },
       timezone: { type: String },
       snapInterval: { type: Number, attribute: "snap-interval" },
@@ -431,7 +433,7 @@ export class CalendarView extends BaseElement {
   }
 
   get #isRtl(): boolean {
-    return getLocaleDirection(this.locale) === "rtl";
+    return this.rtl || getLocaleDirection(this.locale) === "rtl";
   }
 
   #toVisualColumnIndex(columnIndex: number, columnCount: number): number {
@@ -501,7 +503,7 @@ export class CalendarView extends BaseElement {
           : ""}
         <section
           class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
-          dir=${getLocaleDirection(this.locale)}
+          dir=${this.#isRtl ? "rtl" : "ltr"}
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
         >
@@ -753,7 +755,6 @@ export class CalendarView extends BaseElement {
     const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
     const visualColIndex = this.#toVisualColumnIndex(colIndex, cols);
     const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
-    const left = (visualColIndex / cols) * 100;
     const top = this.#isMonthView ? (rowIndex / this.gridRows) * 100 : 0;
     const compactMonthView = this.#isCompactMonthView;
     const previousDay = dayIndex > 0 ? days[dayIndex - 1] : null;
@@ -769,6 +770,17 @@ export class CalendarView extends BaseElement {
     );
     const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
     const compactColCenter = ((visualColIndex + 0.5) / cols) * 100;
+    const inlineStart = (colIndex / cols) * 100;
+    const startOffsetStyle = compactMonthView
+      ? {
+          left: `${compactColCenter}%`,
+          top: `calc(${top}% + 6px)`,
+          transform: "translateX(-50%)",
+        }
+      : {
+          "inset-inline-start": `calc(${inlineStart}% + 6px)`,
+          top: `${top}%`,
+        };
 
     return html`
       <button
@@ -784,11 +796,7 @@ export class CalendarView extends BaseElement {
         }"
         aria-label=${fullDateLabel}
         aria-current=${isCurrentDay ? "date" : undefined}
-        style=${styleMap({
-          left: compactMonthView ? `${compactColCenter}%` : `calc(${left}% + 6px)`,
-          top: compactMonthView ? `calc(${top}% + 6px)` : `${top}%`,
-          transform: compactMonthView ? "translateX(-50%)" : "",
-        })}
+        style=${styleMap(startOffsetStyle)}
         @dblclick=${(event: MouseEvent) => this.#handleDayLabelDoubleClick(day, dayIndex, event)}
         @pointerup=${(event: PointerEvent) => this.#handleDayLabelPointerUp(day, dayIndex, event)}
         @keydown=${(event: KeyboardEvent) => this.#handleDayLabelKeyDown(day, dayIndex, event)}

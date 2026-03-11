@@ -5,7 +5,7 @@ import "./CalendarView.js";
 import "./CalendarTimeSidebar.js";
 import "./CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
-import { getLocaleWeekInfo } from "../utils/Locale.js";
+import { getLocaleDirection, getLocaleWeekInfo } from "../utils/Locale.js";
 
 type EventInput = {
   /**
@@ -42,6 +42,7 @@ export class CalendarWeekView extends BaseElement {
   currentTime?: string;
   snapInterval = 15;
   visibleHours = 12;
+  rtl = false;
 
   static get properties() {
     return {
@@ -85,6 +86,7 @@ export class CalendarWeekView extends BaseElement {
       currentTime: { type: String, attribute: "current-time" },
       snapInterval: { type: Number, attribute: "snap-interval" },
       visibleHours: { type: Number, attribute: "visible-hours" },
+      rtl: { type: Boolean, reflect: true },
     } as const;
   }
 
@@ -196,7 +198,7 @@ export class CalendarWeekView extends BaseElement {
     });
     const weekStart = this.#resolvedWeekStart;
     const firstWeekStart = this.#startOfWeekFor(firstOfYear, weekStart);
-    const normalizedWeek = Math.max(1, this.weekNumber);
+    const normalizedWeek = Math.max(1, Number(this.weekNumber) || 1);
     return firstWeekStart.add({ days: (normalizedWeek - 1) * 7 });
   }
 
@@ -245,9 +247,10 @@ export class CalendarWeekView extends BaseElement {
   render() {
     const clampedVisibleHours = Math.max(1, Math.min(24, Math.floor(Number(this.visibleHours) || 12)));
     const timedHeightFactor = 24 / clampedVisibleHours;
+    const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
 
     return html`
-      <div class="week-layout">
+      <div class="week-layout" dir=${direction}>
         <div class="weekday-sidebar-spacer" aria-hidden="true"></div>
         <calendar-weekday-header
           class="weekday-header"
@@ -262,6 +265,7 @@ export class CalendarWeekView extends BaseElement {
           .days=${this.daysPerWeek}
           variant="all-day"
           .events=${this.#allDayEvents}
+          .rtl=${this.rtl}
           .locale=${this.locale}
           .timezone=${this.timezone}
           .currentTime=${this.currentTime}
@@ -283,6 +287,7 @@ export class CalendarWeekView extends BaseElement {
               .days=${this.daysPerWeek}
               variant="timed"
               .events=${this.#timedEvents}
+              .rtl=${this.rtl}
               .locale=${this.locale}
               .timezone=${this.timezone}
               .currentTime=${this.currentTime}
