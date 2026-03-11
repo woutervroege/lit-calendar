@@ -33,7 +33,7 @@ export class CalendarWeekView extends BaseElement {
   locale?: string;
   timezone?: string;
   currentTime?: string;
-  snapInterval = 30;
+  snapInterval = 15;
 
   static get properties() {
     return {
