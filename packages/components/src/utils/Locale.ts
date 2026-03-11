@@ -32,3 +32,19 @@ export function getLocaleWeekInfo(locale: string | null | undefined): {
     return { weekend: [] };
   }
 }
+
+export function getLocaleDirection(locale: string | null | undefined): "ltr" | "rtl" {
+  const resolvedLocale = resolveLocale(locale);
+  try {
+    const localeInfo = new Intl.Locale(resolvedLocale) as Intl.Locale & {
+      textInfo?: { direction?: string };
+      getTextInfo?: () => { direction?: string };
+    };
+    const direction = localeInfo.getTextInfo?.()?.direction ?? localeInfo.textInfo?.direction;
+    if (direction === "rtl") return "rtl";
+    if (direction === "ltr") return "ltr";
+  } catch {
+    // Fall through to default.
+  }
+  return "ltr";
+}
