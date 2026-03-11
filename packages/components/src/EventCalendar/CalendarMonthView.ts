@@ -30,7 +30,6 @@ export class CalendarMonthView extends BaseElement {
   locale?: string;
   timezone?: string;
   currentTime?: string;
-  snapInterval = 15;
 
   static get properties() {
     return {
@@ -56,7 +55,6 @@ export class CalendarMonthView extends BaseElement {
       locale: { type: String },
       timezone: { type: String },
       currentTime: { type: String, attribute: "current-time" },
-      snapInterval: { type: Number, attribute: "snap-interval" },
     } as const;
   }
 
@@ -102,7 +100,6 @@ export class CalendarMonthView extends BaseElement {
         .locale=${this.locale}
         .timezone=${this.timezone}
         .currentTime=${this.currentTime}
-        .snapInterval=${this.snapInterval}
         .labelsHidden=${false}
         @event-modified=${this.#reemit}
         @event-deleted=${this.#reemit}

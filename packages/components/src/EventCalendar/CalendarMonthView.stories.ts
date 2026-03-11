@@ -28,7 +28,6 @@ const meta: Meta = {
       description: "IANA timezone",
     },
     currentTime: { control: "text", description: "Current time (ISO string)" },
-    snapInterval: { control: { type: "number", min: 5, max: 60, step: 5 } },
   },
   args: {
     month: 1,
@@ -37,7 +36,6 @@ const meta: Meta = {
     locale: "en-US",
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-15T14:30:00",
-    snapInterval: 15,
     events: sampleEvents,
   },
   render: (args) => {
@@ -57,7 +55,6 @@ const meta: Meta = {
     if (args.currentTime) {
       el.setAttribute("current-time", args.currentTime);
     }
-    el.setAttribute("snap-interval", String(args.snapInterval));
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
     el.events = new Map(entries);
     return el;
