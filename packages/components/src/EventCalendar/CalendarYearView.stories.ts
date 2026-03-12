@@ -43,8 +43,6 @@ const meta: Meta = {
   },
   args: {
     year: 2025,
-    weekStart: 1,
-    locale: "en-US",
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-15T14:30:00",
     events: sampleEvents,

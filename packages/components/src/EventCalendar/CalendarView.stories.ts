@@ -116,7 +116,6 @@ export const Month: Story = {
   args: {
     startDate: "2025-01-05",
     days: 42,
-    locale: "en-US",
     snapInterval: 5,
     variant: "all-day",
     events: sampleEvents,
@@ -132,7 +131,6 @@ export const Day: Story = {
   args: {
     ...Month.args,
     ...{ variant: "timed", days: 1, startDate: "2025-01-06" },
-    locale: "nl-NL",
   },
 };
 

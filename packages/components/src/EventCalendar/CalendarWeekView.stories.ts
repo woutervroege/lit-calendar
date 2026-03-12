@@ -53,9 +53,7 @@ const meta: Meta = {
   args: {
     weekNumber: 2,
     year: 2025,
-    weekStart: 1,
     daysPerWeek: 7,
-    locale: "en-US",
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-07T13:00:00",
     snapInterval: 15,
@@ -99,6 +97,5 @@ export const FullWeek: Story = {};
 export const WorkWeek: Story = {
   args: {
     daysPerWeek: 5,
-    locale: "ar"
   },
 };
