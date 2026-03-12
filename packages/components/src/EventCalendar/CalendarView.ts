@@ -1047,6 +1047,7 @@ export class CalendarView extends BaseElement {
     const hiddenCountsByDay = new Map<number, number>();
     const renderedDays = this.days;
     if (!renderedDays.length) return hiddenCountsByDay;
+    const optimisticDraggedEvent = this.#getOptimisticDraggedAllDayEvent();
 
     const renderedDayKeys = renderedDays.map((day) => day.toString());
     const totalDays = renderedDayKeys.length;
@@ -1061,8 +1062,16 @@ export class CalendarView extends BaseElement {
       Array<{ stackIndex: number; startColIndex: number; endColIndex: number }>
     >();
 
-    for (const [, event] of visibleEvents) {
-      const eventDays = this.#expandEventDays(event);
+    for (const [id, event] of visibleEvents) {
+      const effectiveEvent =
+        optimisticDraggedEvent?.eventId === id
+          ? {
+              ...event,
+              start: optimisticDraggedEvent.start,
+              end: optimisticDraggedEvent.end,
+            }
+          : event;
+      const eventDays = this.#expandEventDays(effectiveEvent);
       const visibleIndexes = eventDays
         .map((day) => renderedDayKeys.indexOf(day.toString()))
         .filter((dayIndex) => dayIndex >= 0)
@@ -1118,6 +1127,37 @@ export class CalendarView extends BaseElement {
     }
 
     return hiddenCountsByDay;
+  }
+
+  #getOptimisticDraggedAllDayEvent():
+    | { eventId: string; start: Temporal.PlainDateTime; end: Temporal.PlainDateTime }
+    | null {
+    if (this.variant !== "all-day") return null;
+    if (this.#dragHoverDayIndex === null) return null;
+
+    const draggedEvent = this.renderRoot.querySelector<HTMLElement>("all-day-event[data-dragging]");
+    const eventId = draggedEvent?.getAttribute("event-id");
+    if (!eventId) return null;
+
+    const sourceEvent = this.events?.get(eventId);
+    if (!sourceEvent) return null;
+
+    const sourceStart = this.#toPlainDateTime(sourceEvent.start);
+    const sourceEnd = this.#toPlainDateTime(sourceEvent.end);
+    const sourceDay = sourceStart.toPlainDate();
+    const sourceDayIndex = this.days.findIndex(
+      (day) => Temporal.PlainDate.compare(day, sourceDay) === 0
+    );
+    if (sourceDayIndex < 0) return null;
+
+    const dayDelta = this.#dragHoverDayIndex - sourceDayIndex;
+    if (dayDelta === 0) return { eventId, start: sourceStart, end: sourceEnd };
+
+    return {
+      eventId,
+      start: sourceStart.add({ days: dayDelta }),
+      end: sourceEnd.add({ days: dayDelta }),
+    };
   }
 
   #expandEventDays(event: EventInput): Temporal.PlainDate[] {
