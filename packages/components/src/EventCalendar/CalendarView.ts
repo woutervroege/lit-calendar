@@ -64,7 +64,6 @@ export class CalendarView extends BaseElement {
   #lastObservedHostHeightPx = 0;
   #lastObservedHostWidthPx = 0;
   #isCompactMonth = false;
-  #lastMaxVisibleRowsByHeight: number | null = null;
   #lastDayLabelTap: { dayIndex: number; timestamp: number } | null = null;
   #lastDayLabelTapMaxDelayMs = 350;
   #cachedDaysKey = "";
@@ -372,11 +371,7 @@ export class CalendarView extends BaseElement {
     const nextHeight = section.getBoundingClientRect().height;
     if (!Number.isFinite(nextHeight)) return;
     if (Math.abs(nextHeight - this.#sectionHeightPx) < 0.5) return;
-    const previousMaxVisibleRows = this.#lastMaxVisibleRowsByHeight;
     this.#sectionHeightPx = nextHeight;
-    const nextMaxVisibleRows = this.#getMaxRowsPerCellByHeight();
-    this.#lastMaxVisibleRowsByHeight = nextMaxVisibleRows;
-    if (previousMaxVisibleRows === nextMaxVisibleRows) return;
     if (!this.isUpdatePending) this.requestUpdate();
   }
 
@@ -1005,8 +1000,35 @@ export class CalendarView extends BaseElement {
       };
     }
 
-    const initialHidden = this.#computeHiddenAllDayCountsByDay(maxRowsByHeight);
-    return { maxVisibleRows: maxRowsByHeight, hiddenCountsByDay: initialHidden };
+    const maxVisibleRows = maxRowsByHeight;
+    const hiddenCountsByDay = this.#computeHiddenAllDayCountsByDay(maxVisibleRows);
+    if (!hiddenCountsByDay.size) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    // Reserve vertical room for the "+X more" line when overflow is present.
+    const availableHeight = this.#getAllDayAvailableHeightPx();
+    const eventHeight = this.#getAllDayEventHeightPx();
+    const overflowIndicatorHeight = this.#getAllDayOverflowIndicatorHeightPx();
+    const overflowIndicatorSpacing = this.#getAllDayOverflowIndicatorSpacingPx();
+    if (!Number.isFinite(availableHeight) || eventHeight <= 0) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    const maxRowsWithIndicator = Math.max(
+      0,
+      Math.floor((availableHeight - overflowIndicatorHeight - overflowIndicatorSpacing) / eventHeight)
+    );
+    if (maxRowsWithIndicator >= maxVisibleRows) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    const hiddenCountsWithIndicator = this.#computeHiddenAllDayCountsByDay(maxRowsWithIndicator);
+    if (this.#wouldInflateSingleHiddenCount(hiddenCountsByDay, hiddenCountsWithIndicator)) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    return { maxVisibleRows: maxRowsWithIndicator, hiddenCountsByDay: hiddenCountsWithIndicator };
   }
 
   #getMaxRowsPerCellByHeight(): number {
@@ -1041,8 +1063,13 @@ export class CalendarView extends BaseElement {
   }
 
   #getAllDayOverflowIndicatorHeightPx(): number {
-    // Matches text-xs + leading-tight with single-line label.
-    return 16;
+    // Matches text-xs + leading-tight + pt-1 on the overflow label.
+    return 20;
+  }
+
+  #getAllDayOverflowIndicatorSpacingPx(): number {
+    // Keep a small visual gap between the last visible event row and "+X more".
+    return 4;
   }
 
   #readSectionCssNumber(propertyName: string, fallback: number): number {
@@ -1051,6 +1078,18 @@ export class CalendarView extends BaseElement {
     const rawValue = getComputedStyle(styleTarget).getPropertyValue(propertyName).trim();
     const parsedValue = parseFloat(rawValue);
     return Number.isFinite(parsedValue) ? parsedValue : fallback;
+  }
+
+  #wouldInflateSingleHiddenCount(
+    baseHiddenCountsByDay: Map<number, number>,
+    reservedHiddenCountsByDay: Map<number, number>
+  ): boolean {
+    for (const [dayIndex, baseHiddenCount] of baseHiddenCountsByDay.entries()) {
+      if (baseHiddenCount !== 1) continue;
+      const reservedHiddenCount = reservedHiddenCountsByDay.get(dayIndex) ?? 0;
+      if (reservedHiddenCount > baseHiddenCount) return true;
+    }
+    return false;
   }
 
   #computeHiddenAllDayCountsByDay(maxVisibleRows: number): Map<number, number> {
