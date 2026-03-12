@@ -74,7 +74,7 @@ export class CalendarYearView extends BaseElement {
         .year-grid {
           display: grid;
           grid-template-columns: repeat(var(--_lc-year-grid-effective-columns, 4), minmax(0, 1fr));
-          gap: var(--_lc-year-grid-gap, 40px);
+          gap: var(--_lc-year-grid-gap, 64px);
           width: 100%;
           height: 100%;
           min-height: 0;
@@ -97,7 +97,7 @@ export class CalendarYearView extends BaseElement {
           text-align: start;
         }
 
-        @container (max-width: 1520px) {
+        @container (max-width: 1280px) {
           .year-grid {
             --_lc-year-grid-effective-columns: 3;
           }
