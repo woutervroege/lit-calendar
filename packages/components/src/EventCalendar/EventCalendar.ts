@@ -290,6 +290,7 @@ export class EventCalendar extends BaseElement {
     if (this.view === "week") {
       return html`
         <calendar-week-view
+          start-date=${this.#weekStartDate.toString()}
           week-number=${this.weekNumber}
           year=${this.year}
           .weekStart=${this.weekStart}

@@ -6,6 +6,17 @@ import { localeOptions, type StoryEvent, sampleEvents, timezoneOptions } from ".
 
 type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
 
+function preserveDateOnlyShape(
+  nextValue: { toString(): string; toPlainDate(): { toString(): string } } | null | undefined,
+  currentValue: string
+): string {
+  if (!nextValue) return currentValue;
+  if (!currentValue.includes("T")) {
+    return nextValue.toPlainDate().toString();
+  }
+  return nextValue.toString();
+}
+
 const meta: Meta = {
   title: "CalendarView/EventCalendar",
   component: "event-calendar",
@@ -107,8 +118,8 @@ const meta: Meta = {
 
       el.events = new Map(el.events).set(detail.eventId, {
         ...current,
-        start: detail.start?.toString() ?? current.start,
-        end: detail.end?.toString() ?? current.end,
+        start: preserveDateOnlyShape(detail.start, current.start),
+        end: preserveDateOnlyShape(detail.end, current.end),
         summary: detail.summary,
         color: detail.color,
       });
