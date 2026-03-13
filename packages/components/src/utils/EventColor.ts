@@ -5,13 +5,13 @@ export function getEventColorStyles(color: string): Record<string, string> {
   if (!rgb) return {};
 
   // Keep state progression monotonic: base -> hover -> focus gets brighter.
-  const backgroundColor = rgbToRgba(tintColor(rgb, 0.62), 0.8);
-  const backgroundColorHover = rgbToRgba(tintColor(rgb, 0.72), 0.95);
-  const backgroundColorActive = rgbToRgba(tintColor(rgb, 0.77), 0.98);
-  const backgroundColorFocus = rgbToRgba(tintColor(rgb, 0.82), 1);
+  const backgroundColor = rgbToRgba(tintColor(rgb, 0.5), 0.9);
+  const backgroundColorHover = rgbToRgba(tintColor(rgb, 0.5), 0.95);
+  const backgroundColorActive = rgbToRgba(tintColor(rgb, 0.5), 1);
+  const backgroundColorFocus = rgbToRgba(tintColor(rgb, 0.5), 1);
   const borderColor = rgbToHex(shadeColor(rgb, 0.15));
   const shadowColor = rgbToHex(shadeColor(rgb, 0.35));
-  const textColor = rgbToHex(shadeColor(rgb, 0.55));
+  const textColor = rgbToHex(shadeColor(rgb, 0.75));
 
   return {
     "--_lc-event-bg": backgroundColor,
