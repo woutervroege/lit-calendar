@@ -1,17 +1,18 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
+import type { PropertyValues } from "lit";
+import { cache } from "lit/directives/cache.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import "./CalendarWeekView.js";
 import "./CalendarMonthView.js";
 import "./CalendarYearView.js";
-import "./CalendarViewTabs.js";
-import "./CalendarNavControls.js";
 import { getLocaleWeekInfo } from "../utils/Locale.js";
 import componentStyle from "./EventCalendar.css?inline";
 
-type CalendarViewMode = "day" | "week" | "month" | "year";
+export type CalendarViewMode = "day" | "week" | "month" | "year";
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type CalendarNavigationDirection = "previous" | "today" | "next";
 
 type EventInput = {
   uid?: string;
@@ -24,37 +25,17 @@ type EventInput = {
 
 type EventsMap = Map<string, EventInput>;
 type EventEntry = [id: string, event: EventInput];
-type ViewTransitionMode = "zoom-in" | "zoom-out";
-type ViewTransition = { finished: Promise<unknown> };
-type ViewTransitionDocument = Document & {
-  startViewTransition: (update: () => void | Promise<void>) => ViewTransition;
-};
-
-type WeekEventInput = Omit<EventInput, "start" | "end"> & {
-  start: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-};
 
 function isWeekdayNumber(value: number | undefined): value is WeekdayNumber {
   return Boolean(value && Number.isInteger(value) && value >= 1 && value <= 7);
 }
 
-const VIEW_GRANULARITY: Record<CalendarViewMode, number> = {
-  day: 0,
-  week: 1,
-  month: 2,
-  year: 3,
-};
-
 @customElement("event-calendar")
 export class EventCalendar extends BaseElement {
-  view: CalendarViewMode = "month";
-  weekNumber = Temporal.Now.plainDateISO().weekOfYear;
-  month = Temporal.Now.plainDateISO().month;
-  year = Temporal.Now.plainDateISO().year;
-  dayDate?: string;
+  #view: CalendarViewMode = "month";
+  #startDate?: string;
   weekStart?: WeekdayNumber;
-  daysPerWeek = 7;
+  #daysPerWeek = 7;
   declare events?: EventsMap;
   locale?: string;
   timezone?: string;
@@ -62,40 +43,18 @@ export class EventCalendar extends BaseElement {
   snapInterval = 15;
   visibleHours = 12;
   rtl = false;
-  #isSwitchingView = false;
-  #queuedView: CalendarViewMode | null = null;
-  #viewTransitionMode: ViewTransitionMode = "zoom-in";
 
   static get properties() {
     return {
       view: {
         type: String,
         reflect: true,
-        converter: {
-          fromAttribute: (value: string | null): CalendarViewMode =>
-            value === "day" || value === "week" || value === "month" || value === "year"
-              ? value
-              : "month",
-          toAttribute: (value: CalendarViewMode): string => value,
-        },
       },
-      weekNumber: { type: Number, attribute: "week-number" },
-      month: { type: Number },
-      year: { type: Number },
-      dayDate: { type: String, attribute: "day-date" },
+      startDate: { type: String, attribute: "start-date" },
       weekStart: { type: Number, attribute: "week-start", reflect: true },
       daysPerWeek: {
         type: Number,
         attribute: "days-per-week",
-        reflect: true,
-        converter: {
-          fromAttribute: (v: string | null): number => {
-            const n = Number(v);
-            if (!Number.isFinite(n)) return 7;
-            return Math.max(1, Math.min(7, Math.floor(n)));
-          },
-          toAttribute: (v: number): string => String(v),
-        },
       },
       events: {
         type: Object,
@@ -120,33 +79,151 @@ export class EventCalendar extends BaseElement {
   render() {
     return html`
       <div class="event-calendar">
-        <header class="header">
-          <p class="range-label">${this.#headerRangeLabel}</p>
-          <calendar-view-tabs .view=${this.view} @view-selected=${this.#handleViewSelected}>
-          </calendar-view-tabs>
-          <calendar-nav-controls @navigate=${this.#handleNavigation}></calendar-nav-controls>
-        </header>
-        <section
-          id=${this.#panelId(this.view)}
-          class="content"
-          role="tabpanel"
-          aria-labelledby=${this.#tabId(this.view)}
-        >
-          ${this.#renderViewFor(this.view)}
+        <section class="content" role="tabpanel">
+          ${cache(this.#renderViewFor(this.view))}
         </section>
       </div>
     `;
+  }
+
+  updated(changedProperties: PropertyValues<this>) {
+    super.updated(changedProperties);
+    if (changedProperties.has("view")) {
+      this.dispatchEvent(
+        new CustomEvent("view-changed", {
+          detail: { view: this.view },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+    if (
+      changedProperties.has("view") ||
+      changedProperties.has("startDate")
+    ) {
+      this.dispatchEvent(
+        new CustomEvent("calendar-state-changed", {
+          detail: {
+            view: this.view,
+            startDate: this.#startDate ?? this.#resolvedStartDate.toString(),
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
   }
 
+  get view(): CalendarViewMode {
+    return this.#view;
+  }
+
+  set view(value: CalendarViewMode | string | null | undefined) {
+    const nextValue =
+      value === "day" || value === "week" || value === "month" || value === "year"
+        ? value
+        : "month";
+    this.#view = nextValue;
+  }
+
+  get daysPerWeek(): number {
+    return this.#daysPerWeek;
+  }
+
+  set daysPerWeek(value: number | string | null | undefined) {
+    const rawValue = typeof value === "string" ? Number(value) : value;
+    const numeric = Number(rawValue);
+    const nextValue = Number.isFinite(numeric) ? Math.max(1, Math.min(7, Math.floor(numeric))) : 7;
+    this.#daysPerWeek = nextValue;
+  }
+
+  get month(): number {
+    return this.#resolvedStartDate.month;
+  }
+
+  get year(): number {
+    return this.#resolvedStartDate.year;
+  }
+
+  get weekNumber(): number {
+    return this.#weekNumberFromStartDate(this.#resolvedStartDate);
+  }
+
+  get today(): string {
+    return this.#now.toPlainDate().toString();
+  }
+
+  get startDate(): Temporal.PlainDate | undefined {
+    if (!this.#startDate) return undefined;
+    return Temporal.PlainDate.from(this.#startDate);
+  }
+
+  set startDate(value: string | Temporal.PlainDate | undefined) {
+    const nextValue =
+      value === undefined
+        ? undefined
+        : value instanceof Temporal.PlainDate
+          ? value.toString()
+          : Temporal.PlainDate.from(value).toString();
+    this.#startDate = nextValue;
+  }
+
+  get nextDay(): string {
+    return this.#resolvedStartDate.add({ days: 1 }).toString();
+  }
+
+  get nextWeek(): string {
+    const rangeLengthDays = Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
+    return this.#weekStartDate.add({ days: rangeLengthDays }).toString();
+  }
+
+  get nextMonth(): string {
+    return Temporal.PlainDate.from({
+      year: this.#resolvedStartDate.year,
+      month: this.#resolvedStartDate.month,
+      day: 1,
+    })
+      .add({ months: 1 })
+      .toString();
+  }
+
+  get nextYear(): string {
+    return this.#resolvedStartDate.add({ years: 1 }).toString();
+  }
+
+  goBack() {
+    this.startDate = this.#targetDateByView(-1);
+  }
+
+  goForward() {
+    if (this.view === "day") {
+      this.startDate = this.nextDay;
+      return;
+    }
+    if (this.view === "week") {
+      this.startDate = this.nextWeek;
+      return;
+    }
+    if (this.view === "month") {
+      this.startDate = this.nextMonth;
+      return;
+    }
+    this.startDate = this.nextYear;
+  }
+
+  goToday() {
+    this.#goToToday();
+  }
+
   #renderViewFor(view: CalendarViewMode) {
     if (view === "day") {
       return html`
         <calendar-week-view
-          start-date=${this.#resolvedDayDate.toString()}
+          start-date=${this.#resolvedStartDate.toString()}
           year=${this.year}
           .weekStart=${this.weekStart}
           days-per-week="1"
@@ -168,7 +245,7 @@ export class EventCalendar extends BaseElement {
       return html`
         <calendar-week-view
           start-date=${this.#weekStartDate.toString()}
-          week-number=${this.weekNumber}
+          .weekNumber=${this.weekNumber}
           year=${this.year}
           .weekStart=${this.weekStart}
           days-per-week=${this.daysPerWeek}
@@ -218,7 +295,7 @@ export class EventCalendar extends BaseElement {
     `;
   }
 
-  get #weekEvents(): Map<string, WeekEventInput> {
+  get #weekEvents(): EventsMap {
     const entries = Array.from(this.events?.entries() ?? []);
     return new Map(
       entries.map(([id, event]) => [
@@ -251,60 +328,6 @@ export class EventCalendar extends BaseElement {
     return Temporal.PlainDateTime.from(value);
   }
 
-  #setView(nextView: CalendarViewMode) {
-    if (this.view === nextView && this.#queuedView === null) return;
-    this.#queuedView = nextView;
-    if (this.#isSwitchingView) return;
-    void this.#flushQueuedViewSwitches();
-  }
-
-  async #flushQueuedViewSwitches() {
-    this.#isSwitchingView = true;
-    try {
-      while (this.#queuedView !== null) {
-        const targetView = this.#queuedView;
-        this.#queuedView = null;
-        if (targetView === this.view) continue;
-        await this.#performViewSwitch(targetView);
-      }
-    } finally {
-      this.#isSwitchingView = false;
-    }
-  }
-
-  async #performViewSwitch(nextView: CalendarViewMode) {
-    const previousView = this.view;
-    this.#viewTransitionMode = this.#resolveViewTransitionMode(previousView, nextView);
-    this.setAttribute("data-view-transition-mode", this.#viewTransitionMode);
-    const viewTransitionDocument = document as ViewTransitionDocument;
-    const transition = viewTransitionDocument.startViewTransition(async () => {
-      this.view = nextView;
-      this.dispatchEvent(
-        new CustomEvent("view-changed", {
-          detail: { view: nextView },
-          bubbles: true,
-          composed: true,
-        })
-      );
-      await this.updateComplete;
-    });
-    try {
-      await transition.finished;
-    } finally {
-      this.removeAttribute("data-view-transition-mode");
-    }
-  }
-
-  #resolveViewTransitionMode(
-    previousView: CalendarViewMode,
-    nextView: CalendarViewMode
-  ): ViewTransitionMode {
-    const previousGranularity = VIEW_GRANULARITY[previousView];
-    const nextGranularity = VIEW_GRANULARITY[nextView];
-    if (nextGranularity < previousGranularity) return "zoom-in";
-    return "zoom-out";
-  }
-
   #handleDayLabelDoublePointer = (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
 
@@ -312,86 +335,44 @@ export class EventCalendar extends BaseElement {
     if (!detail?.date) return;
 
     const selectedDate = Temporal.PlainDate.from(detail.date);
-    this.#setAnchorDate(selectedDate);
-    this.#setView("day");
+    this.startDate = selectedDate;
+    this.view = "day";
   };
-
-  #handleViewSelected = (event: Event) => {
-    if (!(event instanceof CustomEvent)) return;
-    const detail = event.detail as { view?: CalendarViewMode } | undefined;
-    if (!detail?.view) return;
-    this.#setView(detail.view);
-  };
-
-  #handleNavigation = (event: Event) => {
-    if (!(event instanceof CustomEvent)) return;
-    const detail = event.detail as { direction?: "previous" | "today" | "next" } | undefined;
-    if (detail?.direction === "previous") {
-      this.#goPrevious();
-      return;
-    }
-    if (detail?.direction === "today") {
-      this.#goToToday();
-      return;
-    }
-    if (detail?.direction === "next") {
-      this.#goNext();
-    }
-  };
-
-  #goPrevious() {
-    this.#navigateByView(-1);
-  }
-
-  #goNext() {
-    this.#navigateByView(1);
-  }
 
   #goToToday() {
     const now = this.#now;
     const today = now.toPlainDate();
     this.currentTime = now.toString();
-    this.#setAnchorDate(today);
+    this.startDate = today;
   }
 
-  #navigateByView(step: number) {
+  #targetDateByView(step: number): Temporal.PlainDate {
+    const anchorDate = this.#resolvedStartDate;
     if (this.view === "day") {
-      this.#setAnchorDate(this.#resolvedDayDate.add({ days: step }));
-      return;
+      return anchorDate.add({ days: step });
     }
 
     if (this.view === "year") {
-      this.year += step;
-      return;
+      return anchorDate.add({ years: step });
     }
 
     if (this.view === "month") {
-      const monthDate = Temporal.PlainDate.from({ year: this.year, month: this.month, day: 1 }).add({
+      return Temporal.PlainDate.from({
+        year: anchorDate.year,
+        month: anchorDate.month,
+        day: 1,
+      }).add({
         months: step,
       });
-      this.year = monthDate.year;
-      this.month = monthDate.month;
-      return;
     }
 
     const start = this.#weekStartDate;
     const rangeLengthDays = Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
-    const nextStart = start.add({ days: rangeLengthDays * step });
-    this.#setAnchorDate(nextStart);
-  }
-
-  #setAnchorDate(date: Temporal.PlainDate) {
-    this.year = date.year;
-    this.month = date.month;
-    this.dayDate = date.toString();
-    this.weekNumber = this.#weekNumberFromStartDate(date);
+    return start.add({ days: rangeLengthDays * step });
   }
 
   get #weekStartDate(): Temporal.PlainDate {
-    const firstOfYear = Temporal.PlainDate.from({ year: this.year, month: 1, day: 1 });
-    const firstWeekStart = this.#startOfWeekFor(firstOfYear, this.#resolvedWeekStart);
-    const normalizedWeek = Math.max(1, Number(this.weekNumber) || 1);
-    return firstWeekStart.add({ days: (normalizedWeek - 1) * 7 });
+    return this.#startOfWeekFor(this.#resolvedStartDate, this.#resolvedWeekStart);
   }
 
   get #resolvedWeekStart(): WeekdayNumber {
@@ -425,37 +406,11 @@ export class EventCalendar extends BaseElement {
     return this.currentTime ?? this.#now.toString();
   }
 
-  get #resolvedDayDate(): Temporal.PlainDate {
-    if (this.dayDate) {
-      return Temporal.PlainDate.from(this.dayDate);
+  get #resolvedStartDate(): Temporal.PlainDate {
+    if (this.#startDate) {
+      return Temporal.PlainDate.from(this.#startDate);
     }
     return Temporal.PlainDate.from(this.#resolvedCurrentTime);
-  }
-
-  get #headerRangeLabel(): string {
-    if (this.view === "year") {
-      return String(this.year);
-    }
-
-    if (this.view === "day") {
-      const dayDate = this.#resolvedDayDate;
-      return new Intl.DateTimeFormat(this.locale, {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }).format(new Date(Date.UTC(dayDate.year, dayDate.month - 1, dayDate.day)));
-    }
-
-    const locale = this.locale;
-    const date = this.view === "week" ? this.#weekStartDate : Temporal.PlainDate.from({
-      year: this.year,
-      month: this.month,
-      day: 1,
-    });
-    return new Intl.DateTimeFormat(locale, {
-      month: "long",
-      year: "numeric",
-    }).format(new Date(Date.UTC(date.year, date.month - 1, 1)));
   }
 
   #reemit = (event: Event) => {
@@ -468,12 +423,4 @@ export class EventCalendar extends BaseElement {
       })
     );
   };
-
-  #tabId(view: CalendarViewMode): string {
-    return `event-calendar-tab-${view}`;
-  }
-
-  #panelId(view: CalendarViewMode): string {
-    return `event-calendar-panel-${view}`;
-  }
 }
