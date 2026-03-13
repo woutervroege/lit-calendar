@@ -211,7 +211,7 @@ export class CalendarViewGroup extends BaseElement {
           .snapInterval=${this.snapInterval}
           .visibleHours=${this.visibleHours}
           .rtl=${this.rtl}
-          @day-label-double-pointer=${this.#handleDayLabelDoublePointer}
+          @day-selection-requested=${this.#handleDaySelectionRequested}
           @event-modified=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-week-view>
@@ -227,7 +227,7 @@ export class CalendarViewGroup extends BaseElement {
           .locale=${this.locale}
           .timezone=${this.timezone}
           .currentTime=${this.#resolvedCurrentTime}
-          @day-label-double-pointer=${this.#handleDayLabelDoublePointer}
+          @day-selection-requested=${this.#handleDaySelectionRequested}
           @event-modified=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-year-view>
@@ -243,7 +243,7 @@ export class CalendarViewGroup extends BaseElement {
         .locale=${this.locale}
         .timezone=${this.timezone}
         .currentTime=${this.#resolvedCurrentTime}
-        @day-label-double-pointer=${this.#handleDayLabelDoublePointer}
+        @day-selection-requested=${this.#handleDaySelectionRequested}
         @event-modified=${this.#reemit}
         @event-deleted=${this.#reemit}
       ></calendar-month-view>
@@ -283,7 +283,7 @@ export class CalendarViewGroup extends BaseElement {
     return Temporal.PlainDateTime.from(value);
   }
 
-  #handleDayLabelDoublePointer = (event: Event) => {
+  #handleDaySelectionRequested = (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
 
     const detail = event.detail as { date?: string } | undefined;
