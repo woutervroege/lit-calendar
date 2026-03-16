@@ -117,10 +117,13 @@
       min(var(--_lc-week-visible-columns), var(--_lc-week-days, 7))
     );
     --_lc-week-available-width: calc(
-      100% - var(--_lc-time-sidebar-width, 56px) - var(--_lc-time-label-gap, 6px)
+      100% -
+      var(--_lc-time-sidebar-width, 56px) -
+      var(--_lc-time-label-gap, 6px)
     );
     --_lc-week-scroll-content-width: calc(
-      var(--_lc-week-available-width) * (var(--_lc-week-days, 7) / var(--_lc-week-effective-visible-columns))
+      var(--_lc-week-available-width) *
+      (var(--_lc-week-days, 7) / var(--_lc-week-effective-visible-columns))
     );
     grid-template-columns:
       var(--_lc-time-sidebar-width, 56px)
@@ -129,6 +132,7 @@
     overflow-y: hidden;
     overscroll-behavior: contain;
     scroll-snap-type: inline var(--_lc-week-scroll-snap-strictness, mandatory);
+    scroll-padding-inline-start: var(--_lc-week-snap-nudge, 1px);
   }
 
   .timed-scroll {
@@ -160,4 +164,3 @@
     --_lc-week-visible-columns: 2;
   }
 }
-
