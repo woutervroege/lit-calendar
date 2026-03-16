@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./CalendarUi.js";
+import "./EventCalendar.js";
 import { calendarCssProps } from "../calendarCssProps.js";
 import { localeOptions, sampleEvents, timezoneOptions, type StoryEvent } from "../storyData.js";
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
-type StoryCalendarUiElement = HTMLElement & { events: Map<string, StoryEvent> };
+type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
 
 function preserveDateOnlyShape(
   nextValue: { toString(): string; toPlainDate(): { toString(): string } } | null | undefined,
@@ -18,8 +18,8 @@ function preserveDateOnlyShape(
 }
 
 const meta: Meta = {
-  title: "CalendarView/CalendarUi",
-  component: "calendar-ui",
+  title: "CalendarView/EventCalendar",
+  component: "event-calendar",
   tags: ["autodocs"],
   parameters: {
     cssprops: calendarCssProps,
@@ -71,7 +71,7 @@ const meta: Meta = {
     events: sampleEvents,
   },
   render: (args) => {
-    const el = document.createElement("calendar-ui") as StoryCalendarUiElement;
+    const el = document.createElement("event-calendar") as StoryEventCalendarElement;
     el.style.display = "block";
     el.style.width = "100%";
     el.style.height = "100%";

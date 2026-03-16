@@ -40,8 +40,8 @@ const TAB_TO_VIEW: Record<string, CalendarViewMode> = {
   Year: "year",
 };
 
-@customElement("calendar-ui")
-export class CalendarUi extends BaseElement {
+@customElement("event-calendar")
+export class EventCalendar extends BaseElement {
   #view: CalendarViewMode = "month";
   #startDate?: string;
   weekStart?: WeekdayNumber;
@@ -188,7 +188,7 @@ export class CalendarUi extends BaseElement {
             <tab-switch
               .options=${["Day", "Week", "Month", "Year"]}
               .value=${TAB_LABELS[this.view]}
-              name="calendar-ui-view-tabs"
+              name="event-calendar-view-tabs"
               group-label="Calendar view"
               @value-changed=${this.#handleViewTabChanged}
             ></tab-switch>
