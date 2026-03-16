@@ -161,8 +161,3 @@
   }
 }
 
-@container (max-width: 380px) {
-  .week-layout {
-    --_lc-week-visible-columns: 1;
-  }
-}
