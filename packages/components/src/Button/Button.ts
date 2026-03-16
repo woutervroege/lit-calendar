@@ -6,9 +6,11 @@ import {
   sharedButtonActiveBackgroundClasses,
   sharedButtonCompactVisualClasses,
   sharedButtonActiveTextClasses,
+  sharedButtonDisabledClasses,
   sharedButtonFocusRingClasses,
   sharedButtonHoverTintClasses,
   sharedButtonVisualClasses,
+  sharedFocusRingColorClasses,
 } from "../shared/buttonStyles.js";
 
 type ButtonType = "button" | "submit" | "reset";
@@ -39,9 +41,7 @@ export class Button extends BaseElement {
 
   render() {
     const visualClasses = this.compact ? sharedButtonCompactVisualClasses : sharedButtonVisualClasses;
-    const buttonClasses =
-      `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedButtonFocusRingClasses}` +
-      " disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))] cursor-pointer";
+    const buttonClasses = `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses}`;
     return html`
       <button
         type=${this.type}

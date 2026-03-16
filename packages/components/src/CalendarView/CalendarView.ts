@@ -9,6 +9,7 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 import componentStyle from "./CalendarView.css?inline";
 import "../TimedEvent/AllDayEvent.js";
 import "../CalendarTimeSidebar/CalendarTimeSidebar.js";
+import { sharedFocusRingColorClasses } from "../shared/buttonStyles.js";
 import {
   type CalendarViewContextValue,
   calendarViewContext,
@@ -548,7 +549,7 @@ export class CalendarView extends BaseElement {
             : ""
         }
         <section
-          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
+          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${sharedFocusRingColorClasses} ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
           dir=${this.#isRtl ? "rtl" : "ltr"}
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
@@ -837,7 +838,7 @@ export class CalendarView extends BaseElement {
     return html`
       <button
         type="button"
-        class="day-label absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none ${
+        class="day-label absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none ${sharedFocusRingColorClasses} ${
           compactMonthView ? "" : "mt-2"
         } ${monthPrefix ? "min-w-6 px-2" : "w-6"} h-6 ${isCurrentDay ? "current-day" : ""} ${
           outsideVisibleMonth ? "outside-month-day-label" : ""

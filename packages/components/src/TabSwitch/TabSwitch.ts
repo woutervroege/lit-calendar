@@ -3,6 +3,8 @@ import { customElement, property } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import {
   sharedButtonHoverTintClasses,
+  sharedButtonPeerCheckedClasses,
+  sharedButtonPeerDisabledClasses,
   sharedButtonPeerFocusRingClasses,
   sharedButtonVisualClasses,
 } from "../shared/buttonStyles.js";
@@ -52,10 +54,10 @@ export class TabSwitch extends BaseElement {
     const groupName = this.name || this.#groupName;
     const optionClasses = "flex items-center";
     const inputClasses = "sr-only peer";
-    const labelClasses = `${sharedButtonVisualClasses} ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} peer-checked:bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))] peer-checked:text-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_95%))] peer-checked:hover:bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))] peer-disabled:opacity-55 peer-disabled:cursor-not-allowed cursor-pointer`;
+    const labelClasses = `${sharedButtonVisualClasses} ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerCheckedClasses} ${sharedButtonPeerDisabledClasses}`;
     return html`
       <div
-        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] rounded-md text-sm"
+        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] rounded-md"
         role="radiogroup"
         aria-label=${this.ariaLabel}
       >

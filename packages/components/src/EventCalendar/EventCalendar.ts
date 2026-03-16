@@ -155,9 +155,7 @@ export class EventCalendar extends BaseElement {
           class="rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] py-2"
           style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:0.75rem;"
         >
-          <div
-            style="display:flex;justify-self:start;gap:0.5rem;font-size:0.875rem;line-height:1.25rem;"
-          >
+          <div style="display:flex;justify-self:start;gap:0.5rem;">
             <lc-button compact label="Previous range" @click=${() => this.goBack()}>
               <svg
                 viewBox="0 0 24 24"
