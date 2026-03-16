@@ -3,19 +3,13 @@ import { html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
+import "../Button/Button.js";
 import "../CalendarViewGroup/CalendarViewGroup.js";
 import type {
   CalendarViewGroup,
   CalendarViewMode,
 } from "../CalendarViewGroup/CalendarViewGroup.js";
 import "../TabSwitch/TabSwitch.js";
-import {
-  sharedButtonActiveBackgroundClasses,
-  sharedButtonActiveTextClasses,
-  sharedButtonFocusRingClasses,
-  sharedButtonHoverTintClasses,
-  sharedButtonVisualClasses,
-} from "../shared/buttonStyles.js";
 
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type EventInput = {
@@ -155,22 +149,16 @@ export class EventCalendar extends BaseElement {
   }
 
   render() {
-    const buttonClasses = `${sharedButtonVisualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedButtonFocusRingClasses} disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))] cursor-pointer`;
-    const iconButtonClasses = `${buttonClasses} px-3 text-sm`;
-    const todayButtonClasses = `${buttonClasses} text-sm`;
     return html`
       <div style="display:flex;flex-direction:column;gap:1.75rem;min-height:0;height:100%;">
         <header
           class="rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] py-2"
           style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:0.75rem;"
         >
-          <div style="display:flex;justify-self:start;gap:0.5rem;">
-            <button
-              type="button"
-              class=${iconButtonClasses}
-              aria-label="Previous range"
-              @click=${() => this.goBack()}
-            >
+          <div
+            style="display:flex;justify-self:start;gap:0.5rem;font-size:0.875rem;line-height:1.25rem;"
+          >
+            <lc-button compact label="Previous range" @click=${() => this.goBack()}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -181,20 +169,11 @@ export class EventCalendar extends BaseElement {
               >
                 <path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
-            </button>
-            <button
-              type="button"
-              class=${todayButtonClasses}
-              @click=${() => this.goToday()}
-            >
+            </lc-button>
+            <lc-button @click=${() => this.goToday()}>
               Today
-            </button>
-            <button
-              type="button"
-              class=${iconButtonClasses}
-              aria-label="Next range"
-              @click=${() => this.goForward()}
-            >
+            </lc-button>
+            <lc-button compact label="Next range" @click=${() => this.goForward()}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -205,7 +184,7 @@ export class EventCalendar extends BaseElement {
               >
                 <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
-            </button>
+            </lc-button>
           </div>
           <p
             class="m-0 text-center text-xl font-bold text-[light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%))]"

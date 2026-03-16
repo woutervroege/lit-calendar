@@ -4,6 +4,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import {
   sharedButtonActiveBackgroundClasses,
+  sharedButtonCompactVisualClasses,
   sharedButtonActiveTextClasses,
   sharedButtonFocusRingClasses,
   sharedButtonHoverTintClasses,
@@ -16,6 +17,9 @@ type ButtonType = "button" | "submit" | "reset";
 export class Button extends BaseElement {
   @property({ type: Boolean, reflect: true })
   disabled = false;
+
+  @property({ type: Boolean, reflect: true })
+  compact = false;
 
   @property({ type: String })
   label = "";
@@ -34,8 +38,9 @@ export class Button extends BaseElement {
   }
 
   render() {
+    const visualClasses = this.compact ? sharedButtonCompactVisualClasses : sharedButtonVisualClasses;
     const buttonClasses =
-      `${sharedButtonVisualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedButtonFocusRingClasses}` +
+      `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedButtonFocusRingClasses}` +
       " disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))] cursor-pointer";
     return html`
       <button

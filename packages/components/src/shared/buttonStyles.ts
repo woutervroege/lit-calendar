@@ -1,5 +1,8 @@
 export const sharedButtonVisualClasses =
-  "inline-flex items-center rounded py-2 px-8 text-[light-dark(rgb(15_23_42_/_72%),rgb(255_255_255_/_72%))] transition-colors duration-200";
+  "inline-flex h-9 items-center rounded px-6 text-[light-dark(rgb(15_23_42_/_72%),rgb(255_255_255_/_72%))] transition-colors duration-200";
+
+export const sharedButtonCompactVisualClasses =
+  "inline-flex h-9 min-w-9 items-center justify-center rounded px-[9.2px] text-[light-dark(rgb(15_23_42_/_72%),rgb(255_255_255_/_72%))] transition-colors duration-200";
 
 export const sharedButtonActiveBackgroundClasses =
   "bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))]";

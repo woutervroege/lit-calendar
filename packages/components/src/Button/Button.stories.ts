@@ -7,22 +7,26 @@ const meta: Meta = {
   tags: ["autodocs"],
   argTypes: {
     disabled: { control: "boolean" },
+    compact: { control: "boolean" },
     type: { control: "text" },
     label: { control: "text" },
   },
   args: {
     disabled: false,
+    compact: false,
     type: "button",
     label: "",
   },
   render: (args) => {
     const el = document.createElement("lc-button") as HTMLElement & {
       disabled: boolean;
+      compact: boolean;
       type: "button" | "submit" | "reset";
       label: string;
     };
 
     el.disabled = args.disabled ?? false;
+    el.compact = args.compact ?? false;
     el.type = args.type ?? "button";
     el.label = args.label ?? "";
     el.textContent = "Action";
