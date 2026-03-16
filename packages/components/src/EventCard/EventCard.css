@@ -6,6 +6,9 @@
   --_lc-event-card-bg: var(--_lc-event-card-bg-active, var(--_lc-event-card-bg-default, var(--_lc-event-bg)));
   --_lc-event-card-text-color: var(--_lc-event-text-color, CanvasText);
   --_lc-event-card-accent-color: var(--_lc-event-accent-color, CanvasText);
+  --_lc-event-focus-ring-width: 0px;
+  --_lc-event-focus-ring-color: transparent;
+  --_lc-event-focus-ring-gap: 1px;
 }
 
 :host > div {
@@ -23,6 +26,11 @@
   z-index: var(--_lc-z-index, 1);
   transform: scale(var(--event-card-scale, 1));
   color: var(--_lc-event-card-text-color);
+}
+
+:host > div::before {
+  outline: var(--_lc-event-focus-ring-width) solid var(--_lc-event-focus-ring-color);
+  outline-offset: var(--_lc-event-focus-ring-gap);
 }
 
 @container (max-height: 12px) {
