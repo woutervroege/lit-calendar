@@ -3,6 +3,8 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  position: relative;
+  container-type: inline-size;
 }
 
 .week-layout {
@@ -17,8 +19,7 @@
   min-height: 0;
 }
 
-.week-layout::after {
-  content: "";
+.week-divider {
   position: absolute;
   left: 0;
   right: 0;
@@ -26,7 +27,7 @@
   border-top: var(--_lc-week-section-divider-width, 3px) solid
     var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
   pointer-events: none;
-  z-index: 1;
+  z-index: 3;
 }
 
 .weekday-sidebar-spacer {
@@ -88,4 +89,78 @@
 .timed {
   display: block;
   min-height: 100%;
+}
+
+.week-snap-track {
+  grid-column: 1 / 3;
+  grid-row: 1 / 4;
+  display: grid;
+  grid-template-columns:
+    calc(var(--_lc-time-sidebar-width, 56px) + var(--_lc-time-label-gap, 6px))
+    repeat(var(--_lc-week-days, 7), minmax(0, 1fr));
+  width: 100%;
+  height: 1px;
+  align-self: start;
+  justify-self: stretch;
+  pointer-events: none;
+}
+
+.week-snap-point {
+  scroll-snap-align: start;
+}
+
+@container (max-width: 1100px) {
+  .week-layout {
+    --_lc-week-visible-columns: 6;
+    --_lc-week-effective-visible-columns: max(
+      1,
+      min(var(--_lc-week-visible-columns), var(--_lc-week-days, 7))
+    );
+    --_lc-week-available-width: calc(
+      100% -
+      var(--_lc-time-sidebar-width, 56px) -
+      var(--_lc-time-label-gap, 6px)
+    );
+    --_lc-week-scroll-content-width: calc(
+      var(--_lc-week-available-width) *
+      (var(--_lc-week-days, 7) / var(--_lc-week-effective-visible-columns))
+    );
+    grid-template-columns:
+      var(--_lc-time-sidebar-width, 56px)
+      minmax(var(--_lc-week-scroll-content-width), 1fr);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior: contain;
+    scroll-snap-type: inline var(--_lc-week-scroll-snap-strictness, mandatory);
+    scroll-padding-inline-start: var(--_lc-week-snap-nudge, 1px);
+  }
+
+  .timed-scroll {
+    overflow-y: auto;
+    height: calc(100% - var(--_lc-week-timed-top-offset, 8px));
+  }
+}
+
+@container (max-width: 980px) {
+  .week-layout {
+    --_lc-week-visible-columns: 5;
+  }
+}
+
+@container (max-width: 840px) {
+  .week-layout {
+    --_lc-week-visible-columns: 4;
+  }
+}
+
+@container (max-width: 700px) {
+  .week-layout {
+    --_lc-week-visible-columns: 3;
+  }
+}
+
+@container (max-width: 540px) {
+  .week-layout {
+    --_lc-week-visible-columns: 2;
+  }
 }

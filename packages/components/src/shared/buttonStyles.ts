@@ -7,13 +7,13 @@ export const sharedButtonCompactVisualClasses =
   `${sharedButtonBaseClasses} min-w-9 justify-center px-[9.2px]`;
 
 export const sharedButtonActiveBackgroundClasses =
-  "bg-[light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%))]";
+  "bg-[var(--_lc-button-bg,light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%)))]";
 
 export const sharedButtonActiveTextClasses =
   "text-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_95%))]";
 
 export const sharedButtonHoverTintClasses =
-  "hover:bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_12%))]";
+  "hover:bg-[var(--_lc-button-hover-bg,light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_12%)))]";
 
 export const sharedFocusRingColorClasses =
   "[--_lc-focus-outline-color:light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_96%))] [--_lc-focus-ring-color:light-dark(rgb(15_23_42_/_85%),rgb(255_255_255_/_92%))] [--_lc-focus-ring-offset-color:light-dark(rgb(255_255_255),rgb(2_6_23))]";
