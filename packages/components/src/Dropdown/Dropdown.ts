@@ -98,6 +98,21 @@ export class Dropdown extends BaseElement {
           pointer-events: none;
           color: light-dark(rgb(15 23 42 / 78%), rgb(255 255 255 / 78%));
         }
+
+        .lc-dropdown-icon {
+          position: absolute;
+          inset-inline-end: 1rem;
+          top: 50%;
+          z-index: 10;
+          display: inline-flex;
+          transform: translateY(-50%);
+          pointer-events: none;
+          color: light-dark(rgb(15 23 42 / 74%), rgb(255 255 255 / 78%));
+        }
+
+        .lc-dropdown-icon:empty {
+          display: none;
+        }
       `,
     ];
   }
@@ -116,6 +131,7 @@ export class Dropdown extends BaseElement {
     const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
     const hasSelection = normalizedOptions.some((option) => option.value === this.value);
     const ownHotkey = normalizeHotkey(this.hotkey);
+    const hasCustomIcon = this.#hasAssignedIcon();
 
     const selectClasses = `lc-dropdown-select ${sharedButtonVisualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses} block w-full ${
       hasSelection
@@ -144,11 +160,25 @@ export class Dropdown extends BaseElement {
             `
           )}
         </select>
-        <span class="lc-dropdown-chevron" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 1rem; height: 1rem;">
-            <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
-          </svg>
-        </span>
+        ${hasCustomIcon
+          ? html`
+              <span class="lc-dropdown-icon" aria-hidden="true">
+                <slot name="icon" @slotchange=${() => this.requestUpdate()}></slot>
+              </span>
+            `
+          : html`
+              <span class="lc-dropdown-chevron" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  style="width: 1rem; height: 1rem;"
+                >
+                  <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            `}
       </div>
     `;
   }
@@ -196,5 +226,11 @@ export class Dropdown extends BaseElement {
     }
 
     return option;
+  }
+
+  #hasAssignedIcon(): boolean {
+    const iconElement = this.querySelector("[slot='icon']");
+    if (!iconElement) return false;
+    return true;
   }
 }

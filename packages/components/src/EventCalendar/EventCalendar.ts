@@ -5,6 +5,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import "../Button/Button.js";
 import "../CalendarViewGroup/CalendarViewGroup.js";
+import "../Dropdown/Dropdown.js";
 import type {
   CalendarViewGroup,
   CalendarViewMode,
@@ -180,7 +181,7 @@ export class EventCalendar extends BaseElement {
     return html`
       <div class="flex h-full min-h-0 flex-col gap-7">
         <header
-          class="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] py-2"
+          class="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] py-2 [container-type:inline-size]"
         >
           <div class="flex justify-self-start gap-2">
             <lc-button compact label="Previous range" @click=${() => this.goBack()}>
@@ -217,14 +218,39 @@ export class EventCalendar extends BaseElement {
           >
             ${this.#rangeLabelText}
           </p>
-          <div class="justify-self-end">
-            <tab-switch
-              .options=${getViewOptions(this.locale)}
-              .value=${this.view}
-              name="event-calendar-view-tabs"
-              group-label="Calendar view"
-              @value-changed=${this.#handleViewTabChanged}
-            ></tab-switch>
+          <div class="inline-flex justify-self-end">
+            <div class="[@container(max-width:54rem)]:hidden">
+              <tab-switch
+                .options=${getViewOptions(this.locale)}
+                .value=${this.view}
+                name="event-calendar-view-tabs"
+                group-label="Calendar view"
+                @value-changed=${this.#handleViewTabChanged}
+              ></tab-switch>
+            </div>
+            <div class="hidden [@container(max-width:54rem)]:block">
+              <lc-dropdown
+                .options=${getViewOptions(this.locale)}
+                .value=${this.view}
+                name="event-calendar-view-dropdown"
+                aria-label="Calendar view"
+                @value-changed=${this.#handleViewTabChanged}
+              >
+                <svg
+                  slot="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                  class="h-4 w-4"
+                >
+                  <rect x="3" y="4.5" width="18" height="15" rx="2.5"></rect>
+                  <path d="M3 9.5h18"></path>
+                  <path d="M8.25 2.75v3.5M15.75 2.75v3.5" stroke-linecap="round"></path>
+                </svg>
+              </lc-dropdown>
+            </div>
           </div>
         </header>
         <calendar-view-group
