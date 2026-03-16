@@ -175,7 +175,7 @@ export class CalendarWeekView extends BaseElement {
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
 
     return html`
-      <div class="week-layout" dir=${direction}>
+      <div class="week-layout" dir=${direction} style=${`--_lc-week-days: ${this.daysPerWeek};`}>
         <div class="weekday-sidebar-spacer" aria-hidden="true"></div>
         <calendar-weekday-header
           class="weekday-header"
@@ -223,7 +223,14 @@ export class CalendarWeekView extends BaseElement {
             ></calendar-view>
           </div>
         </div>
+        <div class="week-snap-track" aria-hidden="true">
+          ${Array.from(
+            { length: this.daysPerWeek + 1 },
+            () => html`<span class="week-snap-point"></span>`
+          )}
+        </div>
       </div>
+      <div class="week-divider" aria-hidden="true"></div>
     `;
   }
 
