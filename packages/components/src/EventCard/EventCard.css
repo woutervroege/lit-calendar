@@ -8,6 +8,7 @@
   --_lc-event-card-accent-color: var(--_lc-event-accent-color, CanvasText);
   --_lc-event-focus-ring-width: 0px;
   --_lc-event-focus-ring-color: transparent;
+  --_lc-event-focus-ring-gap: 1px;
 }
 
 :host > div {
@@ -28,7 +29,8 @@
 }
 
 :host > div::before {
-  box-shadow: inset 0 0 0 var(--_lc-event-focus-ring-width) var(--_lc-event-focus-ring-color);
+  outline: var(--_lc-event-focus-ring-width) solid var(--_lc-event-focus-ring-color);
+  outline-offset: var(--_lc-event-focus-ring-gap);
 }
 
 @container (max-height: 12px) {
