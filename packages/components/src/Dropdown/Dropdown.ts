@@ -127,6 +127,18 @@ export class Dropdown extends BaseElement {
     super.disconnectedCallback();
   }
 
+  override firstUpdated(changedProperties: Map<PropertyKey, unknown>): void {
+    super.firstUpdated(changedProperties);
+    this.#syncSelectValue();
+  }
+
+  override updated(changedProperties: Map<PropertyKey, unknown>): void {
+    super.updated(changedProperties);
+    if (changedProperties.has("value") || changedProperties.has("options")) {
+      this.#syncSelectValue();
+    }
+  }
+
   render() {
     const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
     const hasSelection = normalizedOptions.some((option) => option.value === this.value);
@@ -218,6 +230,18 @@ export class Dropdown extends BaseElement {
     const select = this.renderRoot.querySelector<HTMLSelectElement>("select");
     if (!select) return;
     select.focus();
+  }
+
+  #syncSelectValue() {
+    const select = this.renderRoot.querySelector<HTMLSelectElement>("select");
+    if (!select) return;
+
+    const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
+    const hasSelection = normalizedOptions.some((option) => option.value === this.value);
+    const nextValue = hasSelection ? this.value : "";
+    if (select.value !== nextValue) {
+      select.value = nextValue;
+    }
   }
 
   #normalizeOption(option: DropdownOption | string): DropdownOption {
