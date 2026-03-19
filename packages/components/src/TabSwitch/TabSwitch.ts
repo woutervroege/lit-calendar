@@ -86,7 +86,7 @@ export class TabSwitch extends BaseElement {
     const labelClasses = `${sharedButtonVisualClasses} border-0 border-transparent ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerCheckedClasses} ${sharedButtonPeerDisabledClasses} peer-checked:bg-[light-dark(rgb(255_255_255),rgb(255_255_255_/_16%))] peer-checked:hover:bg-[light-dark(rgb(241_245_249),rgb(255_255_255_/_16%))] peer-checked:shadow-[0_1px_2px_light-dark(rgb(15_23_42_/_16%),rgb(0_0_0_/_32%))]`;
     return html`
       <div
-        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),transparent)] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
+        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
         role="radiogroup"
         aria-label=${this.ariaLabel}
       >

@@ -183,9 +183,7 @@ export class EventCalendar extends BaseElement {
         <header
           class="flex items-center justify-between gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))]"
         >
-          <div
-            class="flex flex-1 gap-2 [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(255_255_255),rgb(255_255_255_/_22%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(241_245_249),rgb(255_255_255_/_18%))]"
-          >
+          <div class="flex shrink-0 gap-2">
             <lc-button compact label="Previous range" @click=${() => this.goBack()}>
               <svg
                 viewBox="0 0 24 24"
@@ -198,7 +196,7 @@ export class EventCalendar extends BaseElement {
                 <path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
             </lc-button>
-            <lc-button hotkey="t" @click=${() => this.goToday()}>
+            <lc-button hotkey="t" class="[@container(max-width:54rem)]:hidden" @click=${() => this.goToday()}>
               ${getTodayLabel(this.locale)}
             </lc-button>
             <lc-button compact label="Next range" @click=${() => this.goForward()}>
@@ -215,7 +213,7 @@ export class EventCalendar extends BaseElement {
             </lc-button>
           </div>
           <h2
-            class="m-0 px-2 text-center text-xl font-bold text-[light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%))] [@container(max-width:54rem)]:text-left [@container(max-width:54rem)]:text-base"
+            class="m-0 px-2 text-center text-xl font-bold text-[light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%))] [@container(max-width:54rem)]:text-left [@container(max-width:54rem)]:text-sm"
             aria-live="polite"
           >
             ${this.#rangeLabelText}
@@ -256,6 +254,13 @@ export class EventCalendar extends BaseElement {
             </div>
           </div>
         </header>
+        <div
+          class="hidden [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:block [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(255_255_255),rgb(255_255_255_/_22%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(241_245_249),rgb(255_255_255_/_18%))]"
+        >
+          <lc-button hotkey="t" @click=${() => this.goToday()}>
+            ${getTodayLabel(this.locale)}
+          </lc-button>
+        </div>
         <calendar-view-group
           class="min-h-0 flex-[1_1_auto]"
           .view=${this.view}
