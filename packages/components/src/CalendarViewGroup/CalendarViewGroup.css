@@ -90,8 +90,8 @@
   --_lc-combined-surface-bg: var(--_lc-app-header-bg-color, light-dark(#fff, #222));
   --_lc-combined-sidebar-width: var(--_lc-time-sidebar-width, 72px);
   --_lc-combined-gap: 0px;
-  --_lc-combined-sidebar-inline-padding: 4px;
-  --_lc-combined-all-day-label-top-offset: 26px;
+  --_lc-combined-sidebar-inline-padding: 8px;
+  --_lc-combined-all-day-label-top-offset: 32px;
   --_lc-combined-header-height: calc(
     var(--_lc-weekday-header-height, 26px) +
     var(--_lc-all-day-row-height, 120px)
