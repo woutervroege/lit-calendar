@@ -3,7 +3,6 @@ import { customElement, property } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import {
   sharedButtonHoverTintClasses,
-  sharedButtonPeerCheckedClasses,
   sharedButtonPeerDisabledClasses,
   sharedButtonPeerFocusRingClasses,
   sharedButtonVisualClasses,
@@ -83,7 +82,7 @@ export class TabSwitch extends BaseElement {
     const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
     const optionClasses = "flex items-center";
     const inputClasses = "sr-only peer";
-    const labelClasses = `${sharedButtonVisualClasses} border-0 border-transparent ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerCheckedClasses} ${sharedButtonPeerDisabledClasses} peer-checked:bg-[light-dark(rgb(255_255_255),rgb(255_255_255_/_16%))] peer-checked:hover:bg-[light-dark(rgb(241_245_249),rgb(255_255_255_/_16%))] peer-checked:shadow-[0_1px_2px_light-dark(rgb(15_23_42_/_16%),rgb(0_0_0_/_32%))]`;
+    const labelClasses = `${sharedButtonVisualClasses} border-0 border-transparent ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerDisabledClasses}`;
     return html`
       <div
         class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
@@ -93,6 +92,9 @@ export class TabSwitch extends BaseElement {
         ${normalizedOptions.map((option, index) => {
           const inputId = `${groupName}-${option.value}-${index}`;
           const isChecked = option.value === this.value;
+          const checkedClasses = isChecked
+            ? "bg-[light-dark(rgb(255_255_255_/_94%),rgb(255_255_255_/_24%))] hover:bg-[light-dark(rgb(255_255_255_/_98%),rgb(255_255_255_/_30%))] text-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_95%))] shadow-[0_1px_2px_light-dark(rgb(15_23_42_/_16%),rgb(0_0_0_/_32%))]"
+            : "";
           const hotkey = option.hotkey?.trim();
           return html`
             <div class=${optionClasses}>
@@ -108,7 +110,7 @@ export class TabSwitch extends BaseElement {
               />
               <label
                 for=${inputId}
-                class=${labelClasses}
+                class="${labelClasses} ${checkedClasses}"
                 title=${hotkey ? `${option.label} (${hotkey.toUpperCase()})` : option.label}
               >
                 <span class="inline-flex items-center gap-2">
