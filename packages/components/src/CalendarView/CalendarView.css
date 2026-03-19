@@ -41,17 +41,22 @@
   top: 0;
   z-index: var(--_lc-pass-through-sidebar-z, 2);
   align-self: start;
-  min-height: calc(var(--_lc-host-height-factor, 1) * 100%);
+  margin-top: var(--_lc-pass-through-timed-top-offset, 10px);
+  min-height: calc(
+    (var(--_lc-host-height-factor, 1) * 100%) - var(--_lc-pass-through-timed-top-offset, 10px)
+  );
   background: var(--_lc-app-header-bg-color, light-dark(#fff, rgb(15 23 42)));
-  padding-top: var(--_lc-pass-through-timed-top-offset, 10px);
-  box-sizing: border-box;
+  padding-inline: var(--_lc-pass-through-sidebar-inline-padding, 4px);
 }
 
 :host([layout-passthrough][variant="timed"]) section {
-  min-height: calc(var(--_lc-host-height-factor, 1) * 100%);
-  height: calc(var(--_lc-host-height-factor, 1) * 100%);
-  padding-top: var(--_lc-pass-through-timed-top-offset, 10px);
-  box-sizing: border-box;
+  margin-top: var(--_lc-pass-through-timed-top-offset, 10px);
+  min-height: calc(
+    (var(--_lc-host-height-factor, 1) * 100%) - var(--_lc-pass-through-timed-top-offset, 10px)
+  );
+  height: calc(
+    (var(--_lc-host-height-factor, 1) * 100%) - var(--_lc-pass-through-timed-top-offset, 10px)
+  );
 }
 
 :host([variant="timed"]) {

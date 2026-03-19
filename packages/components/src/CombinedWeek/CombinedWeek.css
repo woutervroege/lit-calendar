@@ -13,12 +13,15 @@
   overflow: auto;
   scroll-snap-type: both mandatory;
   scroll-padding-inline-start: calc(
-    var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 60px)) +
+    var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 72px)) +
     var(--_lc-combined-gap, var(--_lc-time-label-gap, 6px)) +
-    var(--_lc-combined-snap-nudge, 0px)
+    var(--_lc-combined-snap-nudge, -5px)
   );
   scroll-padding-block-start: calc(
-    var(--_lc-combined-header-height, calc(var(--_lc-weekday-header-height, 26px) + var(--_lc-all-day-row-height, 120px))) +
+    var(
+      --_lc-combined-header-height,
+      calc(var(--_lc-weekday-header-height, 26px) + var(--_lc-all-day-row-height, 120px))
+    ) +
     var(--_lc-week-section-divider-width, 3px) +
     var(--_lc-combined-snap-block-nudge, 0px)
   );
@@ -26,8 +29,9 @@
 }
 
 .grid-canvas {
-  --_lc-combined-sidebar-width: var(--_lc-time-sidebar-width, 60px);
-  --_lc-combined-gap: var(--_lc-time-label-gap, 6px);
+  --_lc-combined-sidebar-width: var(--_lc-time-sidebar-width, 72px);
+  --_lc-combined-gap: 0px;
+  --_lc-combined-sidebar-inline-padding: 4px;
   --_lc-combined-header-height: calc(
     var(--_lc-weekday-header-height, 26px) +
     var(--_lc-all-day-row-height, 120px)
@@ -114,7 +118,8 @@
   display: flex;
   align-items: end;
   justify-content: flex-end;
-  padding: 8px 4px;
+  padding-block: 8px;
+  padding-inline: var(--_lc-combined-sidebar-inline-padding);
   font-size: 12px;
   line-height: 1;
   font-weight: 500;
@@ -146,6 +151,7 @@
 
 .timed-view {
   --_lc-pass-through-sidebar-z: 14;
+  --_lc-pass-through-sidebar-inline-padding: var(--_lc-combined-sidebar-inline-padding);
 }
 
 @container (max-width: 1100px) {
