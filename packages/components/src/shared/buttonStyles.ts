@@ -1,13 +1,13 @@
 const sharedButtonBaseClasses =
-  "inline-flex h-9 items-center rounded-md text-sm leading-5 text-[light-dark(rgb(15_23_42_/_72%),rgb(255_255_255_/_72%))] transition-colors duration-200";
+  "inline-flex h-9 [@media(pointer:coarse)]:h-11 items-center rounded-lg [--_lc-button-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),transparent)] border border-solid border-[var(--_lc-button-border-color)] text-sm leading-5 text-[light-dark(rgb(15_23_42_/_72%),rgb(255_255_255_/_72%))] transition-colors duration-200";
 
-export const sharedButtonVisualClasses = `${sharedButtonBaseClasses} px-6`;
+export const sharedButtonVisualClasses = `${sharedButtonBaseClasses} px-4`;
 
 export const sharedButtonCompactVisualClasses =
-  `${sharedButtonBaseClasses} min-w-9 justify-center px-[9.2px]`;
+  `${sharedButtonBaseClasses} min-w-9 [@media(pointer:coarse)]:min-w-11 justify-center px-[9.2px]`;
 
 export const sharedButtonActiveBackgroundClasses =
-  "bg-[var(--_lc-button-bg,light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_16%)))]";
+  "bg-[var(--_lc-button-bg,light-dark(rgb(255_255_255),rgb(255_255_255_/_16%)))]";
 
 export const sharedButtonActiveTextClasses =
   "text-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_95%))]";

@@ -83,10 +83,10 @@ export class TabSwitch extends BaseElement {
     const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
     const optionClasses = "flex items-center";
     const inputClasses = "sr-only peer";
-    const labelClasses = `${sharedButtonVisualClasses} ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerCheckedClasses} ${sharedButtonPeerDisabledClasses}`;
+    const labelClasses = `${sharedButtonVisualClasses} border-0 border-transparent ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerCheckedClasses} ${sharedButtonPeerDisabledClasses} peer-checked:bg-[light-dark(rgb(255_255_255),rgb(255_255_255_/_16%))] peer-checked:hover:bg-[light-dark(rgb(241_245_249),rgb(255_255_255_/_16%))] peer-checked:shadow-[0_1px_2px_light-dark(rgb(15_23_42_/_16%),rgb(0_0_0_/_32%))]`;
     return html`
       <div
-        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] rounded-md"
+        class="inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),transparent)] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
         role="radiogroup"
         aria-label=${this.ariaLabel}
       >

@@ -179,12 +179,12 @@ export class EventCalendar extends BaseElement {
 
   render() {
     return html`
-      <div class="flex h-full min-h-0 flex-col gap-7 [container-type:inline-size]">
+      <div class="flex h-full min-h-0 flex-col gap-7 [container-type:inline-size] [@media(max-width:54rem)]:gap-4">
         <header
-          class="flex items-center justify-between gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))] py-2"
+          class="flex items-center justify-between gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))]"
         >
           <div
-            class="flex flex-1 gap-2 [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(15_23_42_/_24%),rgb(255_255_255_/_22%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(15_23_42_/_18%),rgb(255_255_255_/_18%))]"
+            class="flex flex-1 gap-2 [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(255_255_255),rgb(255_255_255_/_22%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(241_245_249),rgb(255_255_255_/_18%))]"
           >
             <lc-button compact label="Previous range" @click=${() => this.goBack()}>
               <svg
@@ -214,12 +214,12 @@ export class EventCalendar extends BaseElement {
               </svg>
             </lc-button>
           </div>
-          <p
-            class="m-0 px-2 text-center text-xl font-bold text-[light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%))] [@container(max-width:54rem)]:text-left"
+          <h2
+            class="m-0 px-2 text-center text-xl font-bold text-[light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%))] [@container(max-width:54rem)]:text-left [@container(max-width:54rem)]:text-base"
             aria-live="polite"
           >
             ${this.#rangeLabelText}
-          </p>
+          </h2>
           <div class="flex flex-1 justify-end">
             <div class="[@container(max-width:54rem)]:hidden">
               <tab-switch
