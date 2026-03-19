@@ -1,11 +1,11 @@
-import { html, nothing } from "lit";
+import { css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import {
   sharedButtonActiveBackgroundClasses,
-  sharedButtonCompactVisualClasses,
   sharedButtonActiveTextClasses,
+  sharedButtonCompactVisualClasses,
   sharedButtonDisabledClasses,
   sharedButtonFocusRingClasses,
   sharedButtonHoverTintClasses,
@@ -35,6 +35,9 @@ export class Button extends BaseElement {
   @property({ type: String })
   hotkey = "";
 
+  @property({ type: Boolean, reflect: true })
+  raised = false;
+
   @property({
     type: String,
     converter: {
@@ -45,7 +48,35 @@ export class Button extends BaseElement {
   type: ButtonType = "button";
 
   static get styles() {
-    return [...BaseElement.styles];
+    return [
+      ...BaseElement.styles,
+      css`
+        @media (max-width: 54rem) {
+          :host([raised]) button {
+            backdrop-filter: blur(10px) saturate(140%);
+            -webkit-backdrop-filter: blur(10px) saturate(140%);
+            box-shadow:
+              0 10px 28px rgb(15 23 42 / 20%),
+              0 1px 0 rgb(255 255 255 / 58%) inset;
+            --_lc-button-bg: light-dark(rgb(255 255 255 / 78%), rgb(15 23 42 / 52%));
+            --_lc-button-hover-bg: light-dark(rgb(255 255 255 / 88%), rgb(15 23 42 / 62%));
+            --_lc-button-border-color: light-dark(rgb(15 23 42 / 18%), rgb(255 255 255 / 24%));
+          }
+
+          @media (prefers-color-scheme: dark) {
+            :host([raised]) button {
+              box-shadow:
+                0 12px 30px rgb(0 0 0 / 58%),
+                0 1px 0 rgb(255 255 255 / 10%) inset;
+            }
+          }
+
+          :host([raised][disabled]) button {
+            box-shadow: none;
+          }
+        }
+      `,
+    ];
   }
 
   connectedCallback() {
@@ -59,7 +90,9 @@ export class Button extends BaseElement {
   }
 
   render() {
-    const visualClasses = this.compact ? sharedButtonCompactVisualClasses : sharedButtonVisualClasses;
+    const visualClasses = this.compact
+      ? sharedButtonCompactVisualClasses
+      : sharedButtonVisualClasses;
     const buttonClasses = `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses}`;
     const hotkey = normalizeHotkey(this.hotkey);
     const hotkeyDisplay = hotkey?.toUpperCase();
@@ -74,12 +107,14 @@ export class Button extends BaseElement {
       >
         <span class="inline-flex items-center gap-2">
           <slot></slot>
-          ${hotkeyDisplay
-            ? html`<span
+          ${
+            hotkeyDisplay
+              ? html`<span
                 class=${sharedHotkeyBadgeClasses}
                 >${hotkeyDisplay}</span
               >`
-            : nothing}
+              : nothing
+          }
         </span>
       </button>
     `;
