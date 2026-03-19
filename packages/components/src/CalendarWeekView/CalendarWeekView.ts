@@ -230,7 +230,6 @@ export class CalendarWeekView extends BaseElement {
           )}
         </div>
       </div>
-      <div class="week-divider" aria-hidden="true"></div>
     `;
   }
 

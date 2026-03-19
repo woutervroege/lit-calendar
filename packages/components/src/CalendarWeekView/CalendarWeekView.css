@@ -23,17 +23,6 @@
   min-height: 0;
 }
 
-.week-divider {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(var(--_lc-weekday-header-height, 26px) + var(--_lc-all-day-row-height, 120px));
-  border-top: var(--_lc-week-section-divider-width, 3px) solid
-    var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
-  pointer-events: none;
-  z-index: 3;
-}
-
 .weekday-sidebar-spacer {
   grid-column: 1;
   grid-row: 1;
@@ -60,6 +49,8 @@
   white-space: nowrap;
   color: var(--_lc-grid-line-day-color, light-dark(rgb(15 23 42 / 72%), rgb(255 255 255 / 72%)));
   pointer-events: none;
+  border-bottom: var(--_lc-week-section-divider-width, 3px) solid
+    var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
 }
 
 .all-day {
@@ -67,6 +58,8 @@
   grid-row: 2;
   height: 100%;
   min-height: 120px;
+  border-bottom: var(--_lc-week-section-divider-width, 3px) solid
+    var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
 }
 
 .timed-scroll {
