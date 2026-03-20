@@ -51,7 +51,7 @@
   );
   background-color: var(
     --_lc-pass-through-sticky-bg,
-    var(--_lc-app-header-bg-color, light-dark(#fff, #222))
+    var(--_lc-surface-bg)
   );
   padding-inline: var(--_lc-pass-through-sidebar-inline-padding, 4px);
 }

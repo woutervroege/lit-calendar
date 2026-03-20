@@ -87,7 +87,7 @@
 }
 
 .combined-week-grid-canvas {
-  --_lc-combined-surface-bg: var(--_lc-app-header-bg-color, light-dark(#fff, #222));
+  --_lc-combined-surface-bg: var(--_lc-surface-bg);
   --_lc-combined-sidebar-width: var(--_lc-time-sidebar-width, 72px);
   --_lc-combined-gap: 0px;
   --_lc-combined-sidebar-inline-padding: 8px;
