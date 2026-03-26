@@ -9,6 +9,7 @@ import "../TimedEvent/TimedEvent.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import componentStyle from "./CalendarView.css?inline";
 import "../TimedEvent/AllDayEvent.js";
+import "./DayOverflowPopover.js";
 import {
   type CalendarViewContextValue,
   calendarViewContext,
@@ -23,6 +24,7 @@ import {
 } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
+import type { DayOverflowPopoverEvent } from "./DayOverflowPopover.js";
 
 type EventInput = {
   /**
@@ -894,54 +896,50 @@ export class CalendarView extends BaseElement {
     anchorName: string
   ): TemplateResult {
     const dayEvents = this.#eventsForDay(day);
-    const eventRows = Math.max(1, dayEvents.length);
     const fullDateLabel = new Intl.DateTimeFormat(this.locale, { dateStyle: "full" }).format(
       new Date(Date.UTC(day.year, day.month - 1, day.day))
     );
+    const popoverEvents: DayOverflowPopoverEvent[] = dayEvents.map(([id, event]) => ({
+      id,
+      start: this.#toEventDateTimeString(event.start),
+      end: this.#toEventDateTimeString(event.end),
+      summary: event.summary,
+      color: event.color,
+      hidden: this.#optimisticallyDeletingEventIds.has(id),
+    }));
+    const dayLabel = this.#getPopoverDayLabel(day, dayIndex);
+    const isCurrentDay = Temporal.PlainDate.compare(day, this.currentTime.toPlainDate()) === 0;
+    const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
 
     return html`
-      <section
+      <day-overflow-popover
         id=${popoverId}
-        class="day-overflow-popover"
         popover="auto"
         role="dialog"
         aria-label=${`Events on ${fullDateLabel}`}
         style=${styleMap({
           "position-anchor": anchorName,
         })}
-      >
-        <div
-          class="day-overflow-popover-cell ${this.#weekendDays.has(day.dayOfWeek)
-            ? "day-overflow-popover-cell-weekend"
-            : ""}"
-          style=${styleMap({
-            "--_lc-days": "1",
-            "--_lc-grid-rows": "1",
-            "--_lc-row-height": "100%",
-            "--_lc-popover-event-count": eventRows.toString(),
-          })}
-        >
-          ${this.#renderPopoverDayNumber(day, dayIndex)}
-          ${
-            dayEvents.length
-              ? html`
-                  <div class="day-overflow-popover-events">
-                    ${dayEvents.map(([id, event]) =>
-                      this.#renderDayOverflowPopoverEvent(id, event, day)
-                    )}
-                  </div>
-                `
-              : ""
-          }
-        </div>
-      </section>
+        day-iso=${day.toString()}
+        day-label=${dayLabel}
+        ?is-current-day=${isCurrentDay}
+        ?outside-visible-month=${outsideVisibleMonth}
+        ?is-weekend=${this.#weekendDays.has(day.dayOfWeek)}
+        .events=${popoverEvents}
+        @update=${this.#handleEventUpdate}
+        @delete=${this.#handleEventDelete}
+      ></day-overflow-popover>
     `;
   }
 
   #handleEventUpdate = (event: Event) => {
+    const detailTarget =
+      event instanceof CustomEvent ? ((event.detail as BaseEvent | null) ?? null) : null;
+    const target = detailTarget ?? (event.target as BaseEvent | null);
+    if (!target) return;
     this.dispatchEvent(
       new CustomEvent("event-modified", {
-        detail: event.target as BaseEvent,
+        detail: target,
         bubbles: true,
         composed: true,
       })
@@ -949,7 +947,9 @@ export class CalendarView extends BaseElement {
   };
 
   #handleEventDelete = (event: Event) => {
-    const target = event.target as BaseEvent | null;
+    const detailTarget =
+      event instanceof CustomEvent ? ((event.detail as BaseEvent | null) ?? null) : null;
+    const target = detailTarget ?? (event.target as BaseEvent | null);
     if (!target) return;
     if (target.eventId) {
       this.#optimisticallyDeletingEventIds.add(target.eventId);
@@ -1089,7 +1089,7 @@ export class CalendarView extends BaseElement {
       Temporal.PlainDateTime.compare(end, dayStart) > 0;
   }
 
-  #renderPopoverDayNumber(day: Temporal.PlainDate, dayIndex: number): TemplateResult {
+  #getPopoverDayLabel(day: Temporal.PlainDate, dayIndex: number): string {
     const weekdayFormatter = new Intl.DateTimeFormat(this.locale, { weekday: "short" });
     const dayFormatter = new Intl.NumberFormat(this.locale);
     const monthFormatter = new Intl.DateTimeFormat(this.locale, { month: "short" });
@@ -1103,52 +1103,7 @@ export class CalendarView extends BaseElement {
         ? `${monthFormatter.format(new Date(Date.UTC(day.year, day.month - 1, day.day)))} `
         : "";
     const weekday = weekdayFormatter.format(new Date(Date.UTC(day.year, day.month - 1, day.day)));
-    const label = `${weekday} ${monthPrefix}${dayFormatter.format(day.day)}`;
-    const isCurrentDay = Temporal.PlainDate.compare(day, this.currentTime.toPlainDate()) === 0;
-    const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
-
-    return html`
-      <span
-        class="day-label day-overflow-popover-day-number absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center border-0 bg-transparent text-inherit leading-none ${
-          "min-w-6 px-2"
-        } h-6 ${isCurrentDay ? "current-day" : ""} ${
-          outsideVisibleMonth ? "outside-month-day-label" : ""
-        }"
-        aria-hidden="true"
-      >
-        <time datetime=${day.toString()}>${label}</time>
-      </span>
-    `;
-  }
-
-  #renderDayOverflowPopoverEvent(id: string, event: EventInput, day: Temporal.PlainDate): TemplateResult {
-    return html`
-      <div class="day-overflow-popover-event">
-        ${keyed(
-          `popover-${id}-${day.toString()}`,
-          html`
-            <all-day-event
-              event-id=${id}
-              start=${this.#toEventDateTimeString(event.start)}
-              end=${this.#toEventDateTimeString(event.end)}
-              summary=${event.summary}
-              color=${event.color}
-              style=${styleMap({
-                "--_lc-all-day-day-number-space": "0px",
-              })}
-              ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-              .interactionDisabled=${true}
-              .renderedDays=${[day]}
-              .daysPerRow=${1}
-              .gridRows=${1}
-              .maxVisibleRows=${Number.POSITIVE_INFINITY}
-              @update=${this.#handleEventUpdate}
-              @delete=${this.#handleEventDelete}
-            ></all-day-event>
-          `
-        )}
-      </div>
-    `;
+    return `${weekday} ${monthPrefix}${dayFormatter.format(day.day)}`;
   }
 
   #renderCurrentTimeIndicator() {
