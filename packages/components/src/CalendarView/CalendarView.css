@@ -200,6 +200,27 @@ time {
     0 0 0 4px var(--_lc-focus-ring-color);
 }
 
+.day-overflow-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 100%;
+}
+
+.day-overflow-button {
+  justify-content: flex-start;
+  padding-inline: 8px;
+}
+
+.day-overflow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0.85;
+}
+
 time.current-day,
 .day-label.current-day {
   background-color: var(--_lc-current-day-color);

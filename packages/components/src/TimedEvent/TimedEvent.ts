@@ -138,6 +138,8 @@ export class TimedEvent extends BaseEvent {
       "--_lc-width": width,
       "--_lc-margin-left": marginLeft,
       "--_lc-indentation": `${indentation || 0}px`,
+      "--_lc-inline-inset-start": "1px",
+      "--_lc-inline-inset-end": "2px",
       "--_lc-z-index": (indentation || 0) / 12 + 1,
     } as Record<string, string | number>;
   }

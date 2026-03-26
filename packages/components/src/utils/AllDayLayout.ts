@@ -113,6 +113,32 @@ export function computeHiddenAllDayCountsByDay(
   return hiddenCountsByDay;
 }
 
+export function computeHiddenAllDayEventIdsByDay(
+  layout: AllDayLayout,
+  maxVisibleRows: number
+): Map<number, string[]> {
+  const hiddenEventIdsByDay = new Map<number, string[]>();
+  if (!Number.isFinite(maxVisibleRows)) return hiddenEventIdsByDay;
+
+  for (const eventLayout of layout.placedEvents) {
+    const hiddenSegments = eventLayout.segments.filter(
+      (segment) => segment.stackIndex >= maxVisibleRows
+    );
+    if (!hiddenSegments.length) continue;
+
+    for (const segment of hiddenSegments) {
+      for (let colIndex = segment.startColIndex; colIndex <= segment.endColIndex; colIndex += 1) {
+        const dayIndex = segment.rowIndex * layout.daysPerRow + colIndex;
+        const dayIds = hiddenEventIdsByDay.get(dayIndex) ?? [];
+        dayIds.push(eventLayout.id);
+        hiddenEventIdsByDay.set(dayIndex, dayIds);
+      }
+    }
+  }
+
+  return hiddenEventIdsByDay;
+}
+
 function getVisibleIndexRange(
   renderedDays: Temporal.PlainDate[],
   startInclusive: Temporal.PlainDate,
