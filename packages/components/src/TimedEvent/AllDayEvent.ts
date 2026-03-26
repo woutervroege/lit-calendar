@@ -229,6 +229,8 @@ export class AllDayEvent extends BaseEvent {
     const left = (startColIndex / cols) * 100;
     const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
     const top = this.#getTopPosition(rowIndex, stackIndex);
+    const inlineInsetStart = this.daysPerRow > 0 ? "2px" : "1px";
+    const inlineInsetEnd = this.daysPerRow > 0 ? "1px" : "2px";
 
     return {
       rowIndex,
@@ -240,6 +242,8 @@ export class AllDayEvent extends BaseEvent {
         "--_lc-width": widthInColumns,
         "--_lc-margin-left": 0,
         "--_lc-indentation": "0px",
+        "--_lc-inline-inset-start": inlineInsetStart,
+        "--_lc-inline-inset-end": inlineInsetEnd,
         "--_lc-z-index": 1,
       },
     };

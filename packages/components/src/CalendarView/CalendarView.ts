@@ -21,6 +21,7 @@ import {
   type AllDayLayoutItem,
   buildAllDayLayout,
   computeHiddenAllDayCountsByDay,
+  computeHiddenAllDayEventIdsByDay,
 } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
@@ -43,6 +44,11 @@ type EventInput = {
 
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;
+type AllDayOverflowLayout = {
+  maxVisibleRows: number;
+  hiddenCountsByDay: Map<number, number>;
+  hiddenColorsByDay: Map<number, string[]>;
+};
 const COMPACT_MONTH_MAX_INLINE_SIZE_PX = 520;
 
 @customElement("calendar-view")
@@ -588,7 +594,7 @@ export class CalendarView extends BaseElement {
     `;
   }
 
-  #renderEventEntries(allDayOverflow: { maxVisibleRows: number }): TemplateResult[] {
+  #renderEventEntries(allDayOverflow: AllDayOverflowLayout): TemplateResult[] {
     return this.#sortedEvents.map(([id, event]) =>
       this.#renderEventEntry(id, event, allDayOverflow)
     );
@@ -597,7 +603,7 @@ export class CalendarView extends BaseElement {
   #renderEventEntry(
     id: string,
     event: EventInput,
-    allDayOverflow: { maxVisibleRows: number }
+    allDayOverflow: AllDayOverflowLayout
   ): TemplateResult {
     return html`
       ${keyed(
@@ -638,10 +644,7 @@ export class CalendarView extends BaseElement {
     `;
   }
 
-  #renderAllDayInterleavedByDate(allDayOverflow: {
-    maxVisibleRows: number;
-    hiddenCountsByDay: Map<number, number>;
-  }): TemplateResult[] {
+  #renderAllDayInterleavedByDate(allDayOverflow: AllDayOverflowLayout): TemplateResult[] {
     const days = this.days;
     if (!days.length) return this.#renderEventEntries(allDayOverflow);
     const cols = this.#isMonthView ? this.daysPerRow : this.#days;
@@ -675,9 +678,11 @@ export class CalendarView extends BaseElement {
 
       const hiddenCount = allDayOverflow.hiddenCountsByDay.get(dayIndex) ?? 0;
       if (hiddenCount > 0) {
+        const hiddenColors = allDayOverflow.hiddenColorsByDay.get(dayIndex) ?? [];
         const overflowIndicator = this.#renderAllDayOverflowIndicator(
           dayIndex,
           hiddenCount,
+          hiddenColors,
           cols,
           rowHeightPx,
           allDayOverflow.maxVisibleRows
@@ -758,10 +763,7 @@ export class CalendarView extends BaseElement {
     return day.month !== anchorDay.month || day.year !== anchorDay.year;
   }
 
-  #renderAllDayOverflowIndicators(layout: {
-    maxVisibleRows: number;
-    hiddenCountsByDay: Map<number, number>;
-  }) {
+  #renderAllDayOverflowIndicators(layout: AllDayOverflowLayout) {
     if (this.#isCompactMonthView) return "";
     const dayCount = this.days.length;
     if (!dayCount || this.#days <= 0) return "";
@@ -787,21 +789,24 @@ export class CalendarView extends BaseElement {
     if (!Number.isFinite(rowHeightPx)) return "";
 
     return sortedOverflowEntries
-      .map(([dayIndex, hiddenCount]) =>
-        this.#renderAllDayOverflowIndicator(
+      .map(([dayIndex, hiddenCount]) => {
+        const hiddenColors = layout.hiddenColorsByDay.get(dayIndex) ?? [];
+        return this.#renderAllDayOverflowIndicator(
           dayIndex,
           hiddenCount,
+          hiddenColors,
           cols,
           rowHeightPx,
           layout.maxVisibleRows
-        )
-      )
+        );
+      })
       .filter((indicator): indicator is TemplateResult => Boolean(indicator));
   }
 
   #renderAllDayOverflowIndicator(
     dayIndex: number,
     hiddenCount: number,
+    hiddenColors: string[],
     cols: number,
     rowHeightPx: number,
     maxVisibleRows: number
@@ -816,7 +821,7 @@ export class CalendarView extends BaseElement {
       return null;
     }
     const indicatorHeightPx = this.#getAllDayOverflowIndicatorHeightPx();
-    const indicatorBottomInsetPx = 6;
+    const indicatorBottomInsetPx = 2;
     const indicatorOffsetWithinRowPx = Math.max(
       0,
       rowHeightPx - indicatorHeightPx - indicatorBottomInsetPx
@@ -827,11 +832,11 @@ export class CalendarView extends BaseElement {
     const cellLeft = (visualColIndex / cols) * 100;
     const top = rowIndex * rowHeightPx + indicatorOffsetWithinRowPx;
     const cellWidth = 100 / cols;
-    const inlineInsetPx = 6;
+    const inlineInsetPx = this.#isMonthView ? 3 : 2;
+    const inlineEndInsetPx = 2;
     const day = this.days[dayIndex];
     if (!day) return null;
     const formattedHiddenCount = new Intl.NumberFormat(this.locale).format(hiddenCount);
-    const label = `+${formattedHiddenCount}`;
     const fullDateLabel = new Intl.DateTimeFormat(this.locale, { dateStyle: "full" }).format(
       new Date(Date.UTC(day.year, day.month - 1, day.day))
     );
@@ -846,7 +851,8 @@ export class CalendarView extends BaseElement {
       left,
       top: `${top}px`,
       height: `${indicatorHeightPx}px`,
-      maxWidth: `calc(${cellWidth}% - ${inlineInsetPx * 2}px)`,
+      "min-width": `${indicatorHeightPx}px`,
+      "max-width": `calc(${cellWidth}% - ${inlineInsetPx + inlineEndInsetPx}px)`,
     };
     if (!anchorLeft) {
       buttonStyle.transform = "translateX(-100%)";
@@ -859,14 +865,14 @@ export class CalendarView extends BaseElement {
       return html`
         <button
           type="button"
-          class="day-label absolute z-[3] w-6 h-6 p-0 text-sm font-medium rounded-md flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
+          class="day-label day-overflow-button absolute z-[3] p-0 text-sm font-medium rounded-sm flex items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
           style=${styleMap(buttonStyle)}
           aria-label=${accessibilityLabel}
           tabindex="0"
           @click=${(event: MouseEvent) => this.#handleDayLabelClick(day, dayIndex, event)}
           @keydown=${(event: KeyboardEvent) => this.#handleDayLabelKeyDown(day, dayIndex, event)}
         >
-          ${label}
+          ${this.#renderOverflowDots(hiddenColors, hiddenCount)}
         </button>
       `;
     }
@@ -875,7 +881,7 @@ export class CalendarView extends BaseElement {
       <div class="day-overflow-indicator-anchor">
         <button
           type="button"
-          class="day-label day-overflow-toggle absolute z-[3] w-6 h-6 p-0 text-sm font-medium rounded-md flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
+          class="day-label day-overflow-button day-overflow-toggle absolute z-[3] p-0 text-sm font-medium rounded-sm flex items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
           style=${styleMap(buttonStyle)}
           aria-label=${accessibilityLabel}
           aria-haspopup="dialog"
@@ -884,10 +890,28 @@ export class CalendarView extends BaseElement {
           tabindex="0"
           @click=${() => this.#prepareOverflowPopover(popoverId)}
         >
-          ${label}
+          ${this.#renderOverflowDots(hiddenColors, hiddenCount)}
         </button>
         ${this.#renderDayOverflowPopover(popoverId, day, dayIndex, anchorName)}
       </div>
+    `;
+  }
+
+  #renderOverflowDots(colors: string[], hiddenCount: number): TemplateResult {
+    const shownColors = colors.slice(0, hiddenCount);
+    const hasColors = shownColors.length > 0;
+    const fallbackDots = hiddenCount;
+    return html`
+      <span class="day-overflow-dots" aria-hidden="true">
+        ${
+          hasColors
+            ? shownColors.map(
+                (color) =>
+                  html`<span class="day-overflow-dot" style=${styleMap({ "background-color": color })}></span>`
+              )
+            : Array.from({ length: fallbackDots }, () => html`<span class="day-overflow-dot"></span>`)
+        }
+      </span>
     `;
   }
 
@@ -1111,9 +1135,45 @@ export class CalendarView extends BaseElement {
   }
 
   #prepareOverflowPopover(popoverId: string) {
+    const popover = this.renderRoot.querySelector<HTMLElement>(`#${popoverId}`);
+    if (popover) {
+      this.#setOverflowPopoverInlineAlign(popover);
+    }
     if (this.#activeOverflowPopoverId === popoverId) return;
     this.#activeOverflowPopoverId = popoverId;
     this.requestUpdate();
+  }
+
+  #measureOverflowPopoverWidth(popover: HTMLElement): number {
+    if (popover.matches(":popover-open")) {
+      return popover.getBoundingClientRect().width;
+    }
+    popover.setAttribute("data-measuring", "");
+    const width = popover.getBoundingClientRect().width;
+    popover.removeAttribute("data-measuring");
+    return width;
+  }
+
+  #setOverflowPopoverInlineAlign(popover: HTMLElement) {
+    const anchorToggle = this.renderRoot.querySelector<HTMLElement>(
+      `[popovertarget="${popover.id}"]`
+    );
+    if (!anchorToggle) return;
+    const anchorRect = anchorToggle.getBoundingClientRect();
+    const anchorCenterX = (anchorRect.left + anchorRect.right) / 2;
+    const popoverWidth = this.#measureOverflowPopoverWidth(popover);
+    const viewportMarginPx = 12;
+    const availableLeft = anchorCenterX - viewportMarginPx;
+    const availableRight = window.innerWidth - viewportMarginPx - anchorCenterX;
+    const needsHalfWidth = popoverWidth / 2;
+
+    if (availableLeft >= needsHalfWidth && availableRight >= needsHalfWidth) {
+      popover.removeAttribute("data-inline-align");
+      return;
+    }
+
+    const inlineAlign = anchorCenterX < window.innerWidth / 2 ? "start" : "end";
+    popover.setAttribute("data-inline-align", inlineAlign);
   }
 
   #handleOverflowPopoverToggle = (event: Event) => {
@@ -1121,13 +1181,15 @@ export class CalendarView extends BaseElement {
     if (!target?.id) return;
     const toggleEvent = event as Event & { newState?: "open" | "closed" };
     if (toggleEvent.newState === "open") {
-      if (this.#activeOverflowPopoverId === target.id) return;
-      this.#activeOverflowPopoverId = target.id;
-      this.requestUpdate();
+      if (this.#activeOverflowPopoverId !== target.id) {
+        this.#activeOverflowPopoverId = target.id;
+        this.requestUpdate();
+      }
       return;
     }
     if (toggleEvent.newState === "closed" && this.#activeOverflowPopoverId === target.id) {
       this.#activeOverflowPopoverId = null;
+      target.removeAttribute("data-inline-align");
       this.requestUpdate();
     }
   };
@@ -1270,20 +1332,29 @@ export class CalendarView extends BaseElement {
     return this.#cachedEventEntries;
   }
 
-  #getAllDayOverflowLayout(): { maxVisibleRows: number; hiddenCountsByDay: Map<number, number> } {
+  #getAllDayOverflowLayout(): AllDayOverflowLayout {
     if (this.variant !== "all-day") {
-      return { maxVisibleRows: Number.POSITIVE_INFINITY, hiddenCountsByDay: new Map() };
+      return {
+        maxVisibleRows: Number.POSITIVE_INFINITY,
+        hiddenCountsByDay: new Map(),
+        hiddenColorsByDay: new Map(),
+      };
     }
 
     const dayCount = this.days.length;
     const cols = this.#isMonthView ? this.daysPerRow : dayCount;
     if (!dayCount || cols <= 0) {
-      return { maxVisibleRows: Number.POSITIVE_INFINITY, hiddenCountsByDay: new Map() };
+      return {
+        maxVisibleRows: Number.POSITIVE_INFINITY,
+        hiddenCountsByDay: new Map(),
+        hiddenColorsByDay: new Map(),
+      };
     }
 
     const visibleEvents = this.#sortedEvents.filter(
       ([id]) => !this.#optimisticallyDeletingEventIds.has(id)
     );
+    const eventColorsById = new Map(visibleEvents.map(([id, event]) => [id, event.color]));
     const layout = buildAllDayLayout({
       renderedDays: this.days,
       daysPerRow: cols,
@@ -1292,19 +1363,31 @@ export class CalendarView extends BaseElement {
 
     const maxRowsByHeight = this.#getMaxRowsPerCellByHeight();
     if (!Number.isFinite(maxRowsByHeight)) {
-      return { maxVisibleRows: Number.POSITIVE_INFINITY, hiddenCountsByDay: new Map() };
+      return {
+        maxVisibleRows: Number.POSITIVE_INFINITY,
+        hiddenCountsByDay: new Map(),
+        hiddenColorsByDay: new Map(),
+      };
     }
     if (maxRowsByHeight <= 0) {
+      const hiddenCountsByDay = computeHiddenAllDayCountsByDay(layout, 0);
+      const hiddenColorsByDay = this.#computeHiddenAllDayColorsByDay(layout, 0, eventColorsById);
       return {
         maxVisibleRows: 0,
-        hiddenCountsByDay: computeHiddenAllDayCountsByDay(layout, 0),
+        hiddenCountsByDay,
+        hiddenColorsByDay,
       };
     }
 
     const maxVisibleRows = maxRowsByHeight;
     const hiddenCountsByDay = computeHiddenAllDayCountsByDay(layout, maxVisibleRows);
+    const hiddenColorsByDay = this.#computeHiddenAllDayColorsByDay(
+      layout,
+      maxVisibleRows,
+      eventColorsById
+    );
     if (!hiddenCountsByDay.size) {
-      return { maxVisibleRows, hiddenCountsByDay };
+      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
     }
 
     // Reserve one full row for the overflow indicator when any day overflows.
@@ -1312,7 +1395,7 @@ export class CalendarView extends BaseElement {
     const eventHeight = this.#getAllDayEventHeightPx();
     const overflowIndicatorHeight = this.#getAllDayOverflowIndicatorHeightPx();
     if (!Number.isFinite(availableHeight) || eventHeight <= 0) {
-      return { maxVisibleRows, hiddenCountsByDay };
+      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
     }
 
     const maxRowsWithIndicator = Math.max(
@@ -1320,11 +1403,45 @@ export class CalendarView extends BaseElement {
       Math.floor((availableHeight - overflowIndicatorHeight) / eventHeight)
     );
     if (maxRowsWithIndicator >= maxVisibleRows) {
-      return { maxVisibleRows, hiddenCountsByDay };
+      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
     }
 
     const hiddenCountsWithIndicator = computeHiddenAllDayCountsByDay(layout, maxRowsWithIndicator);
-    return { maxVisibleRows: maxRowsWithIndicator, hiddenCountsByDay: hiddenCountsWithIndicator };
+    const hiddenColorsWithIndicator = this.#computeHiddenAllDayColorsByDay(
+      layout,
+      maxRowsWithIndicator,
+      eventColorsById
+    );
+    return {
+      maxVisibleRows: maxRowsWithIndicator,
+      hiddenCountsByDay: hiddenCountsWithIndicator,
+      hiddenColorsByDay: hiddenColorsWithIndicator,
+    };
+  }
+
+  #computeHiddenAllDayColorsByDay(
+    layout: ReturnType<typeof buildAllDayLayout>,
+    maxVisibleRows: number,
+    eventColorsById: Map<string, string>
+  ): Map<number, string[]> {
+    const hiddenIdsByDay = computeHiddenAllDayEventIdsByDay(layout, maxVisibleRows);
+    const hiddenColorsByDay = new Map<number, string[]>();
+
+    for (const [dayIndex, ids] of hiddenIdsByDay.entries()) {
+      const colors: string[] = [];
+      const seenColors = new Set<string>();
+      for (const id of ids) {
+        const color = eventColorsById.get(id);
+        if (!color || seenColors.has(color)) continue;
+        seenColors.add(color);
+        colors.push(color);
+      }
+      if (colors.length) {
+        hiddenColorsByDay.set(dayIndex, colors);
+      }
+    }
+
+    return hiddenColorsByDay;
   }
 
   #toAllDayLayoutItem(id: string, event: EventInput): AllDayLayoutItem {
@@ -1367,7 +1484,7 @@ export class CalendarView extends BaseElement {
   }
 
   #getAllDayOverflowIndicatorHeightPx(): number {
-    return 24;
+    return this.#readSectionCssNumber("--_lc-event-height", 32);
   }
 
   #readSectionCssNumber(propertyName: string, fallback: number): number {
