@@ -57,11 +57,13 @@
   }
 
   :host .event-card-summary-main {
+    order: 2;
     flex: 1 1 auto;
     min-width: 0;
   }
 
   :host .event-card-time {
+    order: 1;
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
