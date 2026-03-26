@@ -34,6 +34,7 @@ export class AllDayEvent extends BaseEvent {
 
   connectedCallback() {
     super.connectedCallback();
+    this.#clearStackIndexCache();
     this.addEventListener(
       "interaction-drag-hover",
       this.#handleInteractionDragHover as EventListener
@@ -41,6 +42,7 @@ export class AllDayEvent extends BaseEvent {
   }
 
   disconnectedCallback() {
+    this.#clearStackIndexCache();
     this.removeEventListener(
       "interaction-drag-hover",
       this.#handleInteractionDragHover as EventListener
@@ -169,8 +171,7 @@ export class AllDayEvent extends BaseEvent {
   }
 
   #dayKeysForGlobalStack(renderedDays: string[]): string[] {
-    const referenceDay = this.#getReferenceDay(renderedDays);
-    return referenceDay ? [referenceDay] : [];
+    return this.#getVisibleDayKeys(renderedDays);
   }
 
   #dayKeysForRowStack(renderedDays: string[], rowIndex: number): string[] {
@@ -189,11 +190,6 @@ export class AllDayEvent extends BaseEvent {
 
   #getVisibleDayKeys(renderedDays: string[]): string[] {
     return this.days.map((day) => day.toString()).filter((day) => renderedDays.includes(day));
-  }
-
-  #getReferenceDay(renderedDays: string[]): string | null {
-    const visibleDays = this.#getVisibleDayKeys(renderedDays);
-    return visibleDays.length ? visibleDays[0] : null;
   }
 
   #getStackIndex(renderedDays: string[], options?: { ignoreLock?: boolean }): number {
