@@ -258,7 +258,7 @@ export class CalendarWeekView extends BaseElement {
       >
         <div class="combined-week-grid-canvas" style=${visibleColumnsStyle}>
           <header class="combined-week-header">
-            <aside class="combined-week-header-sidebar" aria-hidden="true">All-day</aside>
+            <aside class="combined-week-header-sidebar" aria-hidden="true"></aside>
             <section class="combined-week-header-main">
               <calendar-weekday-header
                 .locale=${this.locale}
