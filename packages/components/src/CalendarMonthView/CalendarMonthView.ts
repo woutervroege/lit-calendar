@@ -124,6 +124,7 @@ export class CalendarMonthView extends BaseElement {
   }
 
   #reemit = (event: Event) => {
+    event.stopPropagation();
     this.dispatchEvent(
       new CustomEvent(event.type, {
         detail: (event as CustomEvent).detail,
