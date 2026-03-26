@@ -181,8 +181,7 @@ export class CalendarViewGroup extends BaseElement {
   }
 
   get nextWeek(): string {
-    const rangeLengthDays = Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
-    return this.#weekStartDate.add({ days: rangeLengthDays }).toString();
+    return this.#weekStartDate.add({ days: 7 }).toString();
   }
 
   get nextMonth(): string {
@@ -317,8 +316,7 @@ export class CalendarViewGroup extends BaseElement {
     }
 
     const start = this.#weekStartDate;
-    const rangeLengthDays = Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
-    return start.add({ days: rangeLengthDays * step });
+    return start.add({ days: 7 * step });
   }
 
   get #weekStartDate(): Temporal.PlainDate {
