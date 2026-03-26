@@ -229,6 +229,7 @@ time.current-day,
   position: fixed;
   position-area: block-end span-inline-start;
   position-try-fallbacks: flip-block, flip-inline;
+  height: auto;
   --_lc-popover-day-number-space: calc(var(--_lc-all-day-day-number-space) - 6px);
 }
 

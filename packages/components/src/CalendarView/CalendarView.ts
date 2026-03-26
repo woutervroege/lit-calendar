@@ -1131,11 +1131,13 @@ export class CalendarView extends BaseElement {
                 "--_lc-all-day-day-number-space": "0px",
               })}
               ?hidden=${this.#optimisticallyDeletingEventIds.has(id)}
-              ?inert=${true}
+              .interactionDisabled=${true}
               .renderedDays=${[day]}
               .daysPerRow=${1}
               .gridRows=${1}
               .maxVisibleRows=${Number.POSITIVE_INFINITY}
+              @update=${this.#handleEventUpdate}
+              @delete=${this.#handleEventDelete}
             ></all-day-event>
           `
         )}
