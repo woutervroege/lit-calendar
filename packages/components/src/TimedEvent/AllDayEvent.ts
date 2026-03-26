@@ -350,6 +350,10 @@ export class AllDayEvent extends BaseEvent {
 
   render() {
     const dayInsets = this.dayInsets;
+    const visibleDayInsets = dayInsets.filter(
+      ({ stackIndex }) => stackIndex < this.maxVisibleRows || !Number.isFinite(this.maxVisibleRows)
+    );
+    const isFocusable = visibleDayInsets.length > 0;
     const canResizeStart = this.days.length > 1;
     const colorStyles = getEventColorStyles(this.color);
     const isDragging = this.interactionController.isDragging;
@@ -363,7 +367,7 @@ export class AllDayEvent extends BaseEvent {
       <div
         class="interaction-surface m-0 text-0 relative w-full h-full border-none bg-none outline-none p-0"
         role="group"
-        tabindex="0"
+        tabindex=${isFocusable ? "0" : "-1"}
         aria-label=${this.#interactionLabel}
         aria-describedby=${this.#keyboardHintId}
         aria-keyshortcuts="Control+Meta+ArrowUp Control+Meta+ArrowDown Control+Meta+ArrowLeft Control+Meta+ArrowRight Control+Shift+ArrowUp Control+Shift+ArrowDown"
@@ -385,22 +389,19 @@ export class AllDayEvent extends BaseEvent {
           Use Control Command and arrow keys to move this event. Use Control Shift and up or down
           arrow keys to resize the end date.
         </span>
-        ${this.#renderEventCards(dayInsets, canResizeStart)}
+        ${this.#renderEventCards(visibleDayInsets, canResizeStart)}
       </div>
     `;
   }
 
   #renderEventCards(
-    dayInsets: Array<{
+    visibleDayInsets: Array<{
       style: Record<string, string | number>;
       rowIndex: number;
       stackIndex: number;
     }>,
     canResizeStart: boolean
   ) {
-    const visibleDayInsets = dayInsets.filter(
-      ({ stackIndex }) => stackIndex < this.maxVisibleRows || !Number.isFinite(this.maxVisibleRows)
-    );
     if (!visibleDayInsets.length) return "";
 
     const startsBeforeVisibleRange = this.#startsBeforeVisibleRange();

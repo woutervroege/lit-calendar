@@ -666,19 +666,23 @@ export class CalendarView extends BaseElement {
     const content: TemplateResult[] = [];
     days.forEach((day, dayIndex) => {
       content.push(this.#renderDayNumber(day, dayIndex));
+      const dayEvents = eventsByDay.get(dayIndex) ?? [];
+      content.push(...dayEvents);
+
       const hiddenCount = allDayOverflow.hiddenCountsByDay.get(dayIndex) ?? 0;
       if (hiddenCount > 0) {
         const overflowIndicator = this.#renderAllDayOverflowIndicator(
           dayIndex,
           hiddenCount,
           cols,
-          rowHeightPx
+          rowHeightPx,
+          allDayOverflow.maxVisibleRows
         );
         if (overflowIndicator) {
+          // Keep the overflow action directly after this day's events in tab order.
           content.push(overflowIndicator);
         }
       }
-      content.push(...(eventsByDay.get(dayIndex) ?? []));
     });
     content.push(...unanchoredEvents);
     return content;
@@ -780,7 +784,13 @@ export class CalendarView extends BaseElement {
 
     return sortedOverflowEntries
       .map(([dayIndex, hiddenCount]) =>
-        this.#renderAllDayOverflowIndicator(dayIndex, hiddenCount, cols, rowHeightPx)
+        this.#renderAllDayOverflowIndicator(
+          dayIndex,
+          hiddenCount,
+          cols,
+          rowHeightPx,
+          layout.maxVisibleRows
+        )
       )
       .filter((indicator): indicator is TemplateResult => Boolean(indicator));
   }
@@ -789,27 +799,42 @@ export class CalendarView extends BaseElement {
     dayIndex: number,
     hiddenCount: number,
     cols: number,
-    rowHeightPx: number
+    rowHeightPx: number,
+    maxVisibleRows: number
   ): TemplateResult | null {
-    if (hiddenCount <= 0 || cols <= 0 || !Number.isFinite(rowHeightPx)) return null;
-    const indicatorTopInsetPx = 6;
+    if (
+      hiddenCount <= 0 ||
+      cols <= 0 ||
+      !Number.isFinite(rowHeightPx) ||
+      !Number.isFinite(maxVisibleRows) ||
+      maxVisibleRows < 0
+    ) {
+      return null;
+    }
+    const indicatorHeightPx = this.#getAllDayOverflowIndicatorHeightPx();
+    const indicatorBottomInsetPx = 6;
+    const indicatorOffsetWithinRowPx = Math.max(
+      0,
+      rowHeightPx - indicatorHeightPx - indicatorBottomInsetPx
+    );
     const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
     const visualColIndex = this.#toVisualColumnIndex(colIndex, cols);
     const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
     const cellLeft = (visualColIndex / cols) * 100;
-    const top = rowIndex * rowHeightPx + indicatorTopInsetPx;
+    const top = rowIndex * rowHeightPx + indicatorOffsetWithinRowPx;
     const cellWidth = 100 / cols;
     const inlineInsetPx = 6;
     const formattedHiddenCount = new Intl.NumberFormat(this.locale).format(hiddenCount);
     const label = `+${formattedHiddenCount}`;
     const accessibilityLabel = label;
-    const anchorLeft = this.#isRtl;
+    const anchorLeft = !this.#isRtl;
     const left = anchorLeft
       ? `calc(${cellLeft}% + ${inlineInsetPx}px)`
       : `calc(${cellLeft + cellWidth}% - ${inlineInsetPx}px)`;
     const buttonStyle: Record<string, string> = {
       left,
       top: `${top}px`,
+      height: `${indicatorHeightPx}px`,
       maxWidth: `calc(${cellWidth}% - ${inlineInsetPx * 2}px)`,
     };
     if (!anchorLeft) {
@@ -1113,7 +1138,28 @@ export class CalendarView extends BaseElement {
 
     const maxVisibleRows = maxRowsByHeight;
     const hiddenCountsByDay = computeHiddenAllDayCountsByDay(layout, maxVisibleRows);
-    return { maxVisibleRows, hiddenCountsByDay };
+    if (!hiddenCountsByDay.size) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    // Reserve one full row for the overflow indicator when any day overflows.
+    const availableHeight = this.#getAllDayAvailableHeightPx();
+    const eventHeight = this.#getAllDayEventHeightPx();
+    const overflowIndicatorHeight = this.#getAllDayOverflowIndicatorHeightPx();
+    if (!Number.isFinite(availableHeight) || eventHeight <= 0) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    const maxRowsWithIndicator = Math.max(
+      0,
+      Math.floor((availableHeight - overflowIndicatorHeight) / eventHeight)
+    );
+    if (maxRowsWithIndicator >= maxVisibleRows) {
+      return { maxVisibleRows, hiddenCountsByDay };
+    }
+
+    const hiddenCountsWithIndicator = computeHiddenAllDayCountsByDay(layout, maxRowsWithIndicator);
+    return { maxVisibleRows: maxRowsWithIndicator, hiddenCountsByDay: hiddenCountsWithIndicator };
   }
 
   #toAllDayLayoutItem(id: string, event: EventInput): AllDayLayoutItem {
@@ -1153,6 +1199,11 @@ export class CalendarView extends BaseElement {
   #getAllDayDayNumberOffsetPx(): number {
     if (this.labelsHidden) return 0;
     return this.#readSectionCssNumber("--_lc-all-day-day-number-space", 36);
+  }
+
+  #getAllDayOverflowIndicatorHeightPx(): number {
+    // Reserve the same vertical space as one rendered all-day event row.
+    return this.#getAllDayEventHeightPx();
   }
 
   #readSectionCssNumber(propertyName: string, fallback: number): number {
