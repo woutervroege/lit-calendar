@@ -207,6 +207,66 @@ export const sampleEvents: StoryEventEntry[] = [
       color: "#A855F7",
     },
   ],
+  [
+    "event-feb5-design-review-20250205",
+    {
+      uid: "feb5-design-review@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Design Review",
+      color: "#6366F1",
+    },
+  ],
+  [
+    "event-feb5-eng-sync-20250205",
+    {
+      uid: "feb5-eng-sync@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Engineering Sync",
+      color: "#0EA5E9",
+    },
+  ],
+  [
+    "event-feb5-customer-call-20250205",
+    {
+      uid: "feb5-customer-call@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Customer Call",
+      color: "#14B8A6",
+    },
+  ],
+  [
+    "event-feb5-roadmap-20250205",
+    {
+      uid: "feb5-roadmap@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Roadmap Session",
+      color: "#22C55E",
+    },
+  ],
+  [
+    "event-feb5-budget-check-20250205",
+    {
+      uid: "feb5-budget-check@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Budget Check",
+      color: "#F59E0B",
+    },
+  ],
+  [
+    "event-feb5-team-retro-20250205",
+    {
+      uid: "feb5-team-retro@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Team Retro",
+      color: "#EF4444",
+    },
+  ],
 ];
 
 export const timezoneShiftEvents: StoryEventEntry[] = [

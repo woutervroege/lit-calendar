@@ -23,6 +23,9 @@ export class AllDayEvent extends BaseEvent {
   @property({ type: Number })
   maxVisibleRows: number = Number.POSITIVE_INFINITY;
 
+  @property({ type: Boolean, attribute: "interaction-disabled" })
+  interactionDisabled = false;
+
   constructor() {
     super({ mode: "all-day" });
   }
@@ -354,7 +357,7 @@ export class AllDayEvent extends BaseEvent {
       ({ stackIndex }) => stackIndex < this.maxVisibleRows || !Number.isFinite(this.maxVisibleRows)
     );
     const isFocusable = visibleDayInsets.length > 0;
-    const canResizeStart = this.days.length > 1;
+    const canResizeStart = this.days.length > 1 && !this.interactionDisabled;
     const colorStyles = getEventColorStyles(this.color);
     const isDragging = this.interactionController.isDragging;
     const hasOffset = this.dragOffsetX !== 0 || this.dragOffsetY !== 0;
@@ -372,17 +375,21 @@ export class AllDayEvent extends BaseEvent {
         ?inert=${!isFocusable}
         aria-label=${this.#interactionLabel}
         aria-describedby=${this.#keyboardHintId}
-        aria-keyshortcuts="Control+Meta+ArrowUp Control+Meta+ArrowDown Control+Meta+ArrowLeft Control+Meta+ArrowRight Control+Shift+ArrowUp Control+Shift+ArrowDown"
+        aria-keyshortcuts=${this.interactionDisabled
+          ? "Delete Backspace"
+          : "Delete Backspace Control+Meta+ArrowUp Control+Meta+ArrowDown Control+Meta+ArrowLeft Control+Meta+ArrowRight Control+Shift+ArrowUp Control+Shift+ArrowDown"}
         style=${styleMap({
           ...colorStyles,
           transform: dragTransform,
           // Disable transform animation entirely to avoid snap/flash at drag end.
           transition: "none",
         })}
-        @pointerdown=${this.interactionController.pointerDownHandler}
-        @pointermove=${this.interactionController.pointerMoveHandler}
-        @pointerup=${this.interactionController.pointerUpHandler}
-        @keydown=${this.interactionController.keydownHandler}
+        @pointerdown=${this.interactionDisabled ? null : this.interactionController.pointerDownHandler}
+        @pointermove=${this.interactionDisabled ? null : this.interactionController.pointerMoveHandler}
+        @pointerup=${this.interactionDisabled ? null : this.interactionController.pointerUpHandler}
+        @keydown=${this.interactionDisabled
+          ? this.#handleDeleteOnlyKeydown
+          : this.interactionController.keydownHandler}
       >
         <span
           id=${this.#keyboardHintId}
@@ -444,7 +451,7 @@ export class AllDayEvent extends BaseEvent {
         ?first-segment=${hasRoundedStart}
         ?last-segment=${hasRoundedEnd}
       >
-        ${isFirst && canResizeStart
+        ${!this.interactionDisabled && isFirst && canResizeStart
           ? html`
               <resize-handle
                 axis="horizontal"
@@ -453,7 +460,7 @@ export class AllDayEvent extends BaseEvent {
               ></resize-handle>
             `
           : ""}
-        ${isLast
+        ${!this.interactionDisabled && isLast
           ? html`
               <resize-handle
                 axis="horizontal"
@@ -465,6 +472,24 @@ export class AllDayEvent extends BaseEvent {
       </event-card>
     `;
   }
+
+  #handleDeleteOnlyKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "Delete" && event.key !== "Backspace") return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target as EventTarget | null;
+    if (target instanceof HTMLElement) {
+      if (target.isContentEditable) return;
+      const tagName = target.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") return;
+    }
+    event.preventDefault();
+    this.dispatchEvent(
+      new CustomEvent("delete", {
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
 
   #startsBeforeVisibleRange(): boolean {
     const startDate = this.startDate;

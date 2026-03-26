@@ -1,0 +1,113 @@
+:host {
+  --_lc-overflow-popover-gap: 8px;
+  display: none;
+  margin: 0;
+  inset: auto;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow:
+    0 14px 28px -16px rgb(15 23 42 / 38%),
+    0 10px 16px -14px rgb(15 23 42 / 24%);
+  min-inline-size: min(260px, calc(100vi - 24px));
+  max-inline-size: min(300px, calc(100vi - 24px));
+  max-block-size: none;
+  overflow: visible;
+  padding: 0;
+  z-index: 120;
+  position: fixed;
+  top: calc(anchor(bottom) + var(--_lc-overflow-popover-gap));
+  left: anchor(center);
+  translate: -50% 0;
+  position-try-fallbacks: flip-block, flip-inline;
+  height: auto;
+  --_lc-popover-day-number-space: calc(var(--_lc-all-day-day-number-space) - 6px);
+}
+
+.day-label {
+  color: var(--_lc-grid-line-day-color);
+}
+
+.day-label.outside-month-day-label,
+.day-label.outside-month-day-label time {
+  color: var(--_lc-outside-month-day-color);
+}
+
+time.current-day,
+.day-label.current-day {
+  background-color: var(--_lc-current-day-color);
+  color: var(--_lc-current-day-text-color);
+}
+
+.day-label.current-day time {
+  color: inherit;
+}
+
+:host(:popover-open) {
+  display: block;
+  animation: day-overflow-popover-fade-in 140ms ease-out;
+}
+
+@keyframes day-overflow-popover-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:host::backdrop {
+  background: transparent;
+}
+
+.day-overflow-popover-cell {
+  position: relative;
+  --_lc-popover-cell-padding: 8px;
+  min-inline-size: 100%;
+  min-height: calc(
+    var(--_lc-popover-day-number-space) +
+    (var(--_lc-event-height) * var(--_lc-popover-event-count, 1)) +
+    (var(--_lc-popover-cell-padding) * 2)
+  );
+  overflow: hidden;
+  padding: var(--_lc-popover-cell-padding);
+  background: var(--_lc-surface-bg);
+  border: var(--_lc-grid-line-width) solid var(--_lc-grid-line-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 18px -14px rgb(15 23 42 / 45%);
+}
+
+.day-overflow-popover-cell-weekend {
+  background: var(--_lc-weekend-bg-color);
+}
+
+.day-overflow-popover-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: var(--_lc-popover-day-number-space);
+}
+
+.day-overflow-popover-event {
+  position: relative;
+  block-size: var(--_lc-event-height);
+}
+
+.day-overflow-popover-event > all-day-event {
+  position: static;
+  inset: auto;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.day-overflow-popover-day-number {
+  inset-inline-start: 6px;
+  top: 0;
+  margin-top: 6px;
+  pointer-events: none;
+}
