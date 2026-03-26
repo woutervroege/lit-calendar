@@ -5,6 +5,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import "../CalendarView/CalendarView.js";
 import "../CalendarWeekdayHeader/CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
+import { type AllDayLayoutItem, buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo } from "../utils/Locale.js";
 import componentStyle from "./CalendarWeekView.css?inline";
 
@@ -130,6 +131,32 @@ export class CalendarWeekView extends BaseElement {
     return new Map(this.#eventEntries.filter(([, event]) => this.#isTimedEvent(event)));
   }
 
+  get #renderedDays(): Temporal.PlainDate[] {
+    return Array.from({ length: this.daysPerWeek }, (_, dayOffset) =>
+      this.startDate.add({ days: dayOffset })
+    );
+  }
+
+  get #allDayVisibleRowCount(): number {
+    const renderedDays = this.#renderedDays;
+    const layout = buildAllDayLayout({
+      renderedDays,
+      daysPerRow: renderedDays.length,
+      items: this.#allDayLayoutItems,
+    });
+    return Math.max(1, layout.maxEventsOnAnyDay);
+  }
+
+  get #allDayLayoutItems(): AllDayLayoutItem[] {
+    return this.#eventEntries
+      .filter(([, event]) => this.#isAllDayEvent(event))
+      .map(([id, event]) => ({
+        id,
+        start: this.#toPlainDateTime(event.start).toPlainDate(),
+        endInclusive: this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate(),
+      }));
+  }
+
   get #eventEntries(): EventEntry[] {
     return Array.from(this.events?.entries() ?? []);
   }
@@ -158,6 +185,31 @@ export class CalendarWeekView extends BaseElement {
     return !value.includes("T");
   }
 
+  #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
+    if (value instanceof Temporal.ZonedDateTime) {
+      return this.timezone
+        ? value.withTimeZone(this.timezone).toPlainDateTime()
+        : value.toPlainDateTime();
+    }
+    if (value instanceof Temporal.PlainDateTime) {
+      return value;
+    }
+    if (value instanceof Temporal.PlainDate) {
+      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    }
+    if (this.#isTimezonedString(value)) {
+      const zoned = Temporal.ZonedDateTime.from(value);
+      return this.timezone
+        ? zoned.withTimeZone(this.timezone).toPlainDateTime()
+        : zoned.toPlainDateTime();
+    }
+    return Temporal.PlainDateTime.from(value);
+  }
+
+  #isTimezonedString(value: string): boolean {
+    return value.includes("[") && value.includes("]");
+  }
+
   #startOfWeekFor(date: Temporal.PlainDate, weekStart: WeekdayNumber): Temporal.PlainDate {
     const weekdayOffset = (date.dayOfWeek - weekStart + 7) % 7;
     return date.subtract({ days: weekdayOffset });
@@ -178,12 +230,13 @@ export class CalendarWeekView extends BaseElement {
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
     const snapPoints = this.daysPerWeek + 1;
     const snapRows = 24;
+    const allDayRowHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
 
     return html`
       <div
         class="combined-week-scroll-root"
         dir=${direction}
-        style=${`--_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor};`}
+        style=${`--_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
       >
         <div class="combined-week-grid-canvas">
           <header class="combined-week-header">

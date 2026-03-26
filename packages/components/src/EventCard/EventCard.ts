@@ -57,16 +57,27 @@ export class EventCard extends BaseElement {
   }
 
   render() {
+    const hasTimeLabel = Boolean(this.time?.trim() || this.timeDetail?.trim());
     return html`
           <div class=${classMap(this.#cardClasses)} dir="${this.dir}">
               ${this.past ? html`<span class="sr-only">Past event.</span>` : ""}
-              <h6 class=${classMap(this.#summaryClasses)}>${this.summary}</h6>
-              <time class=${classMap(this.#timeClasses)}>
-                <span class=${classMap(this.#timeMainClasses)}>${this.time}</span>
-                ${this.timeDetail
-                  ? html`<span class=${classMap(this.#timeDetailClasses)}>(${this.timeDetail})</span>`
-                  : ""}
-              </time>
+              <h6 class=${classMap(this.#summaryClasses)}>
+                <span class=${classMap(this.#summaryMainClasses)}>${this.summary}</span>
+                ${
+                  hasTimeLabel
+                    ? html`
+                        <time class=${classMap(this.#summaryTimeClasses)}>
+                          <span class=${classMap(this.#summaryTimeMainClasses)}>${this.time}</span>
+                          ${this.timeDetail
+                            ? html`<span class=${classMap(this.#summaryTimeDetailClasses)}
+                                >(${this.timeDetail})</span
+                              >`
+                            : ""}
+                        </time>
+                      `
+                    : ""
+                }
+              </h6>
               <slot></slot>
           </div>
         `;
@@ -74,13 +85,17 @@ export class EventCard extends BaseElement {
 
   get #summaryClasses() {
     return {
+      "event-card-heading": true,
       "m-0": true,
       "text-xs": true,
       "text-start": true,
       "font-bold": true,
       "px-2": true,
       "pt-2": true,
-      "truncate": true,
+      "pb-2": true,
+      "leading-tight": true,
+      "max-w-full": true,
+      "overflow-hidden": true,
       "line-through": this.past,
       "decoration-[1.5px]": this.past,
       "opacity-80": this.past,
@@ -88,44 +103,48 @@ export class EventCard extends BaseElement {
     };
   }
 
-  get #timeClasses() {
+  get #summaryMainClasses() {
     return {
-      "m-0": true,
+      "event-card-summary-main": true,
+      "min-w-0": true,
+      "max-w-full": true,
+      block: true,
+      truncate: true,
+    };
+  }
+
+  get #summaryTimeClasses() {
+    return {
+      "event-card-time": true,
       "text-xs": true,
       "text-start": true,
       "font-light": true,
       "tabular-nums": true,
-      "px-2": true,
-      "pb-2": true,
-      "block": true,
+      block: true,
+      "min-w-0": true,
       "max-w-full": true,
       "overflow-hidden": true,
-      flex: true,
-      "flex-wrap": true,
-      "gap-x-1": true,
       "leading-tight": true,
-      "line-through": this.past,
-      "decoration-[1.5px]": this.past,
-      "opacity-80": this.past,
     };
   }
 
-  get #timeMainClasses() {
+  get #summaryTimeMainClasses() {
     return {
+      "event-card-time-main": true,
       "min-w-0": true,
       "max-w-full": true,
+      "inline-block": true,
       "truncate": true,
     };
   }
 
-  get #timeDetailClasses() {
+  get #summaryTimeDetailClasses() {
     return {
+      "event-card-time-detail": true,
       "min-w-0": true,
       "max-w-full": true,
+      "inline-block": true,
       "truncate": true,
-      "line-through": this.past,
-      "decoration-[1.5px]": this.past,
-      "opacity-80": this.past,
     };
   }
 

@@ -168,6 +168,36 @@ export const sampleEvents: StoryEventEntry[] = [
     },
   ],
   [
+    "event-customer-summit-20250115",
+    {
+      uid: "customer-summit@example.test",
+      start: "2025-01-15",
+      end: "2025-01-17",
+      summary: "Customer Summit",
+      color: "#EC4899",
+    },
+  ],
+  [
+    "event-hiring-panel-20250116",
+    {
+      uid: "hiring-panel@example.test",
+      start: "2025-01-16",
+      end: "2025-01-18",
+      summary: "Hiring Panel",
+      color: "#F59E0B",
+    },
+  ],
+  [
+    "event-infra-migration-20250116",
+    {
+      uid: "infra-migration@example.test",
+      start: "2025-01-16",
+      end: "2025-01-17",
+      summary: "Infra Migration",
+      color: "#06B6D4",
+    },
+  ],
+  [
     "event-release-freeze-20250119",
     {
       uid: "release-freeze@example.test",
@@ -202,10 +232,9 @@ export const timezoneShiftEvents: StoryEventEntry[] = [
   ],
 ];
 
-function toTemporalDateLike(value: string):
-  | Temporal.PlainDate
-  | Temporal.PlainDateTime
-  | Temporal.ZonedDateTime {
+function toTemporalDateLike(
+  value: string
+): Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime {
   if (!value.includes("T")) {
     return Temporal.PlainDate.from(value);
   }

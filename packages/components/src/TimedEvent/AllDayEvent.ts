@@ -285,6 +285,11 @@ export class AllDayEvent extends BaseEvent {
   #handleInteractionDragHover = (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
 
+    if (!this.startHasTimeComponent) {
+      this.#clearPreviewDisplayTime();
+      return;
+    }
+
     const hover = this.#getHoverDetail(event);
     if (!hover) {
       this.#clearPreviewDisplayTime();

@@ -42,6 +42,41 @@
   right: var(--_lc-time-sidebar-width);
 }
 
+/* Taller cards: stack summary over time for readability. */
+:host .event-card-time {
+  margin-top: 2px;
+}
+
+/* Compact cards: keep summary + time on a single row. */
+@container (max-height: 47px) {
+  :host .event-card-heading {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  :host .event-card-summary-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  :host .event-card-time {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  :host .event-card-time-main,
+  :host .event-card-time-detail {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 @container (max-height: 12px) {
   :host > div {
     min-height: 0;
