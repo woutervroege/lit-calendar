@@ -28,7 +28,7 @@ import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/L
 import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
 import type { DayOverflowPopoverEvent } from "./DayOverflowPopover.js";
 import "../EventCard/EventCard.js";
-import type { CalendarEvent as EventInput } from "../models/CalendarEvent.js";
+import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js";
 
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;

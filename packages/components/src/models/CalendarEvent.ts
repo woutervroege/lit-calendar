@@ -5,7 +5,7 @@ export type CalendarEventDateValue =
   | Temporal.PlainDateTime
   | Temporal.ZonedDateTime;
 
-export type CalendarEvent = {
+export type CalendarEventEnvelope = {
   sourceId?: string;
   eventId?: string;
   recurrenceId?: string;
@@ -13,10 +13,21 @@ export type CalendarEvent = {
   isOptimistic?: boolean;
   isRemoved?: boolean;
   removalScope?: "instance" | "series";
+};
+
+export type CalendarEventContent = {
   start: CalendarEventDateValue;
   end: CalendarEventDateValue;
   summary: string;
   color: string;
 };
 
+export type CalendarEvent = {
+  envelope: CalendarEventEnvelope;
+  content: CalendarEventContent;
+};
+
+export type CalendarEventView = CalendarEventEnvelope & CalendarEventContent;
+
 export type CalendarEventEntry = [id: string, event: CalendarEvent];
+export type CalendarEventViewEntry = [id: string, event: CalendarEventView];
