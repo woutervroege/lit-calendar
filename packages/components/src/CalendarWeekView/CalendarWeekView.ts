@@ -278,6 +278,7 @@ export class CalendarWeekView extends BaseElement {
                 .snapInterval=${this.snapInterval}
                 .labelsHidden=${false}
                 @day-selection-requested=${this.#reemit}
+                @event-create-requested=${this.#reemit}
                 @event-modified=${this.#reemit}
                 @event-deleted=${this.#reemit}
               ></calendar-view>
@@ -309,6 +310,7 @@ export class CalendarWeekView extends BaseElement {
               .snapInterval=${this.snapInterval}
               .visibleHours=${this.visibleHours}
               .labelsHidden=${false}
+              @event-create-requested=${this.#reemit}
               @event-modified=${this.#reemit}
               @event-deleted=${this.#reemit}
             ></calendar-view>

@@ -50,6 +50,19 @@ type AllDayOverflowLayout = {
   hiddenColorsByDay: Map<number, string[]>;
 };
 const COMPACT_MONTH_MAX_INLINE_SIZE_PX = 520;
+const CREATE_TOUCH_LONG_PRESS_MS = 500;
+const CREATE_TOUCH_CANCEL_DISTANCE_PX = 10;
+const CREATE_DRAG_ACTIVATION_DISTANCE_PX = 6;
+const SECONDS_IN_DAY = 24 * 60 * 60;
+
+type EventCreateRequestDetail = {
+  start: string;
+  end: string;
+  dayIndex: number;
+  trigger: "long-press" | "drag-select";
+  pointerType: string;
+  sourceEvent: Event;
+};
 
 @customElement("calendar-view")
 export class CalendarView extends BaseElement {
@@ -67,6 +80,20 @@ export class CalendarView extends BaseElement {
   rtl = false;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
+  #pendingCreatePointer:
+    | {
+        pointerId: number;
+        pointerType: string;
+        startClientX: number;
+        startClientY: number;
+        startDateTime: Temporal.PlainDateTime;
+        startDayIndex: number;
+        currentDateTime: Temporal.PlainDateTime;
+        currentDayIndex: number;
+        dragActivated: boolean;
+        longPressTimerId: number | null;
+      }
+    | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
   #styleObserver?: MutationObserver;
   #lastDaysPerRowToken = "";
@@ -215,6 +242,7 @@ export class CalendarView extends BaseElement {
   }
 
   disconnectedCallback() {
+    this.#cancelPendingCreatePointer();
     this.#stopStyleObserver();
     this.#stopResizeObserver();
     this.#cancelScheduledResizeSync();
@@ -505,6 +533,7 @@ export class CalendarView extends BaseElement {
 
   render() {
     const hoverStyle: Record<string, string> = {};
+    const createPreviewStyle = this.#getCreatePreviewStyle();
     const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
     const timedSidebarLabels = getHourlyTimeLabels(this.locale, this.hours);
     const timedSidebarRows = timedSidebarLabels.map((label, hour) => {
@@ -576,9 +605,18 @@ export class CalendarView extends BaseElement {
           dir=${this.#isRtl ? "rtl" : "ltr"}
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
+          @pointerdown=${this.#handleCreatePointerDown}
+          @pointermove=${this.#handleCreatePointerMove}
+          @pointerup=${this.#handleCreatePointerUp}
+          @pointercancel=${this.#handleCreatePointerCancel}
         >
           ${this.#renderWeekendHighlights()}
           ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
+          ${
+            createPreviewStyle
+              ? html`<div class="event-create-preview absolute" style=${styleMap(createPreviewStyle)}></div>`
+              : ""
+          }
           ${
             this.variant === "all-day" && !this.labelsHidden
               ? this.#renderAllDayInterleavedByDate(allDayOverflow)
@@ -1081,6 +1119,280 @@ export class CalendarView extends BaseElement {
           pointerType,
           sourceEvent,
         },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  #handleCreatePointerDown = (event: PointerEvent) => {
+    if (this.variant !== "timed") return;
+    if (this.#pendingCreatePointer) return;
+    if (!this.#isCreateEligibleTarget(event.target)) return;
+    if (event.pointerType !== "touch" && event.button !== 0) return;
+
+    const startHit = this.#resolveTimedHitFromPoint(event.clientX, event.clientY);
+    if (!startHit) return;
+
+    const section = event.currentTarget as HTMLElement | null;
+    if (section) {
+      try {
+        section.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore pointer capture failures from synthetic/unsupported pointers.
+      }
+    }
+
+    let longPressTimerId: number | null = null;
+    if (event.pointerType === "touch") {
+      longPressTimerId = window.setTimeout(() => {
+        const pending = this.#pendingCreatePointer;
+        if (!pending || pending.pointerId !== event.pointerId || pending.pointerType !== "touch") return;
+        const endDateTime = this.#defaultCreateEndDateTime(pending.startDateTime);
+        this.#emitEventCreateRequested({
+          start: pending.startDateTime.toString(),
+          end: endDateTime.toString(),
+          dayIndex: pending.startDayIndex,
+          trigger: "long-press",
+          pointerType: pending.pointerType,
+          sourceEvent: event,
+        });
+        this.#cancelPendingCreatePointer(event, section);
+      }, CREATE_TOUCH_LONG_PRESS_MS);
+    }
+
+    this.#pendingCreatePointer = {
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startDateTime: startHit.dateTime,
+      startDayIndex: startHit.dayIndex,
+      currentDateTime: startHit.dateTime,
+      currentDayIndex: startHit.dayIndex,
+      dragActivated: false,
+      longPressTimerId,
+    };
+  };
+
+  #handleCreatePointerMove = (event: PointerEvent) => {
+    const pending = this.#pendingCreatePointer;
+    if (!pending || pending.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - pending.startClientX;
+    const deltaY = event.clientY - pending.startClientY;
+    const pointerDistance = Math.hypot(deltaX, deltaY);
+    if (pending.pointerType === "touch") {
+      if (pointerDistance >= CREATE_TOUCH_CANCEL_DISTANCE_PX) {
+        this.#cancelPendingCreatePointer(event, event.currentTarget as HTMLElement | null);
+      }
+      return;
+    }
+
+    if (!pending.dragActivated && pointerDistance >= CREATE_DRAG_ACTIVATION_DISTANCE_PX) {
+      pending.dragActivated = true;
+    }
+    if (!pending.dragActivated) return;
+
+    const hoverHit = this.#resolveTimedHitFromPoint(event.clientX, event.clientY);
+    if (!hoverHit) return;
+    pending.currentDateTime = hoverHit.dateTime;
+    pending.currentDayIndex = hoverHit.dayIndex;
+    // Keep the create interaction visual focused on the growing preview block.
+    this.#dragHoverDayIndex = null;
+    this.#dragHoverTime = null;
+    this.requestUpdate();
+  };
+
+  #handleCreatePointerUp = (event: PointerEvent) => {
+    const pending = this.#pendingCreatePointer;
+    if (!pending || pending.pointerId !== event.pointerId) return;
+    const section = event.currentTarget as HTMLElement | null;
+
+    if (pending.pointerType === "touch") {
+      this.#cancelPendingCreatePointer(event, section);
+      return;
+    }
+
+    if (!pending.dragActivated) {
+      this.#cancelPendingCreatePointer(event, section);
+      return;
+    }
+
+    const endHit = this.#resolveTimedHitFromPoint(event.clientX, event.clientY);
+    if (!endHit) {
+      this.#cancelPendingCreatePointer(event, section);
+      return;
+    }
+
+    let startDateTime = pending.startDateTime;
+    let endDateTime = endHit.dateTime;
+    if (Temporal.PlainDateTime.compare(endDateTime, startDateTime) < 0) {
+      [startDateTime, endDateTime] = [endDateTime, startDateTime];
+    }
+    if (Temporal.PlainDateTime.compare(startDateTime, endDateTime) === 0) {
+      this.#cancelPendingCreatePointer(event, section);
+      return;
+    }
+
+    const startDayIndex = this.#dayIndexForDate(startDateTime.toPlainDate()) ?? pending.startDayIndex;
+    this.#emitEventCreateRequested({
+      start: startDateTime.toString(),
+      end: endDateTime.toString(),
+      dayIndex: startDayIndex,
+      trigger: "drag-select",
+      pointerType: pending.pointerType,
+      sourceEvent: event,
+    });
+    this.#cancelPendingCreatePointer(event, section);
+  };
+
+  #handleCreatePointerCancel = (event: PointerEvent) => {
+    const pending = this.#pendingCreatePointer;
+    if (!pending || pending.pointerId !== event.pointerId) return;
+    this.#cancelPendingCreatePointer(event, event.currentTarget as HTMLElement | null);
+  };
+
+  #cancelPendingCreatePointer(event?: PointerEvent, section?: HTMLElement | null) {
+    const pending = this.#pendingCreatePointer;
+    if (pending?.longPressTimerId != null) {
+      clearTimeout(pending.longPressTimerId);
+    }
+    if (event && section) {
+      try {
+        if (section.hasPointerCapture(event.pointerId)) {
+          section.releasePointerCapture(event.pointerId);
+        }
+      } catch {
+        // No-op if pointer capture is unavailable/released already.
+      }
+    }
+    this.#pendingCreatePointer = null;
+    if (this.#dragHoverDayIndex !== null || this.#dragHoverTime !== null) {
+      this.#dragHoverDayIndex = null;
+      this.#dragHoverTime = null;
+      this.requestUpdate();
+    }
+  }
+
+  #isCreateEligibleTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+    return !target.closest(
+      "timed-event, all-day-event, .day-label, .day-overflow-button, day-overflow-popover, button, a, input, select, textarea"
+    );
+  }
+
+  #resolveTimedHitFromPoint(
+    clientX: number,
+    clientY: number
+  ): { dayIndex: number; time: Temporal.PlainTime; dateTime: Temporal.PlainDateTime } | null {
+    const section = this.renderRoot.querySelector("section");
+    if (!section || this.#days <= 0) return null;
+    const bounds = section.getBoundingClientRect();
+    if (!Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) return null;
+    if (bounds.width <= 0 || bounds.height <= 0) return null;
+    const days = this.days;
+    if (!days.length) return null;
+
+    const boundedX = Math.max(0, Math.min(bounds.width - Number.EPSILON, clientX - bounds.left));
+    const boundedY = Math.max(0, Math.min(bounds.height - Number.EPSILON, clientY - bounds.top));
+    const visualDayIndex = Math.floor((boundedX / bounds.width) * this.#days);
+    const dayIndex = this.#isRtl ? this.#days - visualDayIndex - 1 : visualDayIndex;
+    const day = days[dayIndex];
+    if (!day) return null;
+
+    const fractionY = boundedY / bounds.height;
+    const time = this.#snappedTimeFromFraction(fractionY);
+    return {
+      dayIndex,
+      time,
+      dateTime: day.toPlainDateTime(time),
+    };
+  }
+
+  #snappedTimeFromFraction(fractionY: number): Temporal.PlainTime {
+    const clampedFraction = Math.max(0, Math.min(0.999999, fractionY));
+    const incrementSeconds = Math.max(60, Math.round(this.#snapInterval * 60));
+    const targetSeconds = Math.round(clampedFraction * SECONDS_IN_DAY);
+    const snappedSeconds = Math.round(targetSeconds / incrementSeconds) * incrementSeconds;
+    const maxSeconds = Math.max(0, SECONDS_IN_DAY - incrementSeconds);
+    const normalizedSeconds = Math.max(0, Math.min(maxSeconds, snappedSeconds));
+    const hour = Math.floor(normalizedSeconds / 3600);
+    const minute = Math.floor((normalizedSeconds % 3600) / 60);
+    return Temporal.PlainTime.from({ hour, minute, second: 0 });
+  }
+
+  #defaultCreateEndDateTime(startDateTime: Temporal.PlainDateTime): Temporal.PlainDateTime {
+    const defaultDurationMinutes = Math.max(60, Math.round(this.#snapInterval));
+    const tentativeEnd = startDateTime.add({ minutes: defaultDurationMinutes });
+    const dayEnd = startDateTime.toPlainDate().add({ days: 1 }).toPlainDateTime({
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    if (Temporal.PlainDateTime.compare(tentativeEnd, dayEnd) > 0) {
+      return dayEnd;
+    }
+    return tentativeEnd;
+  }
+
+  #dayIndexForDate(date: Temporal.PlainDate): number | null {
+    const days = this.days;
+    const dayIndex = days.findIndex((day) => Temporal.PlainDate.compare(day, date) === 0);
+    return dayIndex >= 0 ? dayIndex : null;
+  }
+
+  #getCreatePreviewStyle(): Record<string, string> | null {
+    if (this.variant !== "timed" || this.#days <= 0) return null;
+    const pending = this.#pendingCreatePointer;
+    if (!pending || pending.pointerType === "touch" || !pending.dragActivated) return null;
+
+    let startDateTime = pending.startDateTime;
+    let endDateTime = pending.currentDateTime;
+    if (Temporal.PlainDateTime.compare(endDateTime, startDateTime) < 0) {
+      [startDateTime, endDateTime] = [endDateTime, startDateTime];
+    }
+
+    // Keep the preview focused on same-day drag selection in timed view.
+    if (Temporal.PlainDate.compare(startDateTime.toPlainDate(), endDateTime.toPlainDate()) !== 0) {
+      return null;
+    }
+
+    const dayIndex = this.#dayIndexForDate(startDateTime.toPlainDate());
+    if (dayIndex === null) return null;
+    const visualDayIndex = this.#toVisualColumnIndex(dayIndex, this.#days);
+    const left = (visualDayIndex / this.#days) * 100;
+    const width = (1 / this.#days) * 100;
+    const startHour =
+      startDateTime.hour +
+      startDateTime.minute / 60 +
+      startDateTime.second / 3600 +
+      startDateTime.millisecond / 3_600_000;
+    const endHour =
+      endDateTime.hour +
+      endDateTime.minute / 60 +
+      endDateTime.second / 3600 +
+      endDateTime.millisecond / 3_600_000;
+    const top = (startHour / 24) * 100;
+    const minDurationHours = Math.max(this.#snapInterval, 5) / 60;
+    const durationHours = Math.max(minDurationHours, endHour - startHour);
+    const height = (durationHours / 24) * 100;
+
+    return {
+      left: `${left}%`,
+      width: `${width}%`,
+      top: `${top}%`,
+      height: `${height}%`,
+    };
+  }
+
+  #emitEventCreateRequested(detail: EventCreateRequestDetail) {
+    this.dispatchEvent(
+      new CustomEvent("event-create-requested", {
+        detail,
         bubbles: true,
         composed: true,
       })

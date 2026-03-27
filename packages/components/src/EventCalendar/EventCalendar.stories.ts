@@ -5,6 +5,7 @@ import { localeOptions, type StoryEvent, sampleEvents, timezoneOptions } from ".
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
 type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
+type EventCreateRequestDetail = { start?: string; end?: string };
 
 function preserveDateOnlyShape(
   nextValue: { toString(): string; toPlainDate(): { toString(): string } } | null | undefined,
@@ -122,6 +123,23 @@ const meta: Meta = {
 
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
     el.events = new Map(entries);
+
+    el.addEventListener("event-create-requested", (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as EventCreateRequestDetail | null;
+      if (!detail?.start || !detail.end) return;
+
+      const eventId = `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const nextEvents = new Map(el.events);
+      nextEvents.set(eventId, {
+        uid: eventId,
+        start: detail.start,
+        end: detail.end,
+        summary: "New event",
+        color: "#0ea5e9",
+      });
+      el.events = nextEvents;
+    });
 
     el.addEventListener("event-modified", (event: Event) => {
       if (!(event instanceof CustomEvent)) return;

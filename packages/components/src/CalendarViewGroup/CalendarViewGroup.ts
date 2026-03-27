@@ -261,6 +261,7 @@ export class CalendarViewGroup extends BaseElement {
           .snapInterval=${this.snapInterval}
           .visibleHours=${this.visibleHours}
           @day-selection-requested=${this.#handleDaySelectionRequested}
+          @event-create-requested=${this.#reemit}
           @event-modified=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-week-view>
@@ -277,6 +278,7 @@ export class CalendarViewGroup extends BaseElement {
           .timezone=${this.timezone}
           .currentTime=${this.#resolvedCurrentTime}
           @day-selection-requested=${this.#handleDaySelectionRequested}
+          @event-create-requested=${this.#reemit}
           @event-modified=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-year-view>
@@ -293,6 +295,7 @@ export class CalendarViewGroup extends BaseElement {
         .timezone=${this.timezone}
         .currentTime=${this.#resolvedCurrentTime}
         @day-selection-requested=${this.#handleDaySelectionRequested}
+        @event-create-requested=${this.#reemit}
         @event-modified=${this.#reemit}
         @event-deleted=${this.#reemit}
       ></calendar-month-view>

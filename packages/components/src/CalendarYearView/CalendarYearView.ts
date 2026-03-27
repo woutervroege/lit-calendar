@@ -102,6 +102,7 @@ export class CalendarYearView extends BaseElement {
                 .timezone=${this.timezone}
                 .currentTime=${this.currentTime}
                 @day-selection-requested=${this.#reemit}
+                @event-create-requested=${this.#reemit}
                 @event-modified=${this.#reemit}
                 @event-deleted=${this.#reemit}
               ></calendar-month-view>
