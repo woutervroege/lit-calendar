@@ -1,21 +1,31 @@
+import { Temporal } from "@js-temporal/polyfill";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./EventCalendar.js";
 import { calendarCssProps } from "../calendarCssProps.js";
-import { localeOptions, type StoryEvent, sampleEvents, timezoneOptions } from "../storyData.js";
+import {
+  localeOptions,
+  type CalendarEvent,
+  sampleEvents,
+  toTemporalDateLike,
+  timezoneOptions,
+} from "../storyData.js";
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 
-type StoryEventCalendarElement = HTMLElement & { events: Map<string, StoryEvent> };
+type StoryEventCalendarElement = HTMLElement & { events: Map<string, CalendarEvent> };
 type EventCreateRequestDetail = { start?: string; end?: string };
 
 function preserveDateOnlyShape(
-  nextValue: { toString(): string; toPlainDate(): { toString(): string } } | null | undefined,
-  currentValue: string
-): string {
+  nextValue: CalendarEvent["start"] | null | undefined,
+  currentValue: CalendarEvent["start"]
+): CalendarEvent["start"] {
   if (!nextValue) return currentValue;
-  if (!currentValue.includes("T")) {
-    return nextValue.toPlainDate().toString();
+  if (currentValue instanceof Temporal.PlainDate) {
+    if ("toPlainDate" in nextValue) {
+      return nextValue.toPlainDate();
+    }
+    return nextValue;
   }
-  return nextValue.toString();
+  return nextValue;
 }
 
 const meta: Meta = {
@@ -132,9 +142,9 @@ const meta: Meta = {
       const eventId = `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const nextEvents = new Map(el.events);
       nextEvents.set(eventId, {
-        uid: eventId,
-        start: detail.start,
-        end: detail.end,
+        eventId,
+        start: toTemporalDateLike(detail.start),
+        end: toTemporalDateLike(detail.end),
         summary: "New event",
         color: "#0ea5e9",
       });

@@ -2,15 +2,16 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarView.js";
 import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 import {
+  type CalendarEvent,
   localeOptions,
   sampleEvents,
+  toTemporalDateLike,
   timezoneOptions,
   timezoneShiftEvents,
-  type StoryEvent,
 } from "../storyData.js";
 import { calendarCssProps } from "../calendarCssProps.js";
 
-type StoryCalendarViewElement = HTMLElement & { events: Map<string, StoryEvent> };
+type StoryCalendarViewElement = HTMLElement & { events: Map<string, CalendarEvent> };
 type EventCreateRequestDetail = { start?: string; end?: string; trigger?: string };
 
 const meta: Meta = {
@@ -75,9 +76,9 @@ const meta: Meta = {
       const eventId = `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       const nextEvents = new Map(el.events);
       nextEvents.set(eventId, {
-        uid: eventId,
-        start: detail.start,
-        end: detail.end,
+        eventId,
+        start: toTemporalDateLike(detail.start),
+        end: toTemporalDateLike(detail.end),
         summary: "New event",
         color: "#0ea5e9",
       });
@@ -100,8 +101,8 @@ const meta: Meta = {
 
       el.events = new Map(el.events).set(detail.eventId, {
         ...current,
-        start: detail.start?.toString() ?? current.start,
-        end: detail.end?.toString() ?? current.end,
+        start: detail.start ?? current.start,
+        end: detail.end ?? current.end,
         summary: detail.summary,
         color: detail.color,
       });

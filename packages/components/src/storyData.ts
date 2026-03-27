@@ -1,34 +1,36 @@
 import { Temporal } from "@js-temporal/polyfill";
+import type {
+  CalendarEventDateValue,
+  CalendarEventInput,
+} from "./models/CalendarEvent.js";
 
-export type StoryEvent = {
-  /**
-   * iCalendar UID. Repeating events share the same uid.
-   */
-  uid: string;
-  /**
-   * iCalendar RECURRENCE-ID for a specific occurrence in a recurring series.
-   */
-  recurrenceId?: string;
+export type CalendarEvent = Omit<CalendarEventInput, "start" | "end"> & {
+  start: CalendarEventDateValue;
+  end: CalendarEventDateValue;
+};
+export type CalendarEventSampleEntry = [id: string, event: CalendarEvent];
+export type CalendarTemporalEvent = Omit<CalendarEvent, "start" | "end"> & {
+  start: CalendarEventDateValue;
+  end: CalendarEventDateValue;
+};
+export type CalendarTemporalEventEntry = [id: string, event: CalendarTemporalEvent];
+
+// Backward-compatible aliases for existing stories.
+export type StoryEvent = CalendarEvent;
+export type StoryEventEntry = CalendarEventSampleEntry;
+export type WeekStoryEvent = CalendarTemporalEvent;
+export type WeekStoryEventEntry = CalendarTemporalEventEntry;
+
+type RawStoryEvent = Omit<CalendarEvent, "start" | "end"> & {
   start: string;
   end: string;
-  summary: string;
-  color: string;
 };
 
-export type StoryEventEntry = [id: string, event: StoryEvent];
-
-export type WeekStoryEvent = Omit<StoryEvent, "start" | "end"> & {
-  start: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-};
-
-export type WeekStoryEventEntry = [id: string, event: WeekStoryEvent];
-
-export const sampleEvents: StoryEventEntry[] = [
+const sampleEventSeeds: Array<[id: string, event: RawStoryEvent]> = [
   [
     "event-flight-london-20250104",
     {
-      uid: "flight-london@example.test",
+      eventId: "flight-london@example.test",
       start: "2025-01-04T08:30:00",
       end: "2025-01-05T09:45:00",
       summary: "Flight to London",
@@ -38,7 +40,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-hello-world-20250103",
     {
-      uid: "hello-world@example.test",
+      eventId: "hello-world@example.test",
       start: "2025-01-03T12:00:00",
       end: "2025-01-07T18:00:00",
       summary: "Hello World",
@@ -48,7 +50,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-team-meeting-20250106",
     {
-      uid: "team-meeting@example.test",
+      eventId: "team-meeting@example.test",
       start: "2025-01-06T10:00:00",
       end: "2025-01-07T11:15:00",
       summary: "Team Meeting",
@@ -58,7 +60,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-amsterdam-zoned-20250104",
     {
-      uid: "amsterdam-zoned@example.test",
+      eventId: "amsterdam-zoned@example.test",
       start: "2025-01-04T12:00:00+01:00[Europe/Amsterdam]",
       end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
       summary: "Amsterdam Zoned Event",
@@ -68,7 +70,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-fiesta-20250106",
     {
-      uid: "fiesta@example.test",
+      eventId: "fiesta@example.test",
       start: "2025-01-06T14:00:00",
       end: "2025-01-06T15:00:00",
       summary: "Fiesta",
@@ -78,7 +80,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-drinks-20250108-1630",
     {
-      uid: "drinks-weekly@example.test",
+      eventId: "drinks-weekly@example.test",
       recurrenceId: "20250108T163000",
       start: "2025-01-08T16:30:00",
       end: "2025-01-08T17:30:00",
@@ -89,7 +91,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-drinks-20250115-1630",
     {
-      uid: "drinks-weekly@example.test",
+      eventId: "drinks-weekly@example.test",
       recurrenceId: "20250115T163000",
       start: "2025-01-15T16:30:00",
       end: "2025-01-15T17:30:00",
@@ -100,7 +102,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-more-drinks-20250108",
     {
-      uid: "more-drinks@example.test",
+      eventId: "more-drinks@example.test",
       start: "2025-01-08T19:00:00",
       end: "2025-01-09T00:30:00",
       summary: "More Drinks",
@@ -110,7 +112,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-even-more-drinks-20250108",
     {
-      uid: "even-more-drinks@example.test",
+      eventId: "even-more-drinks@example.test",
       start: "2025-01-08T20:00:00",
       end: "2025-01-09T01:00:00",
       summary: "Even More Drinks",
@@ -120,7 +122,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-meeting-john-20250110",
     {
-      uid: "meeting-with-john@example.test",
+      eventId: "meeting-with-john@example.test",
       start: "2025-01-08",
       end: "2025-01-09",
       summary: "Meeting with John",
@@ -130,7 +132,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-company-holiday-20250101",
     {
-      uid: "company-holiday@example.test",
+      eventId: "company-holiday@example.test",
       start: "2025-01-01",
       end: "2025-01-02",
       summary: "Company Holiday",
@@ -140,7 +142,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-product-planning-20250106",
     {
-      uid: "product-planning@example.test",
+      eventId: "product-planning@example.test",
       start: "2025-01-06",
       end: "2025-01-08",
       summary: "Product Planning Sprint",
@@ -150,7 +152,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-design-qa-20250112",
     {
-      uid: "design-qa@example.test",
+      eventId: "design-qa@example.test",
       start: "2025-01-12",
       end: "2025-01-14",
       summary: "Design QA Window",
@@ -160,7 +162,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-team-offsite-20250115",
     {
-      uid: "team-offsite@example.test",
+      eventId: "team-offsite@example.test",
       start: "2025-01-15",
       end: "2025-01-18",
       summary: "Team Offsite",
@@ -170,7 +172,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-customer-summit-20250115",
     {
-      uid: "customer-summit@example.test",
+      eventId: "customer-summit@example.test",
       start: "2025-01-15",
       end: "2025-01-17",
       summary: "Customer Summit",
@@ -180,7 +182,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-hiring-panel-20250116",
     {
-      uid: "hiring-panel@example.test",
+      eventId: "hiring-panel@example.test",
       start: "2025-01-16",
       end: "2025-01-18",
       summary: "Hiring Panel",
@@ -190,7 +192,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-infra-migration-20250116",
     {
-      uid: "infra-migration@example.test",
+      eventId: "infra-migration@example.test",
       start: "2025-01-16",
       end: "2025-01-17",
       summary: "Infra Migration",
@@ -200,7 +202,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-release-freeze-20250119",
     {
-      uid: "release-freeze@example.test",
+      eventId: "release-freeze@example.test",
       start: "2025-01-19",
       end: "2025-01-21",
       summary: "Release Freeze",
@@ -210,7 +212,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-design-review-20250205",
     {
-      uid: "feb5-design-review@example.test",
+      eventId: "feb5-design-review@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Design Review",
@@ -220,7 +222,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-eng-sync-20250205",
     {
-      uid: "feb5-eng-sync@example.test",
+      eventId: "feb5-eng-sync@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Engineering Sync",
@@ -230,7 +232,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-customer-call-20250205",
     {
-      uid: "feb5-customer-call@example.test",
+      eventId: "feb5-customer-call@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Customer Call",
@@ -240,7 +242,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-roadmap-20250205",
     {
-      uid: "feb5-roadmap@example.test",
+      eventId: "feb5-roadmap@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Roadmap Session",
@@ -250,7 +252,7 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-budget-check-20250205",
     {
-      uid: "feb5-budget-check@example.test",
+      eventId: "feb5-budget-check@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Budget Check",
@@ -260,7 +262,127 @@ export const sampleEvents: StoryEventEntry[] = [
   [
     "event-feb5-team-retro-20250205",
     {
-      uid: "feb5-team-retro@example.test",
+      eventId: "feb5-team-retro@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Team Retro",
+      color: "#EF4444",
+    },
+  ],
+  [
+    "event-feb5-design-review-20250205",
+    {
+      eventId: "feb5-design-review@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Design Review",
+      color: "#6366F1",
+    },
+  ],
+  [
+    "event-feb5-eng-sync-20250205",
+    {
+      eventId: "feb5-eng-sync@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Engineering Sync",
+      color: "#0EA5E9",
+    },
+  ],
+  [
+    "event-feb5-customer-call-20250205",
+    {
+      eventId: "feb5-customer-call@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Customer Call",
+      color: "#14B8A6",
+    },
+  ],
+  [
+    "event-feb5-roadmap-20250205",
+    {
+      eventId: "feb5-roadmap@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Roadmap Session",
+      color: "#22C55E",
+    },
+  ],
+  [
+    "event-feb5-budget-check-20250205",
+    {
+      eventId: "feb5-budget-check@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Budget Check",
+      color: "#F59E0B",
+    },
+  ],
+  [
+    "event-feb5-team-retro-20250205",
+    {
+      eventId: "feb5-team-retro@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Team Retro",
+      color: "#EF4444",
+    },
+  ],
+  [
+    "event-feb5-design-review-20250205",
+    {
+      eventId: "feb5-design-review@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Design Review",
+      color: "#6366F1",
+    },
+  ],
+  [
+    "event-feb5-eng-sync-20250205",
+    {
+      eventId: "feb5-eng-sync@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Engineering Sync",
+      color: "#0EA5E9",
+    },
+  ],
+  [
+    "event-feb5-customer-call-20250205",
+    {
+      eventId: "feb5-customer-call@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Customer Call",
+      color: "#14B8A6",
+    },
+  ],
+  [
+    "event-feb5-roadmap-20250205",
+    {
+      eventId: "feb5-roadmap@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Roadmap Session",
+      color: "#22C55E",
+    },
+  ],
+  [
+    "event-feb5-budget-check-20250205",
+    {
+      eventId: "feb5-budget-check@example.test",
+      start: "2025-02-05",
+      end: "2025-02-06",
+      summary: "Budget Check",
+      color: "#F59E0B",
+    },
+  ],
+  [
+    "event-feb5-team-retro-20250205",
+    {
+      eventId: "feb5-team-retro@example.test",
       start: "2025-02-05",
       end: "2025-02-06",
       summary: "Team Retro",
@@ -269,11 +391,11 @@ export const sampleEvents: StoryEventEntry[] = [
   ],
 ];
 
-export const timezoneShiftEvents: StoryEventEntry[] = [
+const timezoneShiftEventSeeds: Array<[id: string, event: RawStoryEvent]> = [
   [
     "event-amsterdam-noon-zoned",
     {
-      uid: "amsterdam-noon-zoned@example.test",
+      eventId: "amsterdam-noon-zoned@example.test",
       start: "2025-01-06T12:00:00+01:00[Europe/Amsterdam]",
       end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
       summary: "Amsterdam Noon (zoned)",
@@ -283,7 +405,7 @@ export const timezoneShiftEvents: StoryEventEntry[] = [
   [
     "event-local-baseline-0900",
     {
-      uid: "local-baseline@example.test",
+      eventId: "local-baseline@example.test",
       start: "2025-01-06T09:00:00",
       end: "2025-01-06T10:00:00",
       summary: "Local baseline (plain)",
@@ -292,7 +414,7 @@ export const timezoneShiftEvents: StoryEventEntry[] = [
   ],
 ];
 
-function toTemporalDateLike(
+export function toTemporalDateLike(
   value: string
 ): Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime {
   if (!value.includes("T")) {
@@ -304,13 +426,27 @@ function toTemporalDateLike(
   return Temporal.PlainDateTime.from(value);
 }
 
-export const weekSplitEvents: WeekStoryEventEntry[] = sampleEvents.map(([id, event]) => [
+export const sampleEvents: StoryEventEntry[] = sampleEventSeeds.map(([id, event]) => [
   id,
   {
     ...event,
     start: toTemporalDateLike(event.start),
     end: toTemporalDateLike(event.end),
   },
+]);
+
+export const timezoneShiftEvents: StoryEventEntry[] = timezoneShiftEventSeeds.map(([id, event]) => [
+  id,
+  {
+    ...event,
+    start: toTemporalDateLike(event.start),
+    end: toTemporalDateLike(event.end),
+  },
+]);
+
+export const weekSplitEvents: WeekStoryEventEntry[] = sampleEvents.map(([id, event]) => [
+  id,
+  { ...event },
 ]);
 
 export const timezoneOptions =

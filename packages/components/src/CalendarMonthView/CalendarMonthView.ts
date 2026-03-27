@@ -4,23 +4,9 @@ import { customElement } from "lit/decorators.js";
 import "../CalendarView/CalendarView.js";
 import "../CalendarWeekdayHeader/CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
+import type { CalendarEventInput as EventInput } from "../models/CalendarEvent.js";
 import { getLocaleWeekInfo } from "../utils/Locale.js";
 import componentStyle from "./CalendarMonthView.css?inline";
-
-type EventInput = {
-  /**
-   * iCalendar UID. Repeated occurrences should share this value.
-   */
-  uid?: string;
-  /**
-   * iCalendar RECURRENCE-ID for one occurrence in a recurring series.
-   */
-  recurrenceId?: string;
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  summary: string;
-  color: string;
-};
 
 type EventsMap = Map<string, EventInput>;
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;

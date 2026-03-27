@@ -28,21 +28,7 @@ import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/L
 import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
 import type { DayOverflowPopoverEvent } from "./DayOverflowPopover.js";
 import "../EventCard/EventCard.js";
-
-type EventInput = {
-  /**
-   * iCalendar UID. Repeated occurrences should share this value.
-   */
-  uid?: string;
-  /**
-   * iCalendar RECURRENCE-ID for one occurrence in a recurring series.
-   */
-  recurrenceId?: string;
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  summary: string;
-  color: string;
-};
+import type { CalendarEventInput as EventInput } from "../models/CalendarEvent.js";
 
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;

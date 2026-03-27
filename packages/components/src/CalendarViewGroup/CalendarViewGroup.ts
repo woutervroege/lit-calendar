@@ -6,21 +6,13 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 import "../CalendarMonthView/CalendarMonthView.js";
 import "../CalendarWeekView/CalendarWeekView.js";
 import "../CalendarYearView/CalendarYearView.js";
+import type { CalendarEventInput as EventInput } from "../models/CalendarEvent.js";
 import { getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import componentStyle from "./CalendarViewGroup.css?inline";
 
 export type CalendarViewMode = "day" | "week" | "month" | "year";
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type CalendarNavigationDirection = "previous" | "today" | "next";
-
-type EventInput = {
-  uid?: string;
-  recurrenceId?: string;
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  summary: string;
-  color: string;
-};
 
 type EventsMap = Map<string, EventInput>;
 type EventEntry = [id: string, event: EventInput];

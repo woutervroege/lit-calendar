@@ -10,18 +10,11 @@ import type {
   CalendarViewGroup,
   CalendarViewMode,
 } from "../CalendarViewGroup/CalendarViewGroup.js";
+import type { CalendarEventInput as EventInput } from "../models/CalendarEvent.js";
 import "../TabSwitch/TabSwitch.js";
 import type { TabSwitchOption } from "../TabSwitch/TabSwitch.js";
 
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-type EventInput = {
-  uid?: string;
-  recurrenceId?: string;
-  start: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  end: string | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-  summary: string;
-  color: string;
-};
 type EventsMap = Map<string, EventInput>;
 
 type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
