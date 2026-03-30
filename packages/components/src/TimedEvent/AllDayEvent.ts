@@ -25,6 +25,9 @@ export class AllDayEvent extends BaseEvent {
   @property({ type: Number })
   maxVisibleRows: number = Number.POSITIVE_INFINITY;
 
+  @property({ attribute: false })
+  maxVisibleRowsByDay: Map<number, number> = new Map();
+
   @property({ type: Boolean, attribute: "interaction-disabled" })
   interactionDisabled = false;
 
@@ -224,10 +227,11 @@ export class AllDayEvent extends BaseEvent {
     startColIndex: number,
     widthInColumns: number,
     cols: number,
-    renderedDays: string[]
+    renderedDays: string[],
+    stackIndexOverride?: number
   ): { style: Record<string, string | number>; rowIndex: number; stackIndex: number } {
     const left = (startColIndex / cols) * 100;
-    const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
+    const stackIndex = stackIndexOverride ?? this.#getStackIndexForPosition(renderedDays, rowIndex);
     const top = this.#getTopPosition(rowIndex, stackIndex);
     const inlineInsetStart = this.daysPerRow > 0 ? "2px" : "1px";
     const inlineInsetEnd = this.daysPerRow > 0 ? "1px" : "2px";
@@ -300,16 +304,30 @@ export class AllDayEvent extends BaseEvent {
     Array.from(rowSegments.entries())
       .sort((a, b) => a[0] - b[0])
       .forEach(([rowIndex, segment]) => {
-        const widthInColumns = segment.endColIndex - segment.startColIndex + 1;
-        insets.push(
-          this.#createRowInset(
-            rowIndex,
-            segment.startColIndex,
-            widthInColumns,
-            totalCols,
-            renderedDays
-          )
-        );
+        const stackIndex = this.#getStackIndexForPosition(renderedDays, rowIndex);
+        let runStartColIndex: number | null = null;
+        for (let colIndex = segment.startColIndex; colIndex <= segment.endColIndex; colIndex += 1) {
+          const dayIndex = this.daysPerRow > 0 ? rowIndex * this.daysPerRow + colIndex : colIndex;
+          const visible = this.#isStackVisibleForDay(dayIndex, stackIndex);
+          if (visible && runStartColIndex === null) {
+            runStartColIndex = colIndex;
+          }
+          const isRunEnd = runStartColIndex !== null && (!visible || colIndex === segment.endColIndex);
+          if (!isRunEnd) continue;
+          const runEndColIndex = visible ? colIndex : colIndex - 1;
+          const widthInColumns = runEndColIndex - runStartColIndex + 1;
+          insets.push(
+            this.#createRowInset(
+              rowIndex,
+              runStartColIndex,
+              widthInColumns,
+              totalCols,
+              renderedDays,
+              stackIndex
+            )
+          );
+          runStartColIndex = null;
+        }
       });
 
     return insets;
@@ -404,9 +422,7 @@ export class AllDayEvent extends BaseEvent {
 
   render() {
     const dayInsets = this.dayInsets;
-    const visibleDayInsets = dayInsets.filter(
-      ({ stackIndex }) => stackIndex < this.maxVisibleRows || !Number.isFinite(this.maxVisibleRows)
-    );
+    const visibleDayInsets = dayInsets;
     const isFocusable = visibleDayInsets.length > 0;
     const canResizeStart = this.days.length > 1 && !this.interactionDisabled;
     const colorStyles = getEventColorStyles(this.color);
@@ -477,6 +493,14 @@ export class AllDayEvent extends BaseEvent {
         endsAfterVisibleRange
       )
     );
+  }
+
+  #isStackVisibleForDay(dayIndex: number, stackIndex: number): boolean {
+    const dayCap = this.maxVisibleRowsByDay.get(dayIndex);
+    if (typeof dayCap === "number" && Number.isFinite(dayCap)) {
+      return stackIndex < dayCap;
+    }
+    return !Number.isFinite(this.maxVisibleRows) || stackIndex < this.maxVisibleRows;
   }
 
   #renderEventCard(

@@ -20,8 +20,6 @@ import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 import {
   type AllDayLayoutItem,
   buildAllDayLayout,
-  computeHiddenAllDayCountsByDay,
-  computeHiddenAllDayEventIdsByDay,
 } from "../utils/AllDayLayout.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
@@ -39,8 +37,11 @@ type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;
 type AllDayOverflowLayout = {
   maxVisibleRows: number;
+  maxVisibleRowsByDay: Map<number, number>;
   hiddenCountsByDay: Map<number, number>;
   hiddenColorsByDay: Map<number, string[]>;
+  hiddenEventIdsByDay: Map<number, string[]>;
+  forceIndicatorsByDay: Set<number>;
 };
 const COMPACT_MONTH_MAX_INLINE_SIZE_PX = 520;
 // Keep touch-create activation aligned with timed event move/resize activation.
@@ -679,6 +680,7 @@ export class CalendarView extends BaseElement {
                 .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                 .gridRows=${this.#isMonthView ? this.gridRows : 1}
                 .maxVisibleRows=${allDayOverflow.maxVisibleRows}
+                .maxVisibleRowsByDay=${allDayOverflow.maxVisibleRowsByDay}
                 @update=${this.#handleEventUpdate}
                 @delete=${this.#handleEventDelete}
               ></all-day-event>
@@ -732,7 +734,7 @@ export class CalendarView extends BaseElement {
       content.push(...dayEvents);
 
       const hiddenCount = allDayOverflow.hiddenCountsByDay.get(dayIndex) ?? 0;
-      if (hiddenCount > 0) {
+      if (this.#shouldRenderAllDayOverflowIndicator(dayIndex, hiddenCount, allDayOverflow)) {
         const hiddenColors = allDayOverflow.hiddenColorsByDay.get(dayIndex) ?? [];
         const overflowIndicator = this.#renderAllDayOverflowIndicator(
           dayIndex,
@@ -827,7 +829,9 @@ export class CalendarView extends BaseElement {
     if (cols <= 0) return "";
 
     const sortedOverflowEntries = Array.from(layout.hiddenCountsByDay.entries())
-      .filter(([, hiddenCount]) => hiddenCount > 0)
+      .filter(([dayIndex, hiddenCount]) =>
+        this.#shouldRenderAllDayOverflowIndicator(dayIndex, hiddenCount, layout)
+      )
       .sort(([leftDayIndex], [rightDayIndex]) => {
         const leftRowIndex = this.#isMonthView ? Math.floor(leftDayIndex / cols) : 0;
         const rightRowIndex = this.#isMonthView ? Math.floor(rightDayIndex / cols) : 0;
@@ -858,6 +862,47 @@ export class CalendarView extends BaseElement {
       .filter((indicator): indicator is TemplateResult => Boolean(indicator));
   }
 
+  #shouldRenderAllDayOverflowIndicator(
+    dayIndex: number,
+    hiddenCount: number,
+    layout: AllDayOverflowLayout
+  ): boolean {
+    if (hiddenCount <= 0) return false;
+    if (layout.forceIndicatorsByDay.has(dayIndex)) return true;
+    if (hiddenCount !== 1) return true;
+
+    const hiddenIds = layout.hiddenEventIdsByDay.get(dayIndex) ?? [];
+    if (hiddenIds.length !== 1) return true;
+    const hiddenEventId = hiddenIds[0];
+    const hiddenEvent = this.events?.get(hiddenEventId);
+    if (!hiddenEvent) return true;
+    if (!this.#isMultiDayEvent(hiddenEvent)) return false;
+
+    return !this.#isVisibleOnAnyOtherRenderedDay(hiddenEventId, hiddenEvent, dayIndex, layout);
+  }
+
+  #isMultiDayEvent(event: EventInput): boolean {
+    const start = this.#toPlainDateTime(event.start).toPlainDate();
+    const endInclusive = this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate();
+    return Temporal.PlainDate.compare(endInclusive, start) > 0;
+  }
+
+  #isVisibleOnAnyOtherRenderedDay(
+    eventId: string,
+    event: EventInput,
+    currentDayIndex: number,
+    layout: AllDayOverflowLayout
+  ): boolean {
+    for (let dayIndex = 0; dayIndex < this.days.length; dayIndex += 1) {
+      if (dayIndex === currentDayIndex) continue;
+      const day = this.days[dayIndex];
+      if (!day || !this.#eventOverlapsDay(event, day)) continue;
+      const hiddenIds = layout.hiddenEventIdsByDay.get(dayIndex) ?? [];
+      if (!hiddenIds.includes(eventId)) return true;
+    }
+    return false;
+  }
+
   #renderAllDayOverflowIndicator(
     dayIndex: number,
     hiddenCount: number,
@@ -876,11 +921,12 @@ export class CalendarView extends BaseElement {
       return null;
     }
     const indicatorHeightPx = this.#getAllDayOverflowIndicatorHeightPx();
+    const dayNumberOffsetPx = this.#getAllDayDayNumberOffsetPx();
+    const eventHeightPx = this.#getAllDayEventHeightPx();
     const indicatorBottomInsetPx = 2;
-    const indicatorOffsetWithinRowPx = Math.max(
-      0,
-      rowHeightPx - indicatorHeightPx - indicatorBottomInsetPx
-    );
+    const hiddenStartTopPx = Math.max(0, dayNumberOffsetPx + Math.max(0, maxVisibleRows) * eventHeightPx);
+    const maxTopWithinRowPx = Math.max(0, rowHeightPx - indicatorHeightPx - indicatorBottomInsetPx);
+    const indicatorOffsetWithinRowPx = Math.min(hiddenStartTopPx, maxTopWithinRowPx);
     const colIndex = this.#isMonthView ? dayIndex % cols : dayIndex;
     const visualColIndex = this.#toVisualColumnIndex(colIndex, cols);
     const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
@@ -1987,8 +2033,11 @@ export class CalendarView extends BaseElement {
     if (this.variant !== "all-day") {
       return {
         maxVisibleRows: Number.POSITIVE_INFINITY,
+        maxVisibleRowsByDay: new Map(),
         hiddenCountsByDay: new Map(),
         hiddenColorsByDay: new Map(),
+        hiddenEventIdsByDay: new Map(),
+        forceIndicatorsByDay: new Set(),
       };
     }
 
@@ -1997,8 +2046,11 @@ export class CalendarView extends BaseElement {
     if (!dayCount || cols <= 0) {
       return {
         maxVisibleRows: Number.POSITIVE_INFINITY,
+        maxVisibleRowsByDay: new Map(),
         hiddenCountsByDay: new Map(),
         hiddenColorsByDay: new Map(),
+        hiddenEventIdsByDay: new Map(),
+        forceIndicatorsByDay: new Set(),
       };
     }
 
@@ -2014,66 +2066,131 @@ export class CalendarView extends BaseElement {
     if (!Number.isFinite(maxRowsByHeight)) {
       return {
         maxVisibleRows: Number.POSITIVE_INFINITY,
+        maxVisibleRowsByDay: new Map(),
         hiddenCountsByDay: new Map(),
         hiddenColorsByDay: new Map(),
+        hiddenEventIdsByDay: new Map(),
+        forceIndicatorsByDay: new Set(),
       };
     }
-    if (maxRowsByHeight <= 0) {
-      const hiddenCountsByDay = computeHiddenAllDayCountsByDay(layout, 0);
-      const hiddenColorsByDay = this.#computeHiddenAllDayColorsByDay(layout, 0, eventColorsById);
-      return {
-        maxVisibleRows: 0,
-        hiddenCountsByDay,
-        hiddenColorsByDay,
-      };
+    const maxVisibleRows = Math.max(0, maxRowsByHeight);
+    const baseDayCaps = new Map<number, number>();
+    for (let dayIndex = 0; dayIndex < dayCount; dayIndex += 1) {
+      baseDayCaps.set(dayIndex, maxVisibleRows);
     }
 
-    const maxVisibleRows = maxRowsByHeight;
-    const hiddenCountsByDay = computeHiddenAllDayCountsByDay(layout, maxVisibleRows);
-    const hiddenColorsByDay = this.#computeHiddenAllDayColorsByDay(
-      layout,
+    const hiddenCountsByDay = this.#computeHiddenAllDayCountsByDayForDayCaps(layout, baseDayCaps);
+    const hiddenEventIdsByDay = this.#computeHiddenAllDayEventIdsByDayForDayCaps(layout, baseDayCaps);
+    const hiddenColorsByDay = this.#computeHiddenAllDayColorsByDay(hiddenEventIdsByDay, eventColorsById);
+    const initialOverflowLayout: AllDayOverflowLayout = {
       maxVisibleRows,
-      eventColorsById
-    );
-    if (!hiddenCountsByDay.size) {
-      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
-    }
+      maxVisibleRowsByDay: baseDayCaps,
+      hiddenCountsByDay,
+      hiddenColorsByDay,
+      hiddenEventIdsByDay,
+      forceIndicatorsByDay: new Set(),
+    };
 
-    // Reserve one full row for the overflow indicator when any day overflows.
-    const availableHeight = this.#getAllDayAvailableHeightPx();
+    const daysNeedingButton = new Set<number>();
+    for (const [dayIndex, hiddenCount] of hiddenCountsByDay.entries()) {
+      if (!this.#shouldRenderAllDayOverflowIndicator(dayIndex, hiddenCount, initialOverflowLayout)) continue;
+      daysNeedingButton.add(dayIndex);
+    }
+    if (!daysNeedingButton.size) return initialOverflowLayout;
+
+    const rowHeight = this.#getAllDayRowHeightPx();
     const eventHeight = this.#getAllDayEventHeightPx();
-    const overflowIndicatorHeight = this.#getAllDayOverflowIndicatorHeightPx();
-    if (!Number.isFinite(availableHeight) || eventHeight <= 0) {
-      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
+    const dayLabelOffset = this.#getAllDayDayNumberOffsetPx();
+    const indicatorHeight = this.#getAllDayOverflowIndicatorHeightPx();
+    const indicatorBottomInset = 2;
+    if (!Number.isFinite(rowHeight) || eventHeight <= 0) {
+      return initialOverflowLayout;
     }
 
-    const maxRowsWithIndicator = Math.max(
+    const rowsWithOverflowButton = Math.max(
       0,
-      Math.floor((availableHeight - overflowIndicatorHeight) / eventHeight)
+      Math.floor((rowHeight - dayLabelOffset - indicatorHeight - indicatorBottomInset) / eventHeight)
     );
-    if (maxRowsWithIndicator >= maxVisibleRows) {
-      return { maxVisibleRows, hiddenCountsByDay, hiddenColorsByDay };
+    const dayCapsWithButton = new Map(baseDayCaps);
+    let didReduceAnyDay = false;
+    for (const dayIndex of daysNeedingButton) {
+      const currentCap = dayCapsWithButton.get(dayIndex) ?? maxVisibleRows;
+      const nextCap = Math.min(currentCap, rowsWithOverflowButton);
+      if (nextCap < currentCap) {
+        dayCapsWithButton.set(dayIndex, nextCap);
+        didReduceAnyDay = true;
+      }
     }
+    if (!didReduceAnyDay) return initialOverflowLayout;
 
-    const hiddenCountsWithIndicator = computeHiddenAllDayCountsByDay(layout, maxRowsWithIndicator);
-    const hiddenColorsWithIndicator = this.#computeHiddenAllDayColorsByDay(
+    const hiddenCountsWithButton = this.#computeHiddenAllDayCountsByDayForDayCaps(
       layout,
-      maxRowsWithIndicator,
+      dayCapsWithButton
+    );
+    const hiddenEventIdsWithButton = this.#computeHiddenAllDayEventIdsByDayForDayCaps(
+      layout,
+      dayCapsWithButton
+    );
+    const hiddenColorsWithButton = this.#computeHiddenAllDayColorsByDay(
+      hiddenEventIdsWithButton,
       eventColorsById
     );
     return {
-      maxVisibleRows: maxRowsWithIndicator,
-      hiddenCountsByDay: hiddenCountsWithIndicator,
-      hiddenColorsByDay: hiddenColorsWithIndicator,
+      maxVisibleRows,
+      maxVisibleRowsByDay: dayCapsWithButton,
+      hiddenCountsByDay: hiddenCountsWithButton,
+      hiddenColorsByDay: hiddenColorsWithButton,
+      hiddenEventIdsByDay: hiddenEventIdsWithButton,
+      forceIndicatorsByDay: daysNeedingButton,
     };
   }
 
-  #computeHiddenAllDayColorsByDay(
+  #computeHiddenAllDayCountsByDayForDayCaps(
     layout: ReturnType<typeof buildAllDayLayout>,
-    maxVisibleRows: number,
+    dayCaps: Map<number, number>
+  ): Map<number, number> {
+    const hiddenCountsByDay = new Map<number, number>();
+
+    for (const eventLayout of layout.placedEvents) {
+      for (const segment of eventLayout.segments) {
+        for (let colIndex = segment.startColIndex; colIndex <= segment.endColIndex; colIndex += 1) {
+          const dayIndex = segment.rowIndex * layout.daysPerRow + colIndex;
+          const dayCap = dayCaps.get(dayIndex) ?? Number.POSITIVE_INFINITY;
+          if (Number.isFinite(dayCap) && segment.stackIndex < dayCap) continue;
+          hiddenCountsByDay.set(dayIndex, (hiddenCountsByDay.get(dayIndex) ?? 0) + 1);
+        }
+      }
+    }
+
+    return hiddenCountsByDay;
+  }
+
+  #computeHiddenAllDayEventIdsByDayForDayCaps(
+    layout: ReturnType<typeof buildAllDayLayout>,
+    dayCaps: Map<number, number>
+  ): Map<number, string[]> {
+    const hiddenEventIdsByDay = new Map<number, string[]>();
+
+    for (const eventLayout of layout.placedEvents) {
+      for (const segment of eventLayout.segments) {
+        for (let colIndex = segment.startColIndex; colIndex <= segment.endColIndex; colIndex += 1) {
+          const dayIndex = segment.rowIndex * layout.daysPerRow + colIndex;
+          const dayCap = dayCaps.get(dayIndex) ?? Number.POSITIVE_INFINITY;
+          if (Number.isFinite(dayCap) && segment.stackIndex < dayCap) continue;
+          const dayIds = hiddenEventIdsByDay.get(dayIndex) ?? [];
+          dayIds.push(eventLayout.id);
+          hiddenEventIdsByDay.set(dayIndex, dayIds);
+        }
+      }
+    }
+
+    return hiddenEventIdsByDay;
+  }
+
+  #computeHiddenAllDayColorsByDay(
+    hiddenIdsByDay: Map<number, string[]>,
     eventColorsById: Map<string, string>
   ): Map<number, string[]> {
-    const hiddenIdsByDay = computeHiddenAllDayEventIdsByDay(layout, maxVisibleRows);
     const hiddenColorsByDay = new Map<number, string[]>();
 
     for (const [dayIndex, ids] of hiddenIdsByDay.entries()) {
