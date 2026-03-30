@@ -42,36 +42,20 @@
 :host .interaction-surface:focus-visible {
   --_lc-event-focus-ring-width: 3px;
   --_lc-event-focus-ring-color: var(
-    --_lc-event-focus-ring,
-    light-dark(
-      var(
-        --_lc-event-focus-ring-light,
-        var(
-          --_lc-event-text-color,
-          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-        )
-      ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-    )
+    --_lc-focus-ring-color,
+    light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%))
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 /* Primary keyboard ring: target segment internals via event-card CSS vars. */
 :host .interaction-surface:focus-visible event-card {
   --_lc-event-focus-ring-width: 3px;
   --_lc-event-focus-ring-color: var(
-    --_lc-event-focus-ring,
-    light-dark(
-      var(
-        --_lc-event-focus-ring-light,
-        var(
-          --_lc-event-text-color,
-          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-        )
-      ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-    )
+    --_lc-focus-ring-color,
+    light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%))
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
   z-index: 11;
 }
 
@@ -79,18 +63,10 @@
 :host(:has(.interaction-surface:focus-visible)) {
   --_lc-event-focus-ring-width: 3px;
   --_lc-event-focus-ring-color: var(
-    --_lc-event-focus-ring,
-    light-dark(
-      var(
-        --_lc-event-focus-ring-light,
-        var(
-          --_lc-event-text-color,
-          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-        )
-      ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
-    )
+    --_lc-focus-ring-color,
+    light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%))
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 /* Show the same ring while active touch drag/resize is in progress. */
@@ -106,9 +82,16 @@
           var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
         )
       ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+      var(
+        --_lc-event-focus-ring-light,
+        var(
+          --_lc-event-text-color,
+          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+        )
+      )
     )
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 :host([data-dragging-touch]) .interaction-surface event-card {
@@ -123,9 +106,16 @@
           var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
         )
       ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+      var(
+        --_lc-event-focus-ring-light,
+        var(
+          --_lc-event-text-color,
+          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+        )
+      )
     )
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 :host([data-touch-interacting]) .interaction-surface {
@@ -140,9 +130,16 @@
           var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
         )
       ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+      var(
+        --_lc-event-focus-ring-light,
+        var(
+          --_lc-event-text-color,
+          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+        )
+      )
     )
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 :host([data-touch-interacting]) .interaction-surface event-card {
@@ -157,7 +154,24 @@
           var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
         )
       ),
-      var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+      var(
+        --_lc-event-focus-ring-light,
+        var(
+          --_lc-event-text-color,
+          var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
+        )
+      )
     )
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
+}
+
+/* Touch interactions use an inset ring so corners align with card rounding. */
+:host([data-dragging-touch]) .interaction-surface,
+:host([data-dragging-touch]) .interaction-surface event-card,
+:host([data-touch-interacting]) .interaction-surface,
+:host([data-touch-interacting]) .interaction-surface event-card {
+  --_lc-event-focus-ring-width: 0px;
+  --_lc-event-focus-ring-gap: 0px;
+  --_lc-event-focus-ring-inset-width: 3px;
 }

@@ -43,6 +43,7 @@ const CREATE_TOUCH_LONG_PRESS_MS = 160;
 const CREATE_TOUCH_CANCEL_DISTANCE_PX = 10;
 const CREATE_DRAG_ACTIVATION_DISTANCE_PX = 6;
 const SECONDS_IN_DAY = 24 * 60 * 60;
+const DEFAULT_TIMED_CREATE_DURATION_MINUTES = 15;
 
 type EventCreateRequestDetail = {
   start: string;
@@ -80,23 +81,21 @@ export class CalendarView extends BaseElement {
   defaultSourceId?: string;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
-  #pendingCreatePointer:
-    | {
-        pointerId: number;
-        pointerType: string;
-        startClientX: number;
-        startClientY: number;
-        currentClientY: number;
-        startDateTime: Temporal.PlainDateTime;
-        startDayIndex: number;
-        currentDayIndex: number;
-        currentDateTime: Temporal.PlainDateTime;
-        dragActivated: boolean;
-        longPressActivated: boolean;
-        longPressTimerId: number | null;
-        captureTarget: HTMLElement | null;
-      }
-    | null = null;
+  #pendingCreatePointer: {
+    pointerId: number;
+    pointerType: string;
+    startClientX: number;
+    startClientY: number;
+    currentClientY: number;
+    startDateTime: Temporal.PlainDateTime;
+    startDayIndex: number;
+    currentDayIndex: number;
+    currentDateTime: Temporal.PlainDateTime;
+    dragActivated: boolean;
+    longPressActivated: boolean;
+    longPressTimerId: number | null;
+    captureTarget: HTMLElement | null;
+  } | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
   #styleObserver?: MutationObserver;
   #lastDaysPerRowToken = "";
@@ -409,7 +408,6 @@ export class CalendarView extends BaseElement {
     if (typeof ResizeObserver === "undefined") return;
     if (this.#resizeObserver) return;
     this.#resizeObserver = new ResizeObserver((entries) => {
-      if (this.variant !== "all-day") return;
       const nextWidth = entries[0]?.contentRect.width;
       if (
         Number.isFinite(nextWidth) &&
@@ -446,7 +444,11 @@ export class CalendarView extends BaseElement {
     this.#resizeDebounceTimerId = window.setTimeout(() => {
       this.#resizeDebounceTimerId = null;
       this.#syncCompactMonthState(this.#lastObservedHostWidthPx);
-      this.#scheduleSectionHeightSync();
+      if (this.variant === "all-day") {
+        this.#scheduleSectionHeightSync();
+        return;
+      }
+      this.#syncTimedHostHeightFactor();
     }, this.#resizeDebounceDelayMs);
   }
 
@@ -548,6 +550,11 @@ export class CalendarView extends BaseElement {
   render() {
     const hoverStyle: Record<string, string> = {};
     const createPreviewSegments = this.#getCreatePreviewCardModels();
+    const touchCreateActive = Boolean(
+      this.#pendingCreatePointer?.pointerType === "touch" &&
+        this.#pendingCreatePointer?.longPressActivated &&
+        createPreviewSegments.length
+    );
     const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
     const timedSidebarLabels = getHourlyTimeLabels(this.locale, this.hours);
     const timedSidebarRows = timedSidebarLabels.map((label, hour) => {
@@ -619,6 +626,7 @@ export class CalendarView extends BaseElement {
           dir=${this.#isRtl ? "rtl" : "ltr"}
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
+          ?data-touch-creating=${touchCreateActive}
           @pointerdown=${this.#handleCreatePointerDown}
           @pointermove=${this.#handleCreatePointerMove}
           @pointerup=${this.#handleCreatePointerUp}
@@ -629,6 +637,7 @@ export class CalendarView extends BaseElement {
           ${createPreviewSegments.map(
             (segment) => html`
               <event-card
+                class="create-preview-card"
                 summary=${this.defaultEventSummary}
                 time=${segment.timeLabel}
                 segment-direction=${segment.segmentDirection}
@@ -968,7 +977,10 @@ export class CalendarView extends BaseElement {
                 (color) =>
                   html`<span class="day-overflow-dot" style=${styleMap({ "background-color": color })}></span>`
               )
-            : Array.from({ length: fallbackDots }, () => html`<span class="day-overflow-dot"></span>`)
+            : Array.from(
+                { length: fallbackDots },
+                () => html`<span class="day-overflow-dot"></span>`
+              )
         }
       </span>
     `;
@@ -1167,7 +1179,8 @@ export class CalendarView extends BaseElement {
     if (event.pointerType === "touch") {
       longPressTimerId = window.setTimeout(() => {
         const pending = this.#pendingCreatePointer;
-        if (!pending || pending.pointerId !== event.pointerId || pending.pointerType !== "touch") return;
+        if (!pending || pending.pointerId !== event.pointerId || pending.pointerType !== "touch")
+          return;
         pending.longPressActivated = true;
         pending.dragActivated = true;
         pending.currentDateTime =
@@ -1263,7 +1276,10 @@ export class CalendarView extends BaseElement {
       if (Temporal.PlainDateTime.compare(endDateTime, startDateTime) < 0) {
         [startDateTime, endDateTime] = [endDateTime, startDateTime];
       }
-      if (this.variant === "timed" && Temporal.PlainDateTime.compare(startDateTime, endDateTime) === 0) {
+      if (
+        this.variant === "timed" &&
+        Temporal.PlainDateTime.compare(startDateTime, endDateTime) === 0
+      ) {
         endDateTime = this.#defaultCreateEndDateTime(startDateTime);
       }
       if (this.variant === "all-day") {
@@ -1285,7 +1301,8 @@ export class CalendarView extends BaseElement {
         this.#cancelPendingCreatePointer(event, section);
         return;
       }
-      const startDayIndex = this.#dayIndexForDate(startDateTime.toPlainDate()) ?? pending.startDayIndex;
+      const startDayIndex =
+        this.#dayIndexForDate(startDateTime.toPlainDate()) ?? pending.startDayIndex;
       this.#emitEventCreateRequested({
         start: startDateTime.toString(),
         end: endDateTime.toString(),
@@ -1317,7 +1334,10 @@ export class CalendarView extends BaseElement {
     if (Temporal.PlainDateTime.compare(endDateTime, startDateTime) < 0) {
       [startDateTime, endDateTime] = [endDateTime, startDateTime];
     }
-    if (this.variant === "timed" && Temporal.PlainDateTime.compare(startDateTime, endDateTime) === 0) {
+    if (
+      this.variant === "timed" &&
+      Temporal.PlainDateTime.compare(startDateTime, endDateTime) === 0
+    ) {
       this.#cancelPendingCreatePointer(event, section);
       return;
     }
@@ -1341,7 +1361,8 @@ export class CalendarView extends BaseElement {
       return;
     }
 
-    const startDayIndex = this.#dayIndexForDate(startDateTime.toPlainDate()) ?? pending.startDayIndex;
+    const startDayIndex =
+      this.#dayIndexForDate(startDateTime.toPlainDate()) ?? pending.startDayIndex;
     this.#emitEventCreateRequested({
       start: startDateTime.toString(),
       end: endDateTime.toString(),
@@ -1483,8 +1504,7 @@ export class CalendarView extends BaseElement {
   }
 
   #defaultCreateEndDateTime(startDateTime: Temporal.PlainDateTime): Temporal.PlainDateTime {
-    const defaultDurationMinutes = Math.max(60, Math.round(this.#snapInterval));
-    const tentativeEnd = startDateTime.add({ minutes: defaultDurationMinutes });
+    const tentativeEnd = startDateTime.add({ minutes: DEFAULT_TIMED_CREATE_DURATION_MINUTES });
     const dayEnd = startDateTime.toPlainDate().add({ days: 1 }).toPlainDateTime({
       hour: 0,
       minute: 0,
@@ -1714,6 +1734,7 @@ export class CalendarView extends BaseElement {
   }
 
   #emitEventCreateRequested(detail: EventCreateRequestDetail) {
+    console.info("event-create-requested", detail);
     this.dispatchEvent(
       new CustomEvent("event-create-requested", {
         detail,
@@ -1749,8 +1770,10 @@ export class CalendarView extends BaseElement {
       nanosecond: 0,
     });
 
-    return Temporal.PlainDateTime.compare(start, dayEnd) < 0 &&
-      Temporal.PlainDateTime.compare(end, dayStart) > 0;
+    return (
+      Temporal.PlainDateTime.compare(start, dayEnd) < 0 &&
+      Temporal.PlainDateTime.compare(end, dayStart) > 0
+    );
   }
 
   #getPopoverDayLabel(day: Temporal.PlainDate, dayIndex: number): string {
@@ -2156,7 +2179,37 @@ export class CalendarView extends BaseElement {
   }
 
   #syncTimedHostHeightFactor() {
-    const factor = this.variant === "timed" ? 24 / this.visibleHours : 1;
+    const factor = this.#getTimedHostHeightFactor();
     this.style.setProperty("--_lc-host-height-factor", factor.toString());
+  }
+
+  #getTimedHostHeightFactor(): number {
+    if (this.variant !== "timed") return 1;
+
+    const requestedFactor = 24 / this.visibleHours;
+    const minHourHeightPx = this.#readHostCssNumber("--_lc-min-hour-height", 0);
+    if (!Number.isFinite(minHourHeightPx) || minHourHeightPx <= 0) {
+      return requestedFactor;
+    }
+
+    const hostHeight = this.getBoundingClientRect().height;
+    if (!Number.isFinite(hostHeight) || hostHeight <= 0) {
+      return requestedFactor;
+    }
+
+    const timedTopOffset = this.#readHostCssNumber("--_lc-timed-section-top-offset", 0);
+    const availableHeight = Math.max(0, hostHeight - Math.max(0, timedTopOffset));
+    if (availableHeight <= 0) {
+      return requestedFactor;
+    }
+
+    const minFactor = (24 * minHourHeightPx) / availableHeight;
+    return Math.max(requestedFactor, minFactor);
+  }
+
+  #readHostCssNumber(propertyName: string, fallback: number): number {
+    const rawValue = getComputedStyle(this).getPropertyValue(propertyName).trim();
+    const parsedValue = parseFloat(rawValue);
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
   }
 }
