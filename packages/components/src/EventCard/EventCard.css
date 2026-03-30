@@ -91,6 +91,13 @@
   padding: 10px 10px 9px;
 }
 
+@container (min-width: 420px) {
+  :host([layout="flow"]) .event-card-summary-main {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+}
+
 :host .event-card-compact-label {
   display: none;
 }
