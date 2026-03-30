@@ -81,12 +81,12 @@ export class EventCalendar extends BaseElement {
       view: {
         type: String,
         reflect: true,
-        dispatchChangeEvent: { bubbles: true, composed: true },
+        dispatchChangeEvent: { composed: true },
       },
       startDate: {
         type: String,
         attribute: "start-date",
-        dispatchChangeEvent: { bubbles: true, composed: true },
+        dispatchChangeEvent: { composed: true },
       },
       weekStart: { type: Number, attribute: "week-start", reflect: true },
       daysPerWeek: {
@@ -302,8 +302,8 @@ export class EventCalendar extends BaseElement {
           @start-date-changed=${this.#syncFromViewGroup}
           @day-selection-requested=${this.#syncFromViewGroup}
           @event-create-requested=${this.#reemit}
-          @event-modified=${this.#reemit}
-          @event-deleted=${this.#reemit}
+          @event-update-requested=${this.#reemit}
+          @event-delete-requested=${this.#reemit}
         ></calendar-view-group>
       </div>
     `;
@@ -337,13 +337,15 @@ export class EventCalendar extends BaseElement {
 
   #reemit = (event: Event) => {
     event.stopPropagation();
-    this.dispatchEvent(
-      new CustomEvent(event.type, {
-        detail: (event as CustomEvent).detail,
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const forwardedEvent = new CustomEvent(event.type, {
+      detail: (event as CustomEvent).detail,
+      composed: true,
+      cancelable: event.cancelable,
+    });
+    const notCancelled = this.dispatchEvent(forwardedEvent);
+    if (!notCancelled && event.cancelable) {
+      event.preventDefault();
+    }
   };
 
   override updated(changedProperties: Map<PropertyKey, unknown>): void {

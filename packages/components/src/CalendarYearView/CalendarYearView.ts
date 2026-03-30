@@ -104,8 +104,8 @@ export class CalendarYearView extends BaseElement {
                 .defaultSourceId=${this.defaultSourceId}
                 @day-selection-requested=${this.#reemit}
                 @event-create-requested=${this.#reemit}
-                @event-modified=${this.#reemit}
-                @event-deleted=${this.#reemit}
+                @event-update-requested=${this.#reemit}
+                @event-delete-requested=${this.#reemit}
               ></calendar-month-view>
             </section>
           `
@@ -116,12 +116,13 @@ export class CalendarYearView extends BaseElement {
 
   #reemit = (event: Event) => {
     event.stopPropagation();
-    this.dispatchEvent(
-      new CustomEvent(event.type, {
-        detail: (event as CustomEvent).detail,
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const forwardedEvent = new CustomEvent(event.type, {
+      detail: (event as CustomEvent).detail,
+      cancelable: event.cancelable,
+    });
+    const notCancelled = this.dispatchEvent(forwardedEvent);
+    if (!notCancelled && event.cancelable) {
+      event.preventDefault();
+    }
   };
 }

@@ -36,6 +36,9 @@ export class CalendarWeekView extends BaseElement {
   defaultEventSummary = "New event";
   defaultEventColor = "#0ea5e9";
   defaultSourceId?: string;
+  #splitEventsSource?: EventsMap;
+  #cachedAllDayEvents: EventsMap = new Map();
+  #cachedTimedEvents: EventsMap = new Map();
 
   static get properties() {
     return {
@@ -132,11 +135,13 @@ export class CalendarWeekView extends BaseElement {
   }
 
   get #allDayEvents(): EventsMap {
-    return new Map(this.#eventEntries.filter(([, event]) => this.#isAllDayEvent(event)));
+    this.#syncSplitEventsCache();
+    return this.#cachedAllDayEvents;
   }
 
   get #timedEvents(): EventsMap {
-    return new Map(this.#eventEntries.filter(([, event]) => this.#isTimedEvent(event)));
+    this.#syncSplitEventsCache();
+    return this.#cachedTimedEvents;
   }
 
   get #renderedDays(): Temporal.PlainDate[] {
@@ -214,6 +219,16 @@ export class CalendarWeekView extends BaseElement {
     return 1;
   }
 
+  #syncSplitEventsCache() {
+    if (this.events === this.#splitEventsSource) return;
+    this.#splitEventsSource = this.events;
+    const sourceEntries = Array.from(this.events?.entries() ?? []);
+    this.#cachedAllDayEvents = new Map(
+      sourceEntries.filter(([, event]) => this.#isAllDayEvent(event))
+    );
+    this.#cachedTimedEvents = new Map(sourceEntries.filter(([, event]) => this.#isTimedEvent(event)));
+  }
+
   render() {
     const clampedVisibleHours = Math.max(
       1,
@@ -259,8 +274,8 @@ export class CalendarWeekView extends BaseElement {
                 .defaultSourceId=${this.defaultSourceId}
                 @day-selection-requested=${this.#reemit}
                 @event-create-requested=${this.#reemit}
-                @event-modified=${this.#reemit}
-                @event-deleted=${this.#reemit}
+                @event-update-requested=${this.#reemit}
+                @event-delete-requested=${this.#reemit}
               ></calendar-view>
             </section>
           </header>
@@ -294,8 +309,8 @@ export class CalendarWeekView extends BaseElement {
               .defaultEventColor=${this.defaultEventColor}
               .defaultSourceId=${this.defaultSourceId}
               @event-create-requested=${this.#reemit}
-              @event-modified=${this.#reemit}
-              @event-deleted=${this.#reemit}
+              @event-update-requested=${this.#reemit}
+              @event-delete-requested=${this.#reemit}
             ></calendar-view>
           </main>
         </div>
@@ -305,12 +320,13 @@ export class CalendarWeekView extends BaseElement {
 
   #reemit = (event: Event) => {
     event.stopPropagation();
-    this.dispatchEvent(
-      new CustomEvent(event.type, {
-        detail: (event as CustomEvent).detail,
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const forwardedEvent = new CustomEvent(event.type, {
+      detail: (event as CustomEvent).detail,
+      cancelable: event.cancelable,
+    });
+    const notCancelled = this.dispatchEvent(forwardedEvent);
+    if (!notCancelled && event.cancelable) {
+      event.preventDefault();
+    }
   };
 }

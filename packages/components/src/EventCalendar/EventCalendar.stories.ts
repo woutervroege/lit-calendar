@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./EventCalendar.js";
 import { calendarCssProps } from "../calendarCssProps.js";
@@ -6,33 +5,11 @@ import {
   localeOptions,
   type CalendarEvent,
   sampleEvents,
-  toTemporalDateLike,
   timezoneOptions,
 } from "../storyData.js";
-import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
+import { attachRequestEventHandlers } from "../storyRequestHandlers.js";
 
 type StoryEventCalendarElement = HTMLElement & { events: Map<string, CalendarEvent> };
-type EventCreateRequestDetail = {
-  start?: string;
-  end?: string;
-  summary?: string;
-  color?: string;
-  sourceId?: string;
-};
-
-function preserveDateOnlyShape(
-  nextValue: CalendarEvent["start"] | null | undefined,
-  currentValue: CalendarEvent["start"]
-): CalendarEvent["start"] {
-  if (!nextValue) return currentValue;
-  if (currentValue instanceof Temporal.PlainDate) {
-    if ("toPlainDate" in nextValue) {
-      return nextValue.toPlainDate();
-    }
-    return nextValue;
-  }
-  return nextValue;
-}
 
 const meta: Meta = {
   title: "CalendarView/EventCalendar",
@@ -156,55 +133,7 @@ const meta: Meta = {
 
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
     el.events = new Map(entries);
-
-    el.addEventListener("event-create-requested", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as EventCreateRequestDetail | null;
-      if (!detail?.start || !detail.end) return;
-
-      const eventId = `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-      const nextEvents = new Map(el.events);
-      nextEvents.set(eventId, {
-        eventId,
-        start: toTemporalDateLike(detail.start),
-        end: toTemporalDateLike(detail.end),
-        summary: detail.summary ?? "New event",
-        color: detail.color ?? "#0ea5e9",
-        sourceId: detail.sourceId,
-      });
-      el.events = nextEvents;
-    });
-
-    el.addEventListener("event-modified", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-
-      const current = el.events.get(detail.eventId);
-      if (!current) return;
-
-      el.events = new Map(el.events).set(detail.eventId, {
-        ...current,
-        start: preserveDateOnlyShape(detail.start, current.start),
-        end: preserveDateOnlyShape(detail.end, current.end),
-        summary: detail.summary,
-        color: detail.color,
-      });
-    });
-
-    el.addEventListener("event-deleted", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-      if (!el.events.has(detail.eventId)) return;
-
-      const nextEvents = new Map(el.events);
-      const doDelete = confirm("Are you sure you want to delete this event?");
-      if (doDelete) {
-        nextEvents.delete(detail.eventId);
-      }
-      el.events = nextEvents;
-    });
+    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
 
     return el;
   },

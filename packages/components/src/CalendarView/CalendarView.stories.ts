@@ -1,25 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarView.js";
-import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 import {
   type CalendarEvent,
   localeOptions,
   sampleEvents,
-  toTemporalDateLike,
   timezoneOptions,
   timezoneShiftEvents,
 } from "../storyData.js";
 import { calendarCssProps } from "../calendarCssProps.js";
+import { attachRequestEventHandlers } from "../storyRequestHandlers.js";
 
 type StoryCalendarViewElement = HTMLElement & { events: Map<string, CalendarEvent> };
-type EventCreateRequestDetail = {
-  start?: string;
-  end?: string;
-  summary?: string;
-  color?: string;
-  sourceId?: string;
-  trigger?: string;
-};
 
 const meta: Meta = {
   title: "CalendarView/CalendarView",
@@ -92,68 +83,7 @@ const meta: Meta = {
     }
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
     el.events = new Map(entries);
-    el.addEventListener("event-create-requested", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as EventCreateRequestDetail | null;
-      if (!detail?.start || !detail.end) return;
-
-      const eventId = `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-      const nextEvents = new Map(el.events);
-      nextEvents.set(eventId, {
-        eventId,
-        start: toTemporalDateLike(detail.start),
-        end: toTemporalDateLike(detail.end),
-        summary: detail.summary ?? "New event",
-        color: detail.color ?? "#0ea5e9",
-        sourceId: detail.sourceId,
-      });
-      el.events = nextEvents;
-
-      console.info("event-create-requested", {
-        eventId,
-        start: detail.start,
-        end: detail.end,
-        trigger: detail.trigger ?? null,
-      });
-    });
-    el.addEventListener("event-modified", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-
-      const current = el.events.get(detail.eventId);
-      if (!current) return;
-
-      el.events = new Map(el.events).set(detail.eventId, {
-        ...current,
-        start: detail.start ?? current.start,
-        end: detail.end ?? current.end,
-        summary: detail.summary,
-        color: detail.color,
-      });
-
-      console.info("event-modified", {
-        eventId: detail.eventId,
-        start: detail.start?.toString() ?? null,
-        end: detail.end?.toString() ?? null,
-      });
-    });
-    el.addEventListener("event-deleted", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-      if (!el.events.has(detail.eventId)) return;
-
-      const nextEvents = new Map(el.events);
-
-      const doDelete = confirm("Are you sure you want to delete this event?");
-      if (doDelete) {
-        nextEvents.delete(detail.eventId);
-      }
-      el.events = nextEvents;
-
-      console.info("event-deleted", { eventId: detail.eventId });
-    });
+    attachRequestEventHandlers(el);
     return el;
   },
 };

@@ -1,8 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarMonthView.js";
-import type { BaseEvent } from "../TimedEvent/BaseEvent.js";
 import { calendarCssProps } from "../calendarCssProps.js";
-import { localeOptions, type CalendarEvent, sampleEvents, timezoneOptions } from "../storyData.js";
+import {
+  localeOptions,
+  type CalendarEvent,
+  sampleEvents,
+  timezoneOptions,
+} from "../storyData.js";
+import { attachRequestEventHandlers } from "../storyRequestHandlers.js";
 
 type StoryCalendarMonthViewElement = HTMLElement & { events: Map<string, CalendarEvent> };
 
@@ -71,35 +76,7 @@ const meta: Meta = {
     }
     const entries = Array.isArray(args.events) ? args.events : sampleEvents;
     el.events = new Map(entries);
-    el.addEventListener("event-modified", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-
-      const current = el.events.get(detail.eventId);
-      if (!current) return;
-
-      el.events = new Map(el.events).set(detail.eventId, {
-        ...current,
-        start: detail.start ?? current.start,
-        end: detail.end ?? current.end,
-        summary: detail.summary,
-        color: detail.color,
-      });
-    });
-    el.addEventListener("event-deleted", (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail as BaseEvent | null;
-      if (!detail?.eventId) return;
-      if (!el.events.has(detail.eventId)) return;
-
-      const nextEvents = new Map(el.events);
-      const doDelete = confirm("Are you sure you want to delete this event?");
-      if (doDelete) {
-        nextEvents.delete(detail.eventId);
-      }
-      el.events = nextEvents;
-    });
+    attachRequestEventHandlers(el);
     return el;
   },
 };
