@@ -19,6 +19,22 @@ const logUpdateRequested = action("event-update-requested");
 const logDeleteRequested = action("event-delete-requested");
 const logDeleteCancelled = action("event-delete-requested (cancelled)");
 
+function resolveEventMapKey(
+  events: Map<string, CalendarEvent>,
+  envelope: { eventId?: string; calendarId?: string; recurrenceId?: string }
+): string | undefined {
+  const eventId = envelope.eventId;
+  if (!eventId) return undefined;
+  if (events.has(eventId)) return eventId;
+  for (const [key, event] of events.entries()) {
+    if (event.eventId !== eventId) continue;
+    if (envelope.calendarId !== undefined && event.calendarId !== envelope.calendarId) continue;
+    if (envelope.recurrenceId !== undefined && event.recurrenceId !== envelope.recurrenceId) continue;
+    return key;
+  }
+  return undefined;
+}
+
 function preserveDateOnlyShape(
   nextValue: CalendarEvent["start"] | null | undefined,
   currentValue: CalendarEvent["start"]
@@ -96,10 +112,12 @@ export function attachRequestEventHandlers(
     if (!detail?.envelope.eventId) return;
     logUpdateRequested(detail);
 
-    const current = el.events.get(detail.envelope.eventId);
+    const eventKey = resolveEventMapKey(el.events, detail.envelope);
+    if (!eventKey) return;
+    const current = el.events.get(eventKey);
     if (!current) return;
 
-    el.events = new Map(el.events).set(detail.envelope.eventId, {
+    el.events = new Map(el.events).set(eventKey, {
       ...current,
       start: toNextEventValue(detail.content.start, current.start, preserveDateOnly),
       end: toNextEventValue(detail.content.end, current.end, preserveDateOnly),
@@ -114,9 +132,9 @@ export function attachRequestEventHandlers(
   el.addEventListener("event-delete-requested", (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as EventDeleteRequestDetail | null;
-    const eventId = detail?.envelope.eventId;
-    if (!eventId) return;
-    if (!el.events.has(eventId)) return;
+    const eventKey = detail ? resolveEventMapKey(el.events, detail.envelope) : undefined;
+    if (!eventKey) return;
+    if (!el.events.has(eventKey)) return;
     logDeleteRequested(detail);
 
     const nextEvents = new Map(el.events);
@@ -126,7 +144,7 @@ export function attachRequestEventHandlers(
       logDeleteCancelled(detail);
       return;
     }
-    nextEvents.delete(eventId);
+    nextEvents.delete(eventKey);
     el.events = nextEvents;
   });
 }

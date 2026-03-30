@@ -13,5 +13,5 @@ export type EventUpdateRequestDetail = {
 };
 
 export type EventDeleteRequestDetail = {
-  envelope: Pick<CalendarEventEnvelope, "eventId" | "recurrenceId" | "removalScope">;
+  envelope: Pick<CalendarEventEnvelope, "calendarId" | "eventId" | "recurrenceId" | "isRecurring">;
 };

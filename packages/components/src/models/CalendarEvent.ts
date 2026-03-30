@@ -9,10 +9,10 @@ export type CalendarEventEnvelope = {
   calendarId?: string;
   eventId?: string;
   recurrenceId?: string;
+  isRecurring?: boolean;
   isException?: boolean;
   isOptimistic?: boolean;
   isRemoved?: boolean;
-  removalScope?: "instance" | "series";
 };
 
 export type CalendarEventContent = {

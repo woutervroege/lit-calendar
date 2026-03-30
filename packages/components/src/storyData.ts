@@ -106,6 +106,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = ([
         calendarId: CALENDAR_IDS.personal,
         eventId: "drinks-weekly@example.test",
         recurrenceId: "20250108T163000",
+        isRecurring: true,
       },
       content: {
         start: "2025-01-08T16:30:00",
@@ -122,10 +123,45 @@ export const sampleCalendarEvents: CalendarEventEntry[] = ([
         calendarId: CALENDAR_IDS.personal,
         eventId: "drinks-weekly@example.test",
         recurrenceId: "20250115T163000",
+        isRecurring: true,
       },
       content: {
         start: "2025-01-15T16:30:00",
         end: "2025-01-15T17:30:00",
+        summary: "Drinks",
+        color: "#9f3cfa",
+      },
+    },
+  ],
+  [
+    "event-drinks-20250122-1630",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.personal,
+        eventId: "drinks-weekly@example.test",
+        recurrenceId: "20250122T163000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-22T16:30:00",
+        end: "2025-01-22T17:30:00",
+        summary: "Drinks",
+        color: "#9f3cfa",
+      },
+    },
+  ],
+  [
+    "event-drinks-20250129-1630",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.personal,
+        eventId: "drinks-weekly@example.test",
+        recurrenceId: "20250129T163000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-29T16:30:00",
+        end: "2025-01-29T17:30:00",
         summary: "Drinks",
         color: "#9f3cfa",
       },

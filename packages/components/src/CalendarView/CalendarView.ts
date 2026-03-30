@@ -1065,9 +1065,15 @@ export class CalendarView extends BaseElement {
       event instanceof CustomEvent ? ((event.detail as BaseEvent | null) ?? null) : null;
     const target = detailTarget ?? (event.target as BaseEvent | null);
     if (!target?.eventId) return;
+    const current = this.events?.get(target.eventId);
+    const calendarId = current?.calendarId;
+    const eventId = current?.eventId;
     const detail: EventDeleteRequestDetail = {
       envelope: {
-        eventId: target.eventId,
+        calendarId,
+        eventId,
+        recurrenceId: current?.recurrenceId,
+        isRecurring: current?.isRecurring,
       },
     };
 
