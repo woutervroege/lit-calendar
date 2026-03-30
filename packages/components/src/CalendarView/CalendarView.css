@@ -137,6 +137,7 @@ section[data-touch-creating] event-card.create-preview-card {
       var(--_lc-focus-ring-color, light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%)))
     )
   );
+  --_lc-event-card-overlap-shadow: 0 0 0 transparent;
 }
 
 /* Month view: multi-row grid (e.g. 7 columns × N weeks) */
