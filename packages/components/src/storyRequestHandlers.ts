@@ -16,7 +16,11 @@ type AttachRequestHandlersOptions = {
 const logCreateRequested = action("event-create-requested");
 const logCreateCancelled = action("event-create-requested (cancelled)");
 const logUpdateRequested = action("event-update-requested");
+const logUpdateCommittedInstance = action("event-update-committed-instance");
+const logUpdateCommittedSeries = action("event-update-committed-series");
 const logDeleteRequested = action("event-delete-requested");
+const logDeleteCommittedInstance = action("event-delete-committed-instance");
+const logDeleteCommittedSeries = action("event-delete-committed-series");
 const logDeleteCancelled = action("event-delete-requested (cancelled)");
 
 function resolveEventMapKey(
@@ -163,6 +167,7 @@ export function attachRequestEventHandlers(
     const current = el.events.get(eventKey);
     if (!current) return;
     const isRecurring = detail.envelope.isRecurring ?? current.isRecurring ?? false;
+    const shouldPromptForSeries = isRecurring && !current.isException;
     const nextStartForCurrent = toNextEventValue(detail.content.start, current.start, preserveDateOnly);
     const nextEndForCurrent = toNextEventValue(detail.content.end, current.end, preserveDateOnly);
     const startShift = computeDateValueShift(current.start, nextStartForCurrent);
@@ -175,7 +180,15 @@ export function attachRequestEventHandlers(
       recurrenceId: targetEvent.recurrenceId ?? detail.envelope.recurrenceId,
       isException: detail.envelope.isException ?? targetEvent.isException,
     });
-    if (!isRecurring) {
+    if (!isRecurring || !shouldPromptForSeries) {
+      const committedDetail: EventUpdateRequestDetail = {
+        ...detail,
+        envelope: {
+          ...detail.envelope,
+          recurrenceId: detail.envelope.recurrenceId ?? current.recurrenceId,
+        },
+      };
+      logUpdateCommittedInstance(committedDetail);
       el.events = new Map(el.events).set(eventKey, {
         ...applySharedUpdate(current),
         start: nextStartForCurrent,
@@ -189,6 +202,15 @@ export function attachRequestEventHandlers(
     );
     const nextEvents = new Map(el.events);
     if (commitSeries) {
+      const committedDetail: EventUpdateRequestDetail = {
+        ...detail,
+        envelope: {
+          ...detail.envelope,
+          recurrenceId: undefined,
+          isException: false,
+        },
+      };
+      logUpdateCommittedSeries(committedDetail);
       const seriesKeys = resolveSeriesEventKeys(nextEvents, {
         calendarId: current.calendarId,
         eventId: current.eventId,
@@ -207,6 +229,15 @@ export function attachRequestEventHandlers(
       return;
     }
 
+    const committedDetail: EventUpdateRequestDetail = {
+      ...detail,
+      envelope: {
+        ...detail.envelope,
+        recurrenceId: detail.envelope.recurrenceId ?? current.recurrenceId,
+        isException: true,
+      },
+    };
+    logUpdateCommittedInstance(committedDetail);
     nextEvents.set(eventKey, {
       ...applySharedUpdate(current),
       start: nextStartForCurrent,
@@ -219,19 +250,28 @@ export function attachRequestEventHandlers(
   el.addEventListener("event-delete-requested", (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as EventDeleteRequestDetail | null;
+    if (!detail) return;
     const eventKey = detail ? resolveEventMapKey(el.events, detail.envelope) : undefined;
     if (!eventKey) return;
     const current = el.events.get(eventKey);
     if (!current) return;
     logDeleteRequested(detail);
     const isRecurring = detail?.envelope.isRecurring ?? current.isRecurring ?? false;
+    const shouldPromptForSeries = isRecurring && !current.isException;
 
     const nextEvents = new Map(el.events);
-    if (isRecurring) {
+    if (isRecurring && shouldPromptForSeries) {
       const commitSeries = window.confirm(
         "Delete the whole series?\n\nOK = series\nCancel = only this instance"
       );
       if (commitSeries) {
+        const committedDetail: EventDeleteRequestDetail = {
+          envelope: {
+            ...detail.envelope,
+            recurrenceId: undefined,
+          },
+        };
+        logDeleteCommittedSeries(committedDetail);
         const seriesKeys = resolveSeriesEventKeys(nextEvents, {
           calendarId: current.calendarId,
           eventId: current.eventId,
@@ -243,6 +283,13 @@ export function attachRequestEventHandlers(
         return;
       }
 
+      const committedDetail: EventDeleteRequestDetail = {
+        envelope: {
+          ...detail.envelope,
+          recurrenceId: detail.envelope.recurrenceId ?? current.recurrenceId,
+        },
+      };
+      logDeleteCommittedInstance(committedDetail);
       nextEvents.set(eventKey, {
         ...current,
         isException: true,
@@ -258,6 +305,13 @@ export function attachRequestEventHandlers(
       logDeleteCancelled(detail);
       return;
     }
+    const committedDetail: EventDeleteRequestDetail = {
+      envelope: {
+        ...detail.envelope,
+        recurrenceId: detail.envelope.recurrenceId ?? current.recurrenceId,
+      },
+    };
+    logDeleteCommittedInstance(committedDetail);
     nextEvents.delete(eventKey);
     el.events = nextEvents;
   });
