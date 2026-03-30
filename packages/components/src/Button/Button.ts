@@ -13,10 +13,12 @@ import {
   sharedFocusRingColorClasses,
 } from "../shared/buttonStyles.js";
 import {
-  getPlainCharacterHotkey,
+  eventMatchesHotkey,
+  getHotkeyDisplay,
   isEditableEventTarget,
   normalizeHotkey,
   sharedHotkeyBadgeClasses,
+  toAriaHotkey,
 } from "../shared/hotkey.js";
 
 type ButtonType = "button" | "submit" | "reset";
@@ -104,20 +106,23 @@ export class Button extends BaseElement {
       : sharedButtonVisualClasses;
     const buttonClasses = `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses}`;
     const hotkey = normalizeHotkey(this.hotkey);
-    const hotkeyDisplay = hotkey?.toUpperCase();
+    const hotkeyDisplay = getHotkeyDisplay(hotkey);
+    const ariaHotkey = toAriaHotkey(hotkey);
+    const hasVisibleTextContent = Boolean(this.textContent?.trim());
+    const showHotkeyBadge = Boolean(hotkeyDisplay && hasVisibleTextContent);
     return html`
       <button
         type=${this.type}
         class=${buttonClasses}
         ?disabled=${this.disabled}
         aria-label=${ifDefined(this.label || undefined)}
-        aria-keyshortcuts=${hotkey || nothing}
+        aria-keyshortcuts=${ariaHotkey || nothing}
         title=${ifDefined(hotkeyDisplay && this.label ? `${this.label} (${hotkeyDisplay})` : undefined)}
       >
         <span class="inline-flex items-center gap-2">
           <slot></slot>
           ${
-            hotkeyDisplay
+            showHotkeyBadge
               ? html`<span
                 class=${sharedHotkeyBadgeClasses}
                 >${hotkeyDisplay}</span
@@ -132,9 +137,7 @@ export class Button extends BaseElement {
   #handleGlobalKeydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented) return;
     if (this.disabled || isEditableEventTarget(event.target)) return;
-    const pressedHotkey = getPlainCharacterHotkey(event);
-    const ownHotkey = normalizeHotkey(this.hotkey);
-    if (!pressedHotkey || !ownHotkey || pressedHotkey !== ownHotkey) return;
+    if (!eventMatchesHotkey(event, this.hotkey)) return;
 
     const button = this.renderRoot.querySelector("button");
     if (!button) return;

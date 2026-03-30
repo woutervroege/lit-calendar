@@ -211,7 +211,13 @@ export class EventCalendar extends BaseElement {
           <div
             class="flex shrink-0 gap-2 [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(255_255_255),rgb(255_255_255_/_34%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(241_245_249),rgb(255_255_255_/_26%))]"
           >
-            <lc-button compact label="Previous range" @click=${() => this.goBack()} raised>
+            <lc-button
+              compact
+              label="Previous range"
+              hotkey="special+left"
+              @click=${() => this.goBack()}
+              raised
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -226,7 +232,13 @@ export class EventCalendar extends BaseElement {
             <lc-button hotkey="t" @click=${() => this.goToday()} raised>
               ${getTodayLabel(this.locale)}
             </lc-button>
-            <lc-button compact label="Next range" @click=${() => this.goForward()} raised>
+            <lc-button
+              compact
+              label="Next range"
+              hotkey="special+right"
+              @click=${() => this.goForward()}
+              raised
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
