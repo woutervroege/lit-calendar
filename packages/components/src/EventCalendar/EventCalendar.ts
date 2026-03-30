@@ -15,6 +15,8 @@ import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js
 import "../TabSwitch/TabSwitch.js";
 import type { TabSwitchOption } from "../TabSwitch/TabSwitch.js";
 import { renderCalendarIcon } from "../icons/calendarIcon.js";
+import { renderGridIcon } from "../icons/gridIcon.js";
+import { renderListIcon } from "../icons/listIcon.js";
 
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type EventsMap = Map<string, EventInput>;
@@ -57,10 +59,13 @@ function getViewOptions(locale?: string): TabSwitchOption[] {
 }
 
 function getPresentationOptions(): TabSwitchOption[] {
-  return PRESENTATION_OPTIONS_BASE.map(({ value, hotkey }) => ({
-    label: value === "list" ? "List" : "Grid",
+  return PRESENTATION_OPTIONS_BASE.map(({ value }) => ({
+    label:
+      value === "list"
+        ? renderListIcon({ className: "h-4 w-4" })
+        : renderGridIcon({ className: "h-4 w-4" }),
+    ariaLabel: value === "list" ? "List" : "Grid",
     value,
-    hotkey,
   }));
 }
 
@@ -294,36 +299,15 @@ export class EventCalendar extends BaseElement {
             ${this.#rangeLabelText}
           </h2>
           <div class="flex flex-1 justify-end items-center gap-2">
-            <div class="[@container(max-width:54rem)]:hidden">
-              <tab-switch
-                .options=${getPresentationOptions()}
-                .value=${this.presentation}
-                name="event-calendar-presentation-tabs"
-                group-label="Calendar layout"
-                @value-changed=${this.#handlePresentationChanged}
-              ></tab-switch>
-            </div>
-            <div class="hidden [@container(max-width:54rem)]:block">
-              <lc-dropdown
-                .options=${getPresentationOptions()}
-                .value=${this.presentation}
-                name="event-calendar-presentation-dropdown"
-                aria-label="Calendar layout"
-                @value-changed=${this.#handlePresentationChanged}
-              >
-                <svg
-                  slot="icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                  class="h-4 w-4"
-                >
-                  <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"></path>
-                </svg>
-              </lc-dropdown>
-            </div>
+            <tab-switch
+              compact
+              .showHotkeys=${false}
+              .options=${getPresentationOptions()}
+              .value=${this.presentation}
+              name="event-calendar-presentation-tabs"
+              group-label="Calendar layout"
+              @value-changed=${this.#handlePresentationChanged}
+            ></tab-switch>
             <div class="[@container(max-width:54rem)]:hidden">
               <tab-switch
                 .options=${getViewOptions(this.locale)}
