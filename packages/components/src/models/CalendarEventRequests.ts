@@ -8,7 +8,10 @@ export type EventCreateRequestDetail = {
 };
 
 export type EventUpdateRequestDetail = {
-  envelope: Pick<CalendarEventEnvelope, "eventId" | "calendarId" | "recurrenceId" | "isException">;
+  envelope: Pick<
+    CalendarEventEnvelope,
+    "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
+  >;
   content: CalendarEventContent;
 };
 

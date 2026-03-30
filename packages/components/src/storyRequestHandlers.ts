@@ -35,6 +35,25 @@ function resolveEventMapKey(
   return undefined;
 }
 
+function isSameSeries(
+  event: CalendarEvent,
+  envelope: { eventId?: string; calendarId?: string }
+): boolean {
+  if (!envelope.eventId) return false;
+  if (event.eventId !== envelope.eventId) return false;
+  if (envelope.calendarId !== undefined && event.calendarId !== envelope.calendarId) return false;
+  return true;
+}
+
+function resolveSeriesEventKeys(
+  events: Map<string, CalendarEvent>,
+  envelope: { eventId?: string; calendarId?: string }
+): string[] {
+  return Array.from(events.entries())
+    .filter(([, event]) => isSameSeries(event, envelope))
+    .map(([key]) => key);
+}
+
 function preserveDateOnlyShape(
   nextValue: CalendarEvent["start"] | null | undefined,
   currentValue: CalendarEvent["start"]
@@ -56,6 +75,33 @@ function toNextEventValue(
 ): CalendarEvent["start"] {
   if (!nextValue) return currentValue;
   return preserveDateOnly ? preserveDateOnlyShape(nextValue, currentValue) : nextValue;
+}
+
+function computeDateValueShift(
+  from: CalendarEvent["start"],
+  to: CalendarEvent["start"]
+): Temporal.Duration | null {
+  if (from instanceof Temporal.PlainDate && to instanceof Temporal.PlainDate) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  if (from instanceof Temporal.PlainDateTime && to instanceof Temporal.PlainDateTime) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  if (from instanceof Temporal.ZonedDateTime && to instanceof Temporal.ZonedDateTime) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  return null;
+}
+
+function applyDateValueShift(
+  value: CalendarEvent["start"],
+  shift: Temporal.Duration | null
+): CalendarEvent["start"] {
+  if (!shift) return value;
+  if (value instanceof Temporal.PlainDate) return value.add(shift);
+  if (value instanceof Temporal.PlainDateTime) return value.add(shift);
+  if (value instanceof Temporal.ZonedDateTime) return value.add(shift);
+  return value;
 }
 
 export function attachRequestEventHandlers(
@@ -116,17 +162,58 @@ export function attachRequestEventHandlers(
     if (!eventKey) return;
     const current = el.events.get(eventKey);
     if (!current) return;
-
-    el.events = new Map(el.events).set(eventKey, {
-      ...current,
-      start: toNextEventValue(detail.content.start, current.start, preserveDateOnly),
-      end: toNextEventValue(detail.content.end, current.end, preserveDateOnly),
-      summary: detail.content.summary ?? current.summary,
-      color: detail.content.color ?? current.color,
-      calendarId: detail.envelope.calendarId ?? current.calendarId,
-      recurrenceId: detail.envelope.recurrenceId ?? current.recurrenceId,
-      isException: detail.envelope.isException ?? current.isException,
+    const isRecurring = detail.envelope.isRecurring ?? current.isRecurring ?? false;
+    const nextStartForCurrent = toNextEventValue(detail.content.start, current.start, preserveDateOnly);
+    const nextEndForCurrent = toNextEventValue(detail.content.end, current.end, preserveDateOnly);
+    const startShift = computeDateValueShift(current.start, nextStartForCurrent);
+    const endShift = computeDateValueShift(current.end, nextEndForCurrent);
+    const applySharedUpdate = (targetEvent: CalendarEvent): CalendarEvent => ({
+      ...targetEvent,
+      summary: detail.content.summary ?? targetEvent.summary,
+      color: detail.content.color ?? targetEvent.color,
+      calendarId: detail.envelope.calendarId ?? targetEvent.calendarId,
+      recurrenceId: targetEvent.recurrenceId ?? detail.envelope.recurrenceId,
+      isException: detail.envelope.isException ?? targetEvent.isException,
     });
+    if (!isRecurring) {
+      el.events = new Map(el.events).set(eventKey, {
+        ...applySharedUpdate(current),
+        start: nextStartForCurrent,
+        end: nextEndForCurrent,
+      });
+      return;
+    }
+
+    const commitSeries = window.confirm(
+      "Apply changes to the whole series?\n\nOK = series\nCancel = only this instance"
+    );
+    const nextEvents = new Map(el.events);
+    if (commitSeries) {
+      const seriesKeys = resolveSeriesEventKeys(nextEvents, {
+        calendarId: current.calendarId,
+        eventId: current.eventId,
+      });
+      for (const key of seriesKeys) {
+        const seriesEvent = nextEvents.get(key);
+        if (!seriesEvent) continue;
+        nextEvents.set(key, {
+          ...applySharedUpdate(seriesEvent),
+          start: applyDateValueShift(seriesEvent.start, startShift),
+          end: applyDateValueShift(seriesEvent.end, endShift),
+          isException: false,
+        });
+      }
+      el.events = nextEvents;
+      return;
+    }
+
+    nextEvents.set(eventKey, {
+      ...applySharedUpdate(current),
+      start: nextStartForCurrent,
+      end: nextEndForCurrent,
+      isException: true,
+    });
+    el.events = nextEvents;
   });
 
   el.addEventListener("event-delete-requested", (event: Event) => {
@@ -134,10 +221,37 @@ export function attachRequestEventHandlers(
     const detail = event.detail as EventDeleteRequestDetail | null;
     const eventKey = detail ? resolveEventMapKey(el.events, detail.envelope) : undefined;
     if (!eventKey) return;
-    if (!el.events.has(eventKey)) return;
+    const current = el.events.get(eventKey);
+    if (!current) return;
     logDeleteRequested(detail);
+    const isRecurring = detail?.envelope.isRecurring ?? current.isRecurring ?? false;
 
     const nextEvents = new Map(el.events);
+    if (isRecurring) {
+      const commitSeries = window.confirm(
+        "Delete the whole series?\n\nOK = series\nCancel = only this instance"
+      );
+      if (commitSeries) {
+        const seriesKeys = resolveSeriesEventKeys(nextEvents, {
+          calendarId: current.calendarId,
+          eventId: current.eventId,
+        });
+        for (const key of seriesKeys) {
+          nextEvents.delete(key);
+        }
+        el.events = nextEvents;
+        return;
+      }
+
+      nextEvents.set(eventKey, {
+        ...current,
+        isException: true,
+        isRemoved: true,
+      });
+      el.events = nextEvents;
+      return;
+    }
+
     const doDelete = confirm("Are you sure you want to delete this event?");
     if (!doDelete) {
       event.preventDefault();

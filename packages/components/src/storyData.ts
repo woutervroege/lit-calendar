@@ -168,6 +168,125 @@ export const sampleCalendarEvents: CalendarEventEntry[] = ([
     },
   ],
   [
+    "event-daily-standup-20250113-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250113T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-13T09:00:00",
+        end: "2025-01-13T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250114-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250114T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-14T09:00:00",
+        end: "2025-01-14T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250115-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250115T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-15T09:00:00",
+        end: "2025-01-15T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250116-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250116T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-16T09:00:00",
+        end: "2025-01-16T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250117-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250117T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-17T09:00:00",
+        end: "2025-01-17T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250118-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250118T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-18T09:00:00",
+        end: "2025-01-18T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
+    "event-daily-standup-20250119-0900",
+    {
+      envelope: {
+        calendarId: CALENDAR_IDS.work,
+        eventId: "daily-standup@example.test",
+        recurrenceId: "20250119T090000",
+        isRecurring: true,
+      },
+      content: {
+        start: "2025-01-19T09:00:00",
+        end: "2025-01-19T09:20:00",
+        summary: "Daily Standup",
+        color: "#10B981",
+      },
+    },
+  ],
+  [
     "event-meeting-john-20250110",
     {
       envelope: { calendarId: CALENDAR_IDS.personal, eventId: "meeting-with-john@example.test" },

@@ -1044,6 +1044,7 @@ export class CalendarView extends BaseElement {
         calendarId: current?.calendarId,
         recurrenceId: current?.recurrenceId,
         isException: current?.isException,
+        isRecurring: current?.isRecurring,
       },
       content: {
         start: target.start,
