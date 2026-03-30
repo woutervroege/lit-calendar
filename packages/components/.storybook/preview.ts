@@ -13,8 +13,8 @@ const globalStyles = `
     background-color: var(--lg-background-color, light-dark(#fff, #222));
   }
   #storybook-root, #storybook-docs {
-    height: 100%;
-    min-height: 100vh;
+    position: fixed;
+    inset: 1rem;
   }
 `;
 
@@ -26,7 +26,7 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    layout: "padded",
+    layout: "fullscreen",
   },
   decorators: [
     (Story) => {
