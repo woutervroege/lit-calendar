@@ -1590,13 +1590,14 @@ export class CalendarView extends BaseElement {
             ...colorStyles,
             top: `${top}%`,
             bottom: `${bottom}%`,
+            "z-index": "12",
             "--_lc-left": `${left}%`,
             "--_lc-width": "1",
             "--_lc-margin-left": "0",
             "--_lc-indentation": "0px",
             "--_lc-inline-inset-start": "1px",
             "--_lc-inline-inset-end": "2px",
-            "--_lc-z-index": "8",
+            "--_lc-z-index": "12",
           },
         };
       });
@@ -1638,13 +1639,14 @@ export class CalendarView extends BaseElement {
           ...colorStyles,
           top,
           height: "var(--_lc-event-height, 32px)",
+          "z-index": "12",
           "--_lc-left": `${left}%`,
           "--_lc-width": `${widthInColumns}`,
           "--_lc-margin-left": "0",
           "--_lc-indentation": "0px",
           "--_lc-inline-inset-start": inlineInsetStart,
           "--_lc-inline-inset-end": inlineInsetEnd,
-          "--_lc-z-index": "8",
+          "--_lc-z-index": "12",
         },
       };
     });
