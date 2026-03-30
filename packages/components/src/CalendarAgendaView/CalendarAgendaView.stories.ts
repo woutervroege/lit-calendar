@@ -18,8 +18,8 @@ const meta: Meta = {
     cssprops: calendarCssProps,
   },
   argTypes: {
-    month: { control: { type: "number", min: 1, max: 12 } },
-    year: { control: { type: "number", min: 1900, max: 2100 } },
+    startDate: { control: "text", description: "Range start date (YYYY-MM-DD)" },
+    days: { control: { type: "number", min: 1, max: 366, step: 1 } },
     locale: {
       control: "select",
       options: localeOptions,
@@ -33,8 +33,8 @@ const meta: Meta = {
     currentTime: { control: "text", description: "Current time (ISO string)" },
   },
   args: {
-    month: 1,
-    year: 2025,
+    startDate: "2025-01-01",
+    days: 31,
     timezone: "Europe/Amsterdam",
     currentTime: "2025-01-15T14:30:00",
     events: sampleEvents,
@@ -44,8 +44,8 @@ const meta: Meta = {
     el.style.display = "block";
     el.style.width = "100%";
     el.style.height = "100%";
-    el.setAttribute("month", String(args.month));
-    el.setAttribute("year", String(args.year));
+    el.setAttribute("start-date", String(args.startDate));
+    el.setAttribute("days", String(args.days));
     if (args.locale) {
       el.setAttribute("locale", args.locale);
     }

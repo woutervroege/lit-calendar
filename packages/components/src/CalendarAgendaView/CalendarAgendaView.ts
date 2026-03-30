@@ -29,8 +29,8 @@ type AgendaDay = {
 
 @customElement("calendar-agenda-view")
 export class CalendarAgendaView extends BaseElement {
-  month = Temporal.Now.plainDateISO().month;
-  year = Temporal.Now.plainDateISO().year;
+  #startDate?: string;
+  #days = 31;
   declare events?: EventsMap;
   locale?: string;
   timezone?: string;
@@ -38,8 +38,8 @@ export class CalendarAgendaView extends BaseElement {
 
   static get properties() {
     return {
-      month: { type: Number },
-      year: { type: Number },
+      startDate: { type: String, attribute: "start-date" },
+      days: { type: Number },
       events: {
         type: Object,
         converter: {
@@ -51,6 +51,33 @@ export class CalendarAgendaView extends BaseElement {
       timezone: { type: String },
       currentTime: { type: String, attribute: "current-time" },
     } as const;
+  }
+
+  get startDate(): Temporal.PlainDate {
+    if (this.#startDate) {
+      return Temporal.PlainDate.from(this.#startDate);
+    }
+    return this.#resolvedNow.toPlainDate();
+  }
+
+  set startDate(value: string | Temporal.PlainDate | undefined) {
+    const nextValue =
+      value === undefined
+        ? undefined
+        : value instanceof Temporal.PlainDate
+          ? value.toString()
+          : Temporal.PlainDate.from(value).toString();
+    this.#startDate = nextValue;
+  }
+
+  get days(): number {
+    return this.#days;
+  }
+
+  set days(value: number | string | null | undefined) {
+    const rawValue = typeof value === "string" ? Number(value) : value;
+    const numeric = Number(rawValue);
+    this.#days = Number.isFinite(numeric) ? Math.max(1, Math.floor(numeric)) : 31;
   }
 
   static get styles() {
@@ -116,8 +143,8 @@ export class CalendarAgendaView extends BaseElement {
 
   get #agendaDays(): AgendaDay[] {
     const grouped = new Map<string, AgendaItem[]>();
-    const rangeStart = this.#monthStart;
-    const rangeEndExclusive = this.#monthEndExclusive;
+    const rangeStart = this.startDate;
+    const rangeEndExclusive = rangeStart.add({ days: this.days });
 
     for (const [, event] of this.#eventsAsEntries) {
       if (event.isRemoved) continue;
@@ -304,19 +331,15 @@ export class CalendarAgendaView extends BaseElement {
     return Array.from(this.events?.entries() ?? []);
   }
 
-  get #monthStart(): Temporal.PlainDate {
-    return Temporal.PlainDate.from({ year: this.year, month: this.month, day: 1 });
-  }
-
-  get #monthEndExclusive(): Temporal.PlainDate {
-    return this.#monthStart.add({ months: 1 });
-  }
-
   get #resolvedLocale(): string {
     return resolveLocale(this.locale);
   }
 
   get #now(): Temporal.PlainDateTime {
+    return this.#resolvedNow;
+  }
+
+  get #resolvedNow(): Temporal.PlainDateTime {
     if (this.currentTime) {
       if (this.currentTime.includes("[") && this.currentTime.includes("]")) {
         const zoned = Temporal.ZonedDateTime.from(this.currentTime);

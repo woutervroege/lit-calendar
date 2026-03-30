@@ -8,6 +8,7 @@ import "../CalendarViewGroup/CalendarViewGroup.js";
 import "../Dropdown/Dropdown.js";
 import type {
   CalendarViewGroup,
+  CalendarPresentationMode,
   CalendarViewMode,
 } from "../CalendarViewGroup/CalendarViewGroup.js";
 import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js";
@@ -18,14 +19,19 @@ import { renderCalendarIcon } from "../icons/calendarIcon.js";
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type EventsMap = Map<string, EventInput>;
 
-type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year" | "agenda">;
+type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
+type PresentationUnit = CalendarPresentationMode;
 
 const VIEW_OPTIONS_BASE: Array<{ value: ViewUnit; hotkey: string }> = [
   { value: "day", hotkey: "d" },
   { value: "week", hotkey: "w" },
   { value: "month", hotkey: "m" },
   { value: "year", hotkey: "y" },
-  { value: "agenda", hotkey: "a" },
+];
+
+const PRESENTATION_OPTIONS_BASE: Array<{ value: PresentationUnit; hotkey: string }> = [
+  { value: "grid", hotkey: "g" },
+  { value: "list", hotkey: "l" },
 ];
 
 function capitalizeLabel(value: string, locale = globalThis.navigator?.language ?? "en"): string {
@@ -50,6 +56,14 @@ function getViewOptions(locale?: string): TabSwitchOption[] {
   }));
 }
 
+function getPresentationOptions(): TabSwitchOption[] {
+  return PRESENTATION_OPTIONS_BASE.map(({ value, hotkey }) => ({
+    label: value === "list" ? "List" : "Grid",
+    value,
+    hotkey,
+  }));
+}
+
 function getTodayLabel(locale = globalThis.navigator?.language ?? "en"): string {
   try {
     const relativeTimeFormat = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
@@ -62,6 +76,7 @@ function getTodayLabel(locale = globalThis.navigator?.language ?? "en"): string 
 @customElement("event-calendar")
 export class EventCalendar extends BaseElement {
   #view: CalendarViewMode = "month";
+  #presentation: CalendarPresentationMode = "grid";
   #startDate?: string;
   #daysPerWeek = 7;
   #visibleDays?: number;
@@ -81,6 +96,11 @@ export class EventCalendar extends BaseElement {
   static get properties() {
     return {
       view: {
+        type: String,
+        reflect: true,
+        dispatchChangeEvent: { composed: true },
+      },
+      presentation: {
         type: String,
         reflect: true,
         dispatchChangeEvent: { composed: true },
@@ -119,16 +139,26 @@ export class EventCalendar extends BaseElement {
   }
 
   set view(value: CalendarViewMode | string | null | undefined) {
+    if (value === "agenda") {
+      this.presentation = "list";
+      this.requestUpdate();
+      return;
+    }
     const nextValue =
-      value === "day" ||
-      value === "week" ||
-      value === "month" ||
-      value === "year" ||
-      value === "agenda"
-        ? value
-        : "month";
+      value === "day" || value === "week" || value === "month" || value === "year" ? value : "month";
     if (this.#view === nextValue) return;
     this.#view = nextValue;
+    this.requestUpdate();
+  }
+
+  get presentation(): CalendarPresentationMode {
+    return this.#presentation;
+  }
+
+  set presentation(value: CalendarPresentationMode | string | null | undefined) {
+    const nextValue: CalendarPresentationMode = value === "list" ? "list" : "grid";
+    if (this.#presentation === nextValue) return;
+    this.#presentation = nextValue;
     this.requestUpdate();
   }
 
@@ -263,7 +293,37 @@ export class EventCalendar extends BaseElement {
           >
             ${this.#rangeLabelText}
           </h2>
-          <div class="flex flex-1 justify-end">
+          <div class="flex flex-1 justify-end items-center gap-2">
+            <div class="[@container(max-width:54rem)]:hidden">
+              <tab-switch
+                .options=${getPresentationOptions()}
+                .value=${this.presentation}
+                name="event-calendar-presentation-tabs"
+                group-label="Calendar layout"
+                @value-changed=${this.#handlePresentationChanged}
+              ></tab-switch>
+            </div>
+            <div class="hidden [@container(max-width:54rem)]:block">
+              <lc-dropdown
+                .options=${getPresentationOptions()}
+                .value=${this.presentation}
+                name="event-calendar-presentation-dropdown"
+                aria-label="Calendar layout"
+                @value-changed=${this.#handlePresentationChanged}
+              >
+                <svg
+                  slot="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                  class="h-4 w-4"
+                >
+                  <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"></path>
+                </svg>
+              </lc-dropdown>
+            </div>
             <div class="[@container(max-width:54rem)]:hidden">
               <tab-switch
                 .options=${getViewOptions(this.locale)}
@@ -290,6 +350,7 @@ export class EventCalendar extends BaseElement {
         <calendar-view-group
           class="min-h-0 flex-[1_1_auto]"
           .view=${this.view}
+          .presentation=${this.presentation}
           start-date=${ifDefined(this.#startDate)}
           .weekStart=${this.weekStart}
           .daysPerWeek=${this.daysPerWeek}
@@ -327,6 +388,17 @@ export class EventCalendar extends BaseElement {
     this.#syncFromViewGroupElement(viewGroup);
   };
 
+  #handlePresentationChanged = (event: Event) => {
+    const target = event.currentTarget as { value?: string } | null;
+    const nextPresentation = target?.value as CalendarPresentationMode | undefined;
+    if (!nextPresentation || nextPresentation === this.presentation) return;
+    this.presentation = nextPresentation;
+    const viewGroup = this.#calendarViewGroup;
+    if (!viewGroup) return;
+    viewGroup.presentation = nextPresentation;
+    this.#syncFromViewGroupElement(viewGroup);
+  };
+
   #syncFromViewGroup = (event: Event) => {
     const target = event.target as CalendarViewGroup | null;
     if (!target) return;
@@ -335,6 +407,7 @@ export class EventCalendar extends BaseElement {
 
   #syncFromViewGroupElement(target: CalendarViewGroup) {
     this.view = target.view;
+    this.presentation = target.presentation;
     this.startDate = target.startDate;
     this.currentTime = target.currentTime;
     this.daysPerWeek = target.daysPerWeek;
