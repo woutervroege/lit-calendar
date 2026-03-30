@@ -18,6 +18,7 @@
   --_lc-event-focus-ring-width: 0px;
   --_lc-event-focus-ring-color: transparent;
   --_lc-event-focus-ring-gap: 1px;
+  --_lc-event-focus-ring-inset-width: 0px;
 }
 
 :host > div {
@@ -44,13 +45,15 @@
 }
 
 :host > div::before {
-  box-shadow: inset 0 0 0 var(--_lc-event-focus-ring-width) var(--_lc-event-focus-ring-color);
+  outline: var(--_lc-event-focus-ring-width) solid var(--_lc-event-focus-ring-color);
+  outline-offset: var(--_lc-event-focus-ring-gap);
+  box-shadow: inset 0 0 0 var(--_lc-event-focus-ring-inset-width) var(--_lc-event-focus-ring-color);
 }
 
 :host > div.event-card-overlap::before {
   box-shadow:
     var(--_lc-event-card-overlap-shadow),
-    inset 0 0 0 var(--_lc-event-focus-ring-width) var(--_lc-event-focus-ring-color);
+    inset 0 0 0 var(--_lc-event-focus-ring-inset-width) var(--_lc-event-focus-ring-color);
 }
 
 :host([segment-direction="horizontal"]) h6.sticky {
