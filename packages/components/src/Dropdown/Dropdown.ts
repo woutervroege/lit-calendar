@@ -103,9 +103,11 @@ export class Dropdown extends BaseElement {
 
         :host([icon-only]) .lc-dropdown-icon,
         :host([icon-only]) .lc-dropdown-chevron {
-          inset-inline-start: 50%;
-          inset-inline-end: auto;
-          transform: translate(-50%, -50%);
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transform: none;
         }
 
         .lc-dropdown-select:focus:not(:focus-visible) {
@@ -146,6 +148,11 @@ export class Dropdown extends BaseElement {
 
         .lc-dropdown-icon:empty {
           display: none;
+        }
+
+        :host([icon-only]) .lc-dropdown-icon ::slotted([slot="icon"]) {
+          display: block;
+          margin: 0;
         }
       `,
     ];

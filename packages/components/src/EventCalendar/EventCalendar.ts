@@ -17,6 +17,7 @@ import type { TabSwitchOption } from "../TabSwitch/TabSwitch.js";
 import { renderCalendarIcon } from "../icons/calendarIcon.js";
 import { renderGridIcon } from "../icons/gridIcon.js";
 import { renderListIcon } from "../icons/listIcon.js";
+import { getLocaleDirection } from "../utils/Locale.js";
 
 type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type EventsMap = Map<string, EventInput>;
@@ -245,19 +246,23 @@ export class EventCalendar extends BaseElement {
   }
 
   render() {
+    const headerDirection = getLocaleDirection(this.locale);
     return html`
       <div class="flex h-full min-h-0 flex-col gap-7 [container-type:inline-size] [@media(max-width:54rem)]:gap-4">
         <header
           class="flex items-center justify-between gap-x-3 rounded-md border border-[light-dark(rgb(15_23_42_/_14%),rgb(255_255_255_/_16%))]"
+          dir=${headerDirection}
         >
           <div
             class="flex shrink-0 gap-2 [@container(max-width:54rem)]:fixed [@container(max-width:54rem)]:bottom-4 [@container(max-width:54rem)]:right-4 [@container(max-width:54rem)]:z-50 [@container(max-width:54rem)]:[--_lc-button-bg:light-dark(rgb(255_255_255),rgb(255_255_255_/_34%))] [@container(max-width:54rem)]:[--_lc-button-hover-bg:light-dark(rgb(241_245_249),rgb(255_255_255_/_26%))]"
+            dir="ltr"
+            style=${headerDirection === "rtl" ? "left: 1rem; right: auto;" : "right: 1rem; left: auto;"}
           >
             <lc-button
               compact
               label="Previous range"
               hotkey="special+left"
-              @click=${() => this.goBack()}
+              @click=${() => (headerDirection === "rtl" ? this.goForward() : this.goBack())}
               raised
             >
               <svg
@@ -278,7 +283,7 @@ export class EventCalendar extends BaseElement {
               compact
               label="Next range"
               hotkey="special+right"
-              @click=${() => this.goForward()}
+              @click=${() => (headerDirection === "rtl" ? this.goBack() : this.goForward())}
               raised
             >
               <svg
@@ -325,6 +330,7 @@ export class EventCalendar extends BaseElement {
             <div class="hidden [@container(max-width:54rem)]:block">
 
             <lc-dropdown
+                dir=${headerDirection}
                 .options=${getViewOptions(this.locale)}
                 .value=${this.view}
                 name="event-calendar-view-dropdown"
