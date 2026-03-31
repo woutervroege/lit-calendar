@@ -18,6 +18,8 @@ const globalStyles = `
   }
 `;
 
+const storybookViewportContent = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+
 const preview: Preview = {
   parameters: {
     controls: {
@@ -34,6 +36,14 @@ const preview: Preview = {
   },
   decorators: [
     (Story) => {
+      let viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        viewportMeta = document.createElement("meta");
+        viewportMeta.setAttribute("name", "viewport");
+        document.head.appendChild(viewportMeta);
+      }
+      viewportMeta.setAttribute("content", storybookViewportContent);
+
       if (!document.getElementById("storybook-global-styles")) {
         const style = document.createElement("style");
         style.id = "storybook-global-styles";
