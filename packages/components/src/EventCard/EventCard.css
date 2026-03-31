@@ -2,6 +2,7 @@
   position: absolute;
   width: 100%;
   container-type: size;
+  container-name: event-card;
   touch-action: var(--_lc-event-card-touch-action, none);
   --_lc-event-card-bg: var(
     --_lc-event-card-bg-active,
@@ -27,9 +28,12 @@
   display: block;
   touch-action: auto;
   container-type: inline-size;
+  container-name: event-card;
 }
 
 :host > div {
+  container-type: inline-size;
+  container-name: event-card-content;
   width: max(
     0px,
     calc(
@@ -139,6 +143,14 @@
 
   :host .event-card-summary-main,
   :host .event-card-time {
+    display: none;
+  }
+}
+
+/* Very small cards: hide compact time, keep summary visible. */
+@container event-card-content (max-width: 120px) {
+  :host .event-card-compact-time,
+  :host .event-card-compact-time + [aria-hidden="true"] {
     display: none;
   }
 }
