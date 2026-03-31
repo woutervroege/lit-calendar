@@ -25,7 +25,6 @@ export class CalendarWeekView extends BaseElement {
   year = Temporal.Now.plainDateISO().year;
   weekStart?: WeekdayNumber;
   daysPerWeek = 7;
-  visibleDays?: number;
   declare events?: EventsMap;
   locale?: string;
   timezone?: string;
@@ -69,21 +68,6 @@ export class CalendarWeekView extends BaseElement {
             return Math.max(1, Math.min(7, Math.floor(n)));
           },
           toAttribute: (v: number): string => String(v),
-        },
-      },
-      visibleDays: {
-        type: Number,
-        attribute: "visible-days",
-        reflect: true,
-        converter: {
-          fromAttribute: (v: string | null): number | undefined => {
-            if (v === null) return undefined;
-            const n = Number(v);
-            if (!Number.isFinite(n)) return undefined;
-            return Math.max(1, Math.min(7, Math.floor(n)));
-          },
-          toAttribute: (v: number | undefined): string | null =>
-            typeof v === "number" ? String(v) : null,
         },
       },
       events: {
@@ -241,10 +225,6 @@ export class CalendarWeekView extends BaseElement {
     const snapPoints = this.daysPerWeek + 1;
     const snapRows = 24;
     const allDayRowHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
-    const visibleColumnsStyle =
-      typeof this.visibleDays === "number"
-        ? `--_lc-combined-visible-columns: ${this.visibleDays};`
-        : "";
 
     return html`
       <div
@@ -252,7 +232,7 @@ export class CalendarWeekView extends BaseElement {
         dir=${direction}
         style=${`--_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
       >
-        <div class="combined-week-grid-canvas" style=${visibleColumnsStyle}>
+        <div class="combined-week-grid-canvas">
           <header class="combined-week-header">
             <aside class="combined-week-header-sidebar" aria-hidden="true"></aside>
             <section class="combined-week-header-main">

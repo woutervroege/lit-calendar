@@ -112,8 +112,7 @@
 }
 
 .combined-week-header-sidebar {
-  position: sticky;
-  inset-inline-start: 0;
+  position: static;
   z-index: 13;
   color: var(--_lc-grid-line-day-color, light-dark(rgb(15 23 42 / 72%), rgb(255 255 255 / 72%)));
   background-color: var(--_lc-combined-surface-bg);
@@ -155,9 +154,7 @@
   height: 100%;
   --_lc-time-sidebar-width: var(--_lc-combined-sidebar-width);
   --_lc-time-label-gap: var(--_lc-combined-gap);
-  --_lc-time-sidebar-position: sticky;
-  --_lc-time-sidebar-sticky-top: 0px;
-  --_lc-time-sidebar-z-index: 120;
+  --_lc-time-sidebar-position: static;
   --_lc-time-sidebar-align-self: start;
   --_lc-time-sidebar-inline-padding: var(--_lc-combined-sidebar-inline-padding);
   --_lc-time-sidebar-bg: var(--_lc-combined-surface-bg);
@@ -165,32 +162,3 @@
   --_lc-hour-labels-margin-top: 0px;
 }
 
-@container (max-width: 1100px) {
-  .combined-week-grid-canvas {
-    --_lc-combined-visible-columns: 6;
-  }
-}
-
-@container (max-width: 980px) {
-  .combined-week-grid-canvas {
-    --_lc-combined-visible-columns: 5;
-  }
-}
-
-@container (max-width: 840px) {
-  .combined-week-grid-canvas {
-    --_lc-combined-visible-columns: 4;
-  }
-}
-
-@container (max-width: 700px) {
-  .combined-week-grid-canvas {
-    --_lc-combined-visible-columns: 3;
-  }
-}
-
-@container (max-width: 540px) {
-  .combined-week-grid-canvas {
-    --_lc-combined-visible-columns: 2;
-  }
-}

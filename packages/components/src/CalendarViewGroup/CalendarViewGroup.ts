@@ -34,7 +34,6 @@ export class CalendarViewGroup extends BaseElement {
   #startDate?: string;
   weekStart?: WeekdayNumber;
   #daysPerWeek = 7;
-  #visibleDays?: number;
   declare events?: EventsMap;
   locale?: string;
   timezone?: string;
@@ -67,10 +66,6 @@ export class CalendarViewGroup extends BaseElement {
       daysPerWeek: {
         type: Number,
         attribute: "days-per-week",
-      },
-      visibleDays: {
-        type: Number,
-        attribute: "visible-days",
       },
       events: {
         type: Object,
@@ -138,22 +133,6 @@ export class CalendarViewGroup extends BaseElement {
     this.#daysPerWeek = nextValue;
   }
 
-  get visibleDays(): number | undefined {
-    return this.#visibleDays;
-  }
-
-  set visibleDays(value: number | string | null | undefined) {
-    if (value === null || value === undefined || value === "") {
-      this.#visibleDays = undefined;
-      return;
-    }
-    const rawValue = typeof value === "string" ? Number(value) : value;
-    const numeric = Number(rawValue);
-    this.#visibleDays = Number.isFinite(numeric)
-      ? Math.max(1, Math.min(7, Math.floor(numeric)))
-      : undefined;
-  }
-
   get month(): number {
     return this.#resolvedStartDate.month;
   }
@@ -194,7 +173,7 @@ export class CalendarViewGroup extends BaseElement {
       return this.#dateLabelParts(new Intl.DateTimeFormat(locale, { dateStyle: "long" }), anchorDate);
     }
 
-    const start = this.#weekStartDate;
+    const start = this.#weekRangeStartDate;
     const rangeLengthDays = Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
     const end = start.add({ days: rangeLengthDays - 1 });
     return this.#weekRangeLabelParts(start, end, locale);
@@ -220,7 +199,7 @@ export class CalendarViewGroup extends BaseElement {
   }
 
   get nextWeek(): string {
-    return this.#weekStartDate.add({ days: 7 }).toString();
+    return this.#weekRangeStartDate.add({ days: this.#weekStepDays }).toString();
   }
 
   get nextMonth(): string {
@@ -277,14 +256,13 @@ export class CalendarViewGroup extends BaseElement {
     }
 
     if (view === "day" || view === "week") {
-      const startDate = view === "day" ? this.#resolvedStartDate : this.#weekStartDate;
+      const startDate = view === "day" ? this.#resolvedStartDate : this.#weekRangeStartDate;
       const daysPerWeek = view === "day" ? 1 : this.daysPerWeek;
       return html`
         <calendar-week-view
           start-date=${startDate.toString()}
           .weekStart=${this.weekStart}
           .daysPerWeek=${daysPerWeek}
-          .visibleDays=${this.visibleDays}
           .events=${this.events}
           .rtl=${this.rtl}
           .locale=${this.locale}
@@ -381,17 +359,26 @@ export class CalendarViewGroup extends BaseElement {
       });
     }
 
-    const start = this.#weekStartDate;
-    return start.add({ days: 7 * step });
+    return this.#weekRangeStartDate.add({ days: this.#weekStepDays * step });
+  }
+
+  get #weekStepDays(): number {
+    return Math.max(1, Math.min(7, Math.floor(Number(this.daysPerWeek) || 7)));
   }
 
   get #weekStartDate(): Temporal.PlainDate {
     return this.#startOfWeekFor(this.#resolvedStartDate, this.#resolvedWeekStart);
   }
 
+  get #weekRangeStartDate(): Temporal.PlainDate {
+    // Full-week mode stays aligned to locale week start; partial-week modes use a sliding anchor.
+    if (this.#weekStepDays < 7) return this.#resolvedStartDate;
+    return this.#weekStartDate;
+  }
+
   get #agendaRangeStartDate(): Temporal.PlainDate {
     if (this.view === "day") return this.#resolvedStartDate;
-    if (this.view === "week") return this.#weekStartDate;
+    if (this.view === "week") return this.#weekRangeStartDate;
     if (this.view === "year") {
       return Temporal.PlainDate.from({ year: this.year, month: 1, day: 1 });
     }

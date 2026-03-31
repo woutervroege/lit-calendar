@@ -6,6 +6,7 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 import "../Button/Button.js";
 import "../CalendarViewGroup/CalendarViewGroup.js";
 import "../Dropdown/Dropdown.js";
+import type { DropdownOption } from "../Dropdown/Dropdown.js";
 import type {
   CalendarViewGroup,
   CalendarPresentationMode,
@@ -24,6 +25,8 @@ type EventsMap = Map<string, EventInput>;
 
 type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
 type PresentationUnit = CalendarPresentationMode;
+type MobileViewValue = ViewUnit | "three-days";
+const THREE_DAYS_OPTION_VALUE: MobileViewValue = "three-days";
 
 const VIEW_OPTIONS_BASE: Array<{ value: ViewUnit; hotkey: string }> = [
   { value: "day", hotkey: "d" },
@@ -59,6 +62,39 @@ function getViewOptions(locale?: string): TabSwitchOption[] {
   }));
 }
 
+function getThreeDaysLabel(locale = globalThis.navigator?.language ?? "en"): string {
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit: "day",
+      unitDisplay: "long",
+    }).format(3);
+  } catch {
+    return "3 days";
+  }
+}
+
+function getMobileViewOptions(locale?: string): DropdownOption[] {
+  const normalizedOptions = getViewOptions(locale).map((option) => ({
+    label: typeof option.label === "string" ? option.label : String(option.value),
+    value: String(option.value),
+    hotkey: option.hotkey,
+  }));
+  const dayOptionIndex = normalizedOptions.findIndex((option) => option.value === "day");
+  const insertIndex = dayOptionIndex >= 0 ? dayOptionIndex + 1 : normalizedOptions.length;
+  const threeDaysOption: DropdownOption = {
+    label: getThreeDaysLabel(locale),
+    value: THREE_DAYS_OPTION_VALUE,
+    hotkey: "3",
+  };
+
+  return [
+    ...normalizedOptions.slice(0, insertIndex),
+    threeDaysOption,
+    ...normalizedOptions.slice(insertIndex),
+  ];
+}
+
 function getPresentationOptions(): TabSwitchOption[] {
   return PRESENTATION_OPTIONS_BASE.map(({ value }) => ({
     label:
@@ -85,7 +121,8 @@ export class EventCalendar extends BaseElement {
   #presentation: CalendarPresentationMode = "grid";
   #startDate?: string;
   #daysPerWeek = 7;
-  #visibleDays?: number;
+  #threeDayRangeEnabled = false;
+  #daysPerWeekBeforeThreeDayRange = 7;
   #rangeLabelText = "";
   #rangeLabelParts: Array<{ text: string; isYear: boolean }> = [];
   weekStart?: WeekdayNumber;
@@ -121,10 +158,6 @@ export class EventCalendar extends BaseElement {
       daysPerWeek: {
         type: Number,
         attribute: "days-per-week",
-      },
-      visibleDays: {
-        type: Number,
-        attribute: "visible-days",
       },
       events: {
         type: Object,
@@ -199,29 +232,27 @@ export class EventCalendar extends BaseElement {
     this.requestUpdate();
   }
 
-  get visibleDays(): number | undefined {
-    return this.#visibleDays;
-  }
-
-  set visibleDays(value: number | string | null | undefined) {
-    const rawValue = typeof value === "string" ? Number(value) : value;
-    if (value === null || value === undefined || value === "") {
-      if (this.#visibleDays === undefined) return;
-      this.#visibleDays = undefined;
-      this.requestUpdate();
-      return;
-    }
-    const numeric = Number(rawValue);
-    const nextValue = Number.isFinite(numeric)
-      ? Math.max(1, Math.min(7, Math.floor(numeric)))
-      : undefined;
-    if (this.#visibleDays === nextValue) return;
-    this.#visibleDays = nextValue;
-    this.requestUpdate();
-  }
-
   get #calendarViewGroup(): CalendarViewGroup | null {
     return this.renderRoot.querySelector("calendar-view-group");
+  }
+
+  get #mobileViewValue(): MobileViewValue {
+    if (this.#threeDayRangeEnabled) return THREE_DAYS_OPTION_VALUE;
+    return this.view;
+  }
+
+  #enableThreeDayRange() {
+    if (!this.#threeDayRangeEnabled) {
+      this.#daysPerWeekBeforeThreeDayRange = this.daysPerWeek;
+    }
+    this.#threeDayRangeEnabled = true;
+    this.daysPerWeek = 3;
+  }
+
+  #disableThreeDayRange() {
+    if (!this.#threeDayRangeEnabled) return;
+    this.#threeDayRangeEnabled = false;
+    this.daysPerWeek = this.#daysPerWeekBeforeThreeDayRange || 7;
   }
 
   goBack() {
@@ -331,12 +362,12 @@ export class EventCalendar extends BaseElement {
 
             <lc-dropdown
                 dir=${headerDirection}
-                .options=${getViewOptions(this.locale)}
-                .value=${this.view}
+                .options=${getMobileViewOptions(this.locale)}
+                .value=${this.#mobileViewValue}
                 name="event-calendar-view-dropdown"
                 aria-label="Calendar view"
                 icon-only
-                @value-changed=${this.#handleViewTabChanged}
+                @value-changed=${this.#handleViewDropdownChanged}
               >
                 ${renderCalendarIcon({ slot: "icon", className: "h-4 w-4" })}
               </lc-dropdown>
@@ -350,7 +381,6 @@ export class EventCalendar extends BaseElement {
           start-date=${ifDefined(this.#startDate)}
           .weekStart=${this.weekStart}
           .daysPerWeek=${this.daysPerWeek}
-          .visibleDays=${this.visibleDays}
           .events=${this.events}
           .locale=${this.locale}
           .timezone=${this.timezone}
@@ -377,10 +407,39 @@ export class EventCalendar extends BaseElement {
     const nextView = target?.value as CalendarViewMode | undefined;
     if (!nextView || nextView === this.view) return;
 
+    this.#disableThreeDayRange();
     this.view = nextView;
     const viewGroup = this.#calendarViewGroup;
     if (!viewGroup) return;
     viewGroup.view = nextView;
+    viewGroup.daysPerWeek = this.daysPerWeek;
+    this.#syncFromViewGroupElement(viewGroup);
+  };
+
+  #handleViewDropdownChanged = (event: Event) => {
+    const target = event.currentTarget as { value?: string } | null;
+    const nextValue = target?.value as MobileViewValue | undefined;
+    if (!nextValue) return;
+
+    const viewGroup = this.#calendarViewGroup;
+    if (nextValue === THREE_DAYS_OPTION_VALUE) {
+      this.#enableThreeDayRange();
+      this.view = "week";
+      if (viewGroup) {
+        viewGroup.view = "week";
+        viewGroup.daysPerWeek = 3;
+        this.#syncFromViewGroupElement(viewGroup);
+      }
+      return;
+    }
+
+    this.#disableThreeDayRange();
+    const nextView = nextValue as CalendarViewMode;
+    if (nextView === this.view && !this.#threeDayRangeEnabled) return;
+    this.view = nextView;
+    if (!viewGroup) return;
+    viewGroup.view = nextView;
+    viewGroup.daysPerWeek = this.daysPerWeek;
     this.#syncFromViewGroupElement(viewGroup);
   };
 
@@ -407,6 +466,7 @@ export class EventCalendar extends BaseElement {
     this.startDate = target.startDate;
     this.currentTime = target.currentTime;
     this.daysPerWeek = target.daysPerWeek;
+    this.#threeDayRangeEnabled = this.view === "week" && this.daysPerWeek === 3;
     this.#rangeLabelText = target.rangeLabel;
     this.#rangeLabelParts = target.rangeLabelParts;
   }
