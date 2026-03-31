@@ -96,7 +96,7 @@ export class TabSwitch extends BaseElement {
       : "";
     const labelClasses = `${buttonSizeClasses} ${compactSizeOverrides} border-0 border-transparent ${sharedButtonHoverTintClasses} ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerDisabledClasses}`;
     const wrapperClasses = this.compact
-      ? "inline-flex space-x-1 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-0.5 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
+      ? "inline-flex space-x-1 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg"
       : "inline-flex space-x-2 bg-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_10%))] p-1 [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border border-solid border-[var(--_lc-switch-border-color)] rounded-lg";
     return html`
       <div
