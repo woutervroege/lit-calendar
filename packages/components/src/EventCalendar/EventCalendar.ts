@@ -290,11 +290,16 @@ export class EventCalendar extends BaseElement {
                   : this.#rangeLabelText}
               </h2>
             </div>
-            <lc-button compact label=${getTodayLabel(this.locale)} hotkey="t" @click=${() => this.goToday()}>
+            <lc-button
+              label=${getTodayLabel(this.locale)}
+              style="--_lc-grid-line-color: light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%)); --lc-button-border-color: light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%)); --_lc-button-border-color: light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%));"
+              @click=${() => this.goToday()}
+            >
               ${renderCalendarIcon({ className: "h-[1.1rem] w-[1.1rem]" })}
+              <span class="[@container(max-width:54rem)]:hidden">${getTodayLabel(this.locale)}</span>
             </lc-button>
           </div>
-          <div class="flex items-center justify-end gap-2 border-t border-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_12%))] pt-2 [@container(max-width:54rem)]:w-full [@container(max-width:54rem)]:justify-between [@container(max-width:54rem)]:items-stretch">
+          <div class="flex items-center justify-end gap-0 border-t border-[light-dark(rgb(15_23_42_/_10%),rgb(255_255_255_/_12%))] pt-2 [@container(max-width:34rem)]:w-full [@container(max-width:34rem)]:justify-between [@container(max-width:34rem)]:gap-2 [@container(max-width:34rem)]:items-stretch">
             <tab-switch
               class="flex-none"
               .showHotkeys=${false}
