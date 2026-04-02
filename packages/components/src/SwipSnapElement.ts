@@ -16,13 +16,12 @@ export class SwipeSnapElement extends LitElement {
       display: block;
       width: 100%;
       height: 100%;
-      overflow-x: auto;
-      overflow-y: auto;
+      overflow: hidden;
       position: relative;
       touch-action: pan-y;
       user-select: none;
       -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+
     }
 
     .container {
