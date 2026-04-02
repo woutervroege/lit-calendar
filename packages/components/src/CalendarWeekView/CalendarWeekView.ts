@@ -6,8 +6,10 @@ import "../CalendarView/CalendarView.js";
 import "../CalendarWeekdayHeader/CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js";
+import { SwipeSnapElement } from "../SwipSnapElement.js";
 import { type AllDayLayoutItem, buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo } from "../utils/Locale.js";
+import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
 import componentStyle from "./CalendarWeekView.css?inline";
 
 type EventEntry = [id: string, event: EventInput];
@@ -39,6 +41,7 @@ export class CalendarWeekView extends BaseElement {
   #splitEventsSource?: EventsMap;
   #cachedAllDayEvents: EventsMap = new Map();
   #cachedTimedEvents: EventsMap = new Map();
+  #swipeIndex = 0;
 
   static get properties() {
     return {
@@ -231,6 +234,26 @@ export class CalendarWeekView extends BaseElement {
     );
   }
 
+  #setSwipeIndex(index: number, source?: EventTarget | null) {
+    const next = Math.max(0, Math.min(this.daysPerWeek - 1, Math.floor(index)));
+    if (next === this.#swipeIndex) return;
+    this.#swipeIndex = next;
+    this.requestUpdate();
+
+    const sourceElement = source instanceof SwipeSnapElement ? source : null;
+    const headerSnap = this.renderRoot.querySelector<SwipeSnapElement>("#combined-week-header-snap");
+    const timedSnap = this.renderRoot.querySelector<SwipeSnapElement>("#combined-week-timed-snap");
+    for (const snapElement of [headerSnap, timedSnap]) {
+      if (!snapElement || snapElement === sourceElement || snapElement.currentIndex === next) continue;
+      snapElement.currentIndex = next;
+    }
+  }
+
+  #handleSwipePageChange = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.index !== "number") return;
+    this.#setSwipeIndex(event.detail.index, event.currentTarget);
+  };
+
   render() {
     const clampedVisibleHours = Math.max(
       1,
@@ -238,13 +261,16 @@ export class CalendarWeekView extends BaseElement {
     );
     const timedHeightFactor = 24 / clampedVisibleHours;
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
-    const snapPoints = this.daysPerWeek + 1;
-    const snapRows = 24;
     const allDayRowHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
     const visibleColumnsStyle =
       typeof this.visibleDays === "number"
         ? `--_lc-combined-visible-columns: ${this.visibleDays};`
         : "";
+    const hourLabels = getHourlyTimeLabels(this.locale, 24);
+    const swipeIndex = Math.max(0, Math.min(this.daysPerWeek - 1, this.#swipeIndex));
+    if (swipeIndex !== this.#swipeIndex) {
+      this.#swipeIndex = swipeIndex;
+    }
 
     return html`
       <div
@@ -255,67 +281,99 @@ export class CalendarWeekView extends BaseElement {
         <div class="combined-week-grid-canvas" style=${visibleColumnsStyle}>
           <header class="combined-week-header">
             <aside class="combined-week-header-sidebar" aria-hidden="true"></aside>
-            <section class="combined-week-header-main">
-              <calendar-weekday-header
-                .locale=${this.locale}
-                .weekStart=${this.weekStart}
-                .days=${this.daysPerWeek}
-              ></calendar-weekday-header>
-              <calendar-view
-                class="combined-week-all-day-view"
-                start-date=${this.startDate.toString()}
-                days=${String(this.daysPerWeek)}
-                variant="all-day"
-                .events=${this.#allDayEvents}
-                .rtl=${this.rtl}
-                locale=${ifDefined(this.locale)}
-                timezone=${ifDefined(this.timezone)}
-                current-time=${ifDefined(this.currentTime)}
-                .snapInterval=${this.snapInterval}
-                .labelsHidden=${false}
-                .defaultEventSummary=${this.defaultEventSummary}
-                .defaultEventColor=${this.defaultEventColor}
-                .defaultCalendarId=${this.defaultCalendarId}
-                @day-selection-requested=${this.#reemit}
-                @event-create-requested=${this.#reemit}
-                @event-update-requested=${this.#reemit}
-                @event-delete-requested=${this.#reemit}
-              ></calendar-view>
-            </section>
+            <swipe-snap-element
+              id="combined-week-header-snap"
+              class="combined-week-swipe combined-week-header-main"
+              style="--column-width: var(--_lc-combined-column-width);"
+              .currentIndex=${swipeIndex}
+              .dir=${direction}
+              @pagechange=${this.#handleSwipePageChange}
+            >
+              ${this.#renderedDays.map(
+                (day) => html`
+                  <article class="combined-week-day-column">
+                    <calendar-weekday-header
+                      .locale=${this.locale}
+                      .weekStart=${day.dayOfWeek as WeekdayNumber}
+                      .days=${1}
+                    ></calendar-weekday-header>
+                    <calendar-view
+                      class="combined-week-all-day-view"
+                      start-date=${day.toString()}
+                      days="1"
+                      variant="all-day"
+                      .events=${this.#allDayEvents}
+                      .rtl=${this.rtl}
+                      locale=${ifDefined(this.locale)}
+                      timezone=${ifDefined(this.timezone)}
+                      current-time=${ifDefined(this.currentTime)}
+                      .snapInterval=${this.snapInterval}
+                      .labelsHidden=${false}
+                      .defaultEventSummary=${this.defaultEventSummary}
+                      .defaultEventColor=${this.defaultEventColor}
+                      .defaultCalendarId=${this.defaultCalendarId}
+                      @day-selection-requested=${this.#reemit}
+                      @event-create-requested=${this.#reemit}
+                      @event-update-requested=${this.#reemit}
+                      @event-delete-requested=${this.#reemit}
+                    ></calendar-view>
+                  </article>
+                `
+              )}
+            </swipe-snap-element>
           </header>
 
           <main class="combined-week-main">
-            <div class="combined-week-snap-overlay" aria-hidden="true">
-              <div
-                class="combined-week-snap-grid"
-                style=${`--_lc-combined-snap-days: ${this.daysPerWeek}; --_lc-combined-snap-rows: ${snapRows};`}
-              >
-                ${Array.from(
-                  { length: snapPoints * snapRows },
-                  () => html`<span class="combined-week-snap-cell"></span>`
+            <aside class="combined-week-time-sidebar" aria-hidden="true">
+              <div class="combined-week-hour-labels">
+                ${hourLabels.map(
+                  (label, hour) => html`
+                    <div class="combined-week-hour-label-row">
+                      <time
+                        class="combined-week-hour-label"
+                        datetime=${`${hour.toString().padStart(2, "0")}:00`}
+                        >${label}</time
+                      >
+                    </div>
+                  `
                 )}
               </div>
-            </div>
-            <calendar-view
-              class="combined-week-timed-view"
-              start-date=${this.startDate.toString()}
-              days=${String(this.daysPerWeek)}
-              variant="timed"
-              .events=${this.#timedEvents}
-              .rtl=${this.rtl}
-              locale=${ifDefined(this.locale)}
-              timezone=${ifDefined(this.timezone)}
-              current-time=${ifDefined(this.currentTime)}
-              .snapInterval=${this.snapInterval}
-              .visibleHours=${this.visibleHours}
-              .labelsHidden=${false}
-              .defaultEventSummary=${this.defaultEventSummary}
-              .defaultEventColor=${this.defaultEventColor}
-              .defaultCalendarId=${this.defaultCalendarId}
-              @event-create-requested=${this.#reemit}
-              @event-update-requested=${this.#reemit}
-              @event-delete-requested=${this.#reemit}
-            ></calendar-view>
+            </aside>
+            <swipe-snap-element
+              id="combined-week-timed-snap"
+              class="combined-week-swipe combined-week-timed-snap"
+              style="--column-width: var(--_lc-combined-column-width);"
+              .currentIndex=${swipeIndex}
+              .dir=${direction}
+              @pagechange=${this.#handleSwipePageChange}
+            >
+              ${this.#renderedDays.map(
+                (day) => html`
+                  <article class="combined-week-day-column combined-week-timed-day-column">
+                    <calendar-view
+                      class="combined-week-timed-view"
+                      start-date=${day.toString()}
+                      days="1"
+                      variant="timed"
+                      .events=${this.#timedEvents}
+                      .rtl=${this.rtl}
+                      locale=${ifDefined(this.locale)}
+                      timezone=${ifDefined(this.timezone)}
+                      current-time=${ifDefined(this.currentTime)}
+                      .snapInterval=${this.snapInterval}
+                      .visibleHours=${this.visibleHours}
+                      .labelsHidden=${true}
+                      .defaultEventSummary=${this.defaultEventSummary}
+                      .defaultEventColor=${this.defaultEventColor}
+                      .defaultCalendarId=${this.defaultCalendarId}
+                      @event-create-requested=${this.#reemit}
+                      @event-update-requested=${this.#reemit}
+                      @event-delete-requested=${this.#reemit}
+                    ></calendar-view>
+                  </article>
+                `
+              )}
+            </swipe-snap-element>
           </main>
         </div>
       </div>
