@@ -246,14 +246,19 @@ export class SwipeSnapElement extends LitElement {
     const widths = this.#pages.map((page) => Math.max(1, page.getBoundingClientRect().width));
     const containerRect = this.#container?.getBoundingClientRect() ?? this.getBoundingClientRect();
     const isRtl = this.#isRtl();
+    const viewportWidth = this.clientWidth || 1;
+    const snapPaddingInlineStart = this.#resolveStyleLengthPx(
+      "scroll-padding-inline-start",
+      viewportWidth
+    );
     const offsets = this.#pages.map((page) => {
       const pageRect = page.getBoundingClientRect();
-      const offset = isRtl
+      const rawOffset = isRtl
         ? containerRect.right - pageRect.right
         : pageRect.left - containerRect.left;
+      const offset = rawOffset - snapPaddingInlineStart;
       return Math.max(0, offset);
     });
-    const viewportWidth = this.clientWidth || 1;
     const measuredContentWidth = widths.reduce((sum, width) => sum + width, 0);
     const scrollContentWidth = this.#container?.scrollWidth ?? measuredContentWidth;
     const contentWidth = Math.max(measuredContentWidth, scrollContentWidth);
@@ -286,8 +291,16 @@ export class SwipeSnapElement extends LitElement {
 
   #resolveColumnWidthPx(viewportWidth: number): number {
     const raw = getComputedStyle(this).getPropertyValue("--column-width").trim();
-    if (!raw) return Math.max(1, viewportWidth);
+    return this.#resolveCssLengthPx(raw, viewportWidth);
+  }
 
+  #resolveStyleLengthPx(propertyName: string, fallbackPx: number): number {
+    const raw = getComputedStyle(this).getPropertyValue(propertyName).trim();
+    return this.#resolveCssLengthPx(raw, fallbackPx);
+  }
+
+  #resolveCssLengthPx(raw: string, fallbackPx: number): number {
+    if (!raw) return Math.max(0, fallbackPx);
     const probe = document.createElement("div");
     probe.style.position = "absolute";
     probe.style.visibility = "hidden";
@@ -296,11 +309,10 @@ export class SwipeSnapElement extends LitElement {
     this.renderRoot.append(probe);
     const resolved = probe.getBoundingClientRect().width;
     probe.remove();
-
-    if (!Number.isFinite(resolved) || resolved <= 0) {
-      return Math.max(1, viewportWidth);
+    if (!Number.isFinite(resolved) || resolved < 0) {
+      return Math.max(0, fallbackPx);
     }
-    return Math.max(1, resolved);
+    return Math.max(0, resolved);
   }
 
   #buildVirtualOffsets(maxOffsetX: number, stepWidth: number): number[] {

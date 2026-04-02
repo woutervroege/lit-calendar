@@ -6,6 +6,13 @@
   container-type: inline-size;
 }
 
+.combined-week-swipe-snap-element {
+  --_lc-combined-effective-visible-columns: max(
+    1,
+    min(var(--_lc-combined-visible-columns, 7), var(--_lc-combined-days, 7))
+  );
+}
+
 .combined-week-scroll-root {
   width: 100%;
   height: 100%;
@@ -46,27 +53,9 @@
     var(--_lc-weekday-header-height, 26px) +
     var(--_lc-all-day-row-height, 120px)
   );
-  --_lc-combined-visible-columns: 7;
-  --_lc-combined-effective-visible-columns: max(
-    1,
-    min(var(--_lc-combined-visible-columns), var(--_lc-combined-days, 7))
-  );
-  --_lc-combined-available-width: calc(
-    100% -
-    var(--_lc-combined-sidebar-width) -
-    var(--_lc-combined-gap)
-  );
-  --_lc-combined-scroll-content-width: calc(
-    var(--_lc-combined-available-width) *
-    (var(--_lc-combined-days, 7) / var(--_lc-combined-effective-visible-columns))
-  );
 
   position: relative;
-  width: calc(
-    var(--_lc-combined-sidebar-width) +
-    var(--_lc-combined-gap) +
-    var(--_lc-combined-scroll-content-width)
-  );
+  width: 100%;
   min-width: 100%;
   min-height: 100%;
   height: 100%;
@@ -160,5 +149,35 @@
   --_lc-time-sidebar-bg: var(--_lc-combined-surface-bg);
   --_lc-timed-section-top-offset: 4px;
   --_lc-hour-labels-margin-top: 0px;
+}
+
+@container (max-width: 1100px) {
+  .combined-week-swipe-snap-element {
+    --_lc-combined-visible-columns: 6;
+  }
+}
+
+@container (max-width: 980px) {
+  .combined-week-swipe-snap-element {
+    --_lc-combined-visible-columns: 5;
+  }
+}
+
+@container (max-width: 840px) {
+  .combined-week-swipe-snap-element {
+    --_lc-combined-visible-columns: 4;
+  }
+}
+
+@container (max-width: 700px) {
+  .combined-week-swipe-snap-element {
+    --_lc-combined-visible-columns: 3;
+  }
+}
+
+@container (max-width: 540px) {
+  .combined-week-swipe-snap-element {
+    --_lc-combined-visible-columns: 2;
+  }
 }
 

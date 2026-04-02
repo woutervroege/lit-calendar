@@ -232,12 +232,12 @@ export class CalendarWeekView extends BaseElement {
         class="combined-week-swipe-snap-element"
         .currentIndex=${0}
         .dir=${direction}
-        style="--column-width: 50vw;width:100%;height:100%;display:block;overflow:hidden;border:1px solid red;"
+        style=${`--_lc-combined-days: ${this.daysPerWeek}; --column-width: calc((100% - var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 72px))) / var(--_lc-combined-effective-visible-columns)); scroll-padding-inline-start: var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 72px)); width: 100%; height: 100%; display: block; overflow: hidden;`}
       >
       <div
         class="combined-week-scroll-root"
         dir=${direction}
-        style=${`min-width:200vw; --_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
+        style=${`width: calc(var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 72px)) + ((100% - var(--_lc-combined-sidebar-width, var(--_lc-time-sidebar-width, 72px))) * var(--_lc-combined-days) / var(--_lc-combined-effective-visible-columns))); flex: 0 0 auto; --_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
       >
         <div class="combined-week-grid-canvas">
           <header class="combined-week-header">
