@@ -227,10 +227,16 @@ export class CalendarWeekView extends BaseElement {
     const allDayRowHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
 
     return html`
+      <swipe-snap-element
+        class="combined-week-swipe-snap-element"
+        .currentIndex=${0}
+        .dir=${direction}
+        style="--column-width: 50vw;width:100%;height:100%;display:block;overflow:hidden;border:1px solid red;"
+      >
       <div
         class="combined-week-scroll-root"
         dir=${direction}
-        style=${`--_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
+        style=${`width:200vw; --_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
       >
         <div class="combined-week-grid-canvas">
           <header class="combined-week-header">
@@ -299,6 +305,7 @@ export class CalendarWeekView extends BaseElement {
           </main>
         </div>
       </div>
+      </swipe-snap-element>
     `;
   }
 
