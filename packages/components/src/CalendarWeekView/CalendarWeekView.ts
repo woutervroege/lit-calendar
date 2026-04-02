@@ -9,6 +9,7 @@ import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js
 import { type AllDayLayoutItem, buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo } from "../utils/Locale.js";
 import componentStyle from "./CalendarWeekView.css?inline";
+import "../SwipSnapElement.js";
 
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;
@@ -236,7 +237,7 @@ export class CalendarWeekView extends BaseElement {
       <div
         class="combined-week-scroll-root"
         dir=${direction}
-        style=${`width:200vw; --_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
+        style=${`min-width:200vw; --_lc-combined-days: ${this.daysPerWeek}; --_lc-combined-timed-height-factor: ${timedHeightFactor}; --_lc-all-day-row-height: ${allDayRowHeight};`}
       >
         <div class="combined-week-grid-canvas">
           <header class="combined-week-header">
