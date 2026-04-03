@@ -63,6 +63,8 @@ export class SwipeContainer extends LitElement {
   #swipeCommitDistance = 0.5;
   #swipeCommitVelocity = 0.75;
   #edgeResistance = 0.5;
+  #resizeObserver: ResizeObserver | null = null;
+  #observedPages = new Set<Element>();
 
   constructor() {
     super();
@@ -198,6 +200,7 @@ export class SwipeContainer extends LitElement {
     this.#container = this.renderRoot.querySelector(".container");
     this.currentIndex = this.currentIndex;
     this.scrollSnapStop = this.scrollSnapStop;
+    this.#resizeObserver = new ResizeObserver(() => this.#onResize());
 
     this.addEventListener("pointerdown", this.#onPointerDown, { passive: true });
     this.addEventListener("pointermove", this.#onPointerMove, { passive: false });
@@ -206,6 +209,7 @@ export class SwipeContainer extends LitElement {
     window.addEventListener("resize", this.#onResize, { passive: true });
 
     this.#updatePages();
+    this.#resizeObserver.observe(this);
     this.#onResize();
   }
 
@@ -241,11 +245,26 @@ export class SwipeContainer extends LitElement {
     this.removeEventListener("pointerup", this.#onPointerUp);
     this.removeEventListener("pointercancel", this.#onPointerUp);
     window.removeEventListener("resize", this.#onResize);
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = null;
+    this.#observedPages.clear();
   }
 
   #updatePages(): void {
+    if (this.#resizeObserver) {
+      this.#observedPages.forEach((page) => {
+        this.#resizeObserver?.unobserve(page);
+      });
+      this.#observedPages.clear();
+    }
     this.#pages = Array.from(this.children) as HTMLElement[];
     this.#maxIndex = Math.max(0, this.#pages.length - 1);
+    if (this.#resizeObserver) {
+      this.#pages.forEach((page) => {
+        this.#resizeObserver?.observe(page);
+        this.#observedPages.add(page);
+      });
+    }
   }
 
   #measurePages(): void {

@@ -42,6 +42,7 @@ export class CalendarWeekView extends BaseElement {
   #cachedAllDayEvents: EventsMap = new Map();
   #cachedTimedEvents: EventsMap = new Map();
   #activeInteractionLocks = new Set<string>();
+  #currentDayIndex = 0;
 
   static get properties() {
     return {
@@ -115,6 +116,16 @@ export class CalendarWeekView extends BaseElement {
 
   set startDate(value: string | undefined) {
     this.#startDate = value || undefined;
+  }
+
+  get currentDayIndex(): number {
+    if (this.daysPerWeek === 1) return 0;
+    return this.#currentDayIndex;
+  }
+
+  set currentDayIndex(value: number) {
+    const normalized = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    this.#currentDayIndex = normalized;
   }
 
   get #resolvedWeekStart(): WeekdayNumber {
@@ -253,9 +264,10 @@ export class CalendarWeekView extends BaseElement {
 
         <swipe-container
           class="week-swipe"
-          .currentIndex=${0}
+          .currentIndex=${this.currentDayIndex}
           scroll-snap-stop="normal"
           .disabled=${this.#activeInteractionLocks.size > 0 || this.daysPerWeek === 1}
+          @change=${this.#handleSwipeIndexChange}
           dir=${direction}
         >
           <div class="week-stack">
@@ -348,5 +360,11 @@ export class CalendarWeekView extends BaseElement {
       this.#activeInteractionLocks.delete(lockKey);
     }
     this.requestUpdate();
+  };
+
+  #handleSwipeIndexChange = (event: Event) => {
+    if (this.daysPerWeek === 1) return;
+    const target = event.currentTarget as { currentIndex?: number } | null;
+    this.currentDayIndex = target?.currentIndex ?? 0;
   };
 }
