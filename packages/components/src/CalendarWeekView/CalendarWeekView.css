@@ -87,6 +87,7 @@
 .week-timed-view {
   height: var(--_lc-week-timed-content-height);
   min-height: var(--_lc-week-timed-content-height);
+  --_lc-host-base-height: var(--_lc-week-timed-content-height);
   --_lc-hour-cell-height: var(--_lc-week-hour-cell-height);
   --_lc-min-hour-height: 0px;
 }

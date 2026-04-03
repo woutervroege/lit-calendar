@@ -247,7 +247,7 @@ export class CalendarWeekView extends BaseElement {
     const timedHeight = "var(--_lc-week-effective-timed-height)";
     const hourCellHeight = clampedVisibleHours
       ? `calc(var(--_lc-week-effective-timed-height) / ${clampedVisibleHours})`
-      : "var(--_lc-week-min-hour-cell-height, 144px)";
+      : "max(var(--_lc-week-min-hour-cell-height, 72px), calc(var(--_lc-week-effective-timed-height) / 24))";
     const timedContentHeight = clampedVisibleHours
       ? "var(--_lc-week-effective-timed-height)"
       : `calc(24 * ${hourCellHeight})`;
