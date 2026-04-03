@@ -23,7 +23,6 @@ import {
 } from "../utils/AllDayLayout.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
-import { getHourlyTimeLabels } from "../utils/TimeFormatting.js";
 import type { DayOverflowPopoverEvent } from "./DayOverflowPopover.js";
 import "../EventCard/EventCard.js";
 import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js";
@@ -546,15 +545,6 @@ export class CalendarView extends BaseElement {
         this.#pendingCreatePointer?.longPressActivated &&
         createPreviewSegments.length
     );
-    const showTimedLabels = this.variant === "timed" && !this.labelsHidden;
-    const timedSidebarLabels = getHourlyTimeLabels(this.locale, this.hours);
-    const timedSidebarRows = timedSidebarLabels.map((label, hour) => {
-      return html`
-        <div class="hour-label-row">
-          <time class="hour-label" datetime=${`${hour.toString().padStart(2, "0")}:00`}>${label}</time>
-        </div>
-      `;
-    });
     const compactMonthView = this.#isCompactMonthView;
 
     if (this.#dragHoverDayIndex !== null) {
@@ -602,16 +592,7 @@ export class CalendarView extends BaseElement {
     const allDayOverflow = this.#getAllDayOverflowLayout();
 
     return html`
-      <div class="calendar-layout flex h-full min-h-0 ${showTimedLabels ? "with-time-labels" : ""}">
-        ${
-          showTimedLabels
-            ? html`
-              <div class="time-sidebar">
-                <div class="hour-labels">${timedSidebarRows}</div>
-              </div>
-            `
-            : ""
-        }
+      <div class="calendar-layout flex h-full min-h-0">
         <section
           class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${sharedFocusRingColorClasses} ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
           dir=${this.#isRtl ? "rtl" : "ltr"}
