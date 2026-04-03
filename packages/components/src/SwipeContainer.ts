@@ -40,7 +40,7 @@ export class SwipeContainer extends LitElement {
     }
   `;
 
-  declare currentIndex: number;
+  #currentIndex = 0;
   declare scrollSnapStop: SnapStopMode;
   declare disabled: boolean;
   declare dir: string;
@@ -66,10 +66,21 @@ export class SwipeContainer extends LitElement {
 
   constructor() {
     super();
-    this.currentIndex = 0;
     this.scrollSnapStop = "normal";
     this.disabled = false;
     this.dir = "";
+  }
+
+  get currentIndex(): number {
+    return this.#currentIndex;
+  }
+
+  set currentIndex(value: number) {
+    const safeIndex = Number.isFinite(value) ? Math.trunc(value) : 0;
+    const oldValue = this.#currentIndex;
+    if (safeIndex === oldValue) return;
+    this.#currentIndex = safeIndex;
+    this.requestUpdate("currentIndex", oldValue);
   }
 
   #onSlotChange = (): void => {
@@ -216,14 +227,11 @@ export class SwipeContainer extends LitElement {
       this.#applyCurrentIndex(false);
     }
 
-    if (!changedProperties.has("currentIndex")) return;
-    const normalized = this.#normalizeIndex(this.currentIndex);
-    if (normalized !== this.currentIndex) {
-      this.currentIndex = normalized;
-      return;
+    if (changedProperties.has("currentIndex")) {
+      this.#applyCurrentIndex(this.#pendingAnimate);
+      this.#pendingAnimate = false;
+      this.dispatchEvent(new CustomEvent("change"));
     }
-    this.#applyCurrentIndex(this.#pendingAnimate);
-    this.#pendingAnimate = false;
   }
 
   disconnectedCallback(): void {
@@ -346,7 +354,6 @@ export class SwipeContainer extends LitElement {
   }
 
   #applyCurrentIndex(animate: boolean): void {
-    const index = this.#getCurrentIndex();
     this.#measurePages();
     if (this.#container) {
       this.#container.style.transition = animate
@@ -354,7 +361,6 @@ export class SwipeContainer extends LitElement {
         : "none";
     }
     this.#transformContainer();
-    this.dispatchEvent(new CustomEvent("pagechange", { detail: { index } }));
   }
 
   #transformContainer(): void {
