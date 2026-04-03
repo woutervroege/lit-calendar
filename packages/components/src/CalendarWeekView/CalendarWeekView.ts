@@ -230,6 +230,13 @@ export class CalendarWeekView extends BaseElement {
     );
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // Drag/resize interactions can leave transient locks active if the view unmounts mid-gesture.
+    // Reset so swipe is always re-enabled when returning to this view.
+    this.#activeInteractionLocks.clear();
+  }
+
   render() {
     const clampedVisibleHours = Math.max(
       1,
@@ -240,6 +247,10 @@ export class CalendarWeekView extends BaseElement {
     const timedHeight = `calc(${clampedVisibleHours} * var(--_lc-min-hour-height, var(--lc-min-hour-height, 54px)))`;
     const timedContentHeight = `calc(${24 / clampedVisibleHours} * ${timedHeight})`;
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
+    const dayModeWeekStart = isWeekdayNumber(this.startDate.dayOfWeek)
+      ? this.startDate.dayOfWeek
+      : this.weekStart;
+    const headerWeekStart = this.daysPerWeek === 1 ? dayModeWeekStart : this.weekStart;
 
     return html`
       <div
@@ -275,7 +286,7 @@ export class CalendarWeekView extends BaseElement {
             <calendar-weekday-header
               class="week-weekday-header"
               .locale=${this.locale}
-              .weekStart=${this.weekStart}
+              .weekStart=${headerWeekStart}
               .days=${this.daysPerWeek}
             ></calendar-weekday-header>
             <calendar-view

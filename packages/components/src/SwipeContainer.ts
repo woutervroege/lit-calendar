@@ -196,12 +196,27 @@ export class SwipeContainer extends LitElement {
     return html`<div class="container"><slot @slotchange=${this.#onSlotChange}></slot></div>`;
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      this.#container ??= this.renderRoot.querySelector(".container");
+      this.#resizeObserver ??= new ResizeObserver(() => this.#onResize());
+      this.addEventListener("pointerdown", this.#onPointerDown, { passive: true });
+      this.addEventListener("pointermove", this.#onPointerMove, { passive: false });
+      this.addEventListener("pointerup", this.#onPointerUp);
+      this.addEventListener("pointercancel", this.#onPointerUp);
+      window.addEventListener("resize", this.#onResize, { passive: true });
+      this.#resizeObserver.observe(this);
+      this.#updatePages();
+      this.#onResize();
+    }
+  }
+
   firstUpdated(): void {
     this.#container = this.renderRoot.querySelector(".container");
     this.currentIndex = this.currentIndex;
     this.scrollSnapStop = this.scrollSnapStop;
     this.#resizeObserver = new ResizeObserver(() => this.#onResize());
-
     this.addEventListener("pointerdown", this.#onPointerDown, { passive: true });
     this.addEventListener("pointermove", this.#onPointerMove, { passive: false });
     this.addEventListener("pointerup", this.#onPointerUp);
@@ -246,7 +261,6 @@ export class SwipeContainer extends LitElement {
     this.removeEventListener("pointercancel", this.#onPointerUp);
     window.removeEventListener("resize", this.#onResize);
     this.#resizeObserver?.disconnect();
-    this.#resizeObserver = null;
     this.#observedPages.clear();
   }
 
