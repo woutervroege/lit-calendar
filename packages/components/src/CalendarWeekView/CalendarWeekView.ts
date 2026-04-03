@@ -237,53 +237,59 @@ export class CalendarWeekView extends BaseElement {
         })}
       >
         <div class="week-stack">
-        <calendar-view
-          class="week-all-day-view"
-          .startDate=${this.startDate}
-          days=${String(this.daysPerWeek)}
-          variant="all-day"
-          .events=${this.#allDayEvents}
-          .rtl=${this.rtl}
-          locale=${ifDefined(this.locale)}
-          timezone=${ifDefined(this.timezone)}
-          current-time=${ifDefined(this.currentTime)}
-          .snapInterval=${this.snapInterval}
-          .labelsHidden=${false}
-          style=${styleMap({
-            "--_lc-week-all-day-height": allDayHeight,
-            "--_lc-section-bg":
-              "var(--lg-background-color, var(--_lc-surface-bg, light-dark(#fff, #222)))",
-          })}
-          @event-create-requested=${this.#reemit}
-          @event-update-requested=${this.#reemit}
-          @event-delete-requested=${this.#reemit}
-          @day-selection-requested=${this.#reemit}
-        >
-        </calendar-view>
-        
-        <calendar-view
-          class="week-timed-view"
-          .startDate=${this.startDate}
-          days=${String(this.daysPerWeek)}
-          variant="timed"
-          .events=${this.#timedEvents}
-          .rtl=${this.rtl}
-          locale=${ifDefined(this.locale)}
-          timezone=${ifDefined(this.timezone)}
-          current-time=${ifDefined(this.currentTime)}
-          .snapInterval=${this.snapInterval}
-          style=${styleMap({
-            "--_lc-week-timed-height": timedHeight,
-          })}
-          @event-create-requested=${this.#reemit}
-          @event-update-requested=${this.#reemit}
-          @event-delete-requested=${this.#reemit}
-          @day-selection-requested=${this.#reemit}
-      >
-      </calendar-view>
+          <div class="week-all-day-shell">
+            <calendar-weekday-header
+              class="week-weekday-header"
+              .locale=${this.locale}
+              .weekStart=${this.weekStart}
+              .days=${this.daysPerWeek}
+            ></calendar-weekday-header>
+            <calendar-view
+              class="week-all-day-view"
+              .startDate=${this.startDate}
+              days=${String(this.daysPerWeek)}
+              variant="all-day"
+              .events=${this.#allDayEvents}
+              .rtl=${this.rtl}
+              locale=${ifDefined(this.locale)}
+              timezone=${ifDefined(this.timezone)}
+              current-time=${ifDefined(this.currentTime)}
+              .snapInterval=${this.snapInterval}
+              .labelsHidden=${false}
+              style=${styleMap({
+                "--_lc-week-all-day-height": allDayHeight,
+                "--_lc-section-bg":
+                  "var(--lg-background-color, var(--_lc-surface-bg, light-dark(#fff, #222)))",
+              })}
+              @event-create-requested=${this.#reemit}
+              @event-update-requested=${this.#reemit}
+              @event-delete-requested=${this.#reemit}
+              @day-selection-requested=${this.#reemit}
+            >
+            </calendar-view>
+          </div>
 
-      </div>
-
+          <calendar-view
+            class="week-timed-view"
+            .startDate=${this.startDate}
+            days=${String(this.daysPerWeek)}
+            variant="timed"
+            .events=${this.#timedEvents}
+            .rtl=${this.rtl}
+            locale=${ifDefined(this.locale)}
+            timezone=${ifDefined(this.timezone)}
+            current-time=${ifDefined(this.currentTime)}
+            .snapInterval=${this.snapInterval}
+            style=${styleMap({
+              "--_lc-week-timed-height": timedHeight,
+            })}
+            @event-create-requested=${this.#reemit}
+            @event-update-requested=${this.#reemit}
+            @event-delete-requested=${this.#reemit}
+            @day-selection-requested=${this.#reemit}
+          >
+          </calendar-view>
+        </div>
       </swipe-snap-element>
     `;
   }
