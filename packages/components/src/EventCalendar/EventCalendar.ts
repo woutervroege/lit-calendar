@@ -242,7 +242,7 @@ export class EventCalendar extends BaseElement {
     const isHeaderRtl = headerDirection === "rtl";
     return html`
       <div
-        class="flex h-full min-h-0 flex-col gap-7 [container-type:inline-size] [@media(max-width:54rem)]:gap-4"
+        class="flex min-h-0 flex-col gap-7 [container-type:inline-size] [@media(max-width:54rem)]:gap-4"
         style=${styleMap({
           "--_lc-event-calendar-header-height": `${this.#headerHeight}px`,
           "--_lc-event-calendar-sticky-stack-offset": `calc(var(--_lc-event-calendar-sticky-top, 0px) + ${this.#headerHeight}px)`,
