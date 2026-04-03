@@ -151,7 +151,7 @@
 /* Smaller compact cards: tighten spacing to avoid vertical clipping. */
 @container (max-height: 31px) {
   :host .event-card-heading {
-    padding: 7px 8px;
+    padding: 6px 8px;
   }
 
   :host .event-card-time,
