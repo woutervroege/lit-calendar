@@ -225,7 +225,6 @@ export class SwipeSnapElement extends LitElement {
   #updatePages(): void {
     this.#pages = Array.from(this.children) as HTMLElement[];
     this.#maxIndex = Math.max(0, this.#pages.length - 1);
-    this.currentIndex = this.currentIndex;
   }
 
   #measurePages(): void {
@@ -242,9 +241,47 @@ export class SwipeSnapElement extends LitElement {
     const contentWidth = widths.reduce((sum, width) => sum + width, 0);
     const viewportWidth = this.clientWidth || 1;
     const maxOffsetX = Math.max(0, contentWidth - viewportWidth);
-    this.#pageWidths = widths.length ? widths : [1];
-    this.#pageOffsets = offsets.length ? offsets : [0];
+
+    // Support "virtual pages" for a single very wide child.
+    // Example: one timeline element can snap every --column-width pixels.
+    const columnWidth = this.#resolveColumnWidth();
+    if (this.#pages.length === 1 && columnWidth > 0.5) {
+      const step = Math.max(1, columnWidth);
+      const virtualOffsets: number[] = [0];
+      const virtualWidths: number[] = [step];
+      for (let nextOffset = step; nextOffset < maxOffsetX - 0.5; nextOffset += step) {
+        virtualOffsets.push(nextOffset);
+        virtualWidths.push(step);
+      }
+      if (maxOffsetX > 0.5) {
+        const lastOffset = virtualOffsets[virtualOffsets.length - 1] ?? 0;
+        if (Math.abs(lastOffset - maxOffsetX) > 0.5) {
+          virtualOffsets.push(maxOffsetX);
+          virtualWidths.push(step);
+        }
+      }
+      this.#pageOffsets = virtualOffsets;
+      this.#pageWidths = virtualWidths;
+    } else {
+      this.#pageWidths = widths.length ? widths : [1];
+      this.#pageOffsets = offsets.length ? offsets : [0];
+    }
     this.#maxOffsetX = maxOffsetX;
+    this.#maxIndex = Math.max(0, this.#pageOffsets.length - 1);
+  }
+
+  #resolveColumnWidth(): number {
+    const value = getComputedStyle(this).getPropertyValue("--column-width").trim();
+    if (!value) return 0;
+    const probe = document.createElement("div");
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.pointerEvents = "none";
+    probe.style.inlineSize = value;
+    this.renderRoot.append(probe);
+    const measuredWidth = probe.getBoundingClientRect().width;
+    probe.remove();
+    return Number.isFinite(measuredWidth) ? measuredWidth : 0;
   }
 
   #isRtl(): boolean {
