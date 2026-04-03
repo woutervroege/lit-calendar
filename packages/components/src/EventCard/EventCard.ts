@@ -248,7 +248,6 @@ export class EventCard extends BaseElement {
       "event-card-overlap": isOverlapping,
       relative: true,
       "h-full": true,
-      "min-h-[32px]": true,
       "[@container(max-height:47px)]:whitespace-nowrap": true,
       "pointer-events-auto": true,
     };

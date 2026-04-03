@@ -251,7 +251,8 @@ export class CalendarWeekView extends BaseElement {
       ? Math.max(1, Math.min(24, Math.floor(Number(this.visibleHours))))
       : undefined;
     const weekdayHeaderHeight = "calc(var(--_lc-weekday-header-height, 26px) + 4px)";
-    const allDayHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
+    const eventHeight = "var(--lc-event-height, var(--_lc-default-event-height, 32px))";
+    const allDayHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * ${eventHeight})`;
     const timedHeight = "var(--_lc-week-effective-timed-height)";
     const hourCellHeight = clampedVisibleHours
       ? `calc(var(--_lc-week-effective-timed-height) / ${clampedVisibleHours})`

@@ -10,7 +10,8 @@
   /* Public API: only these 6 vars are supported. */
   --_lc-current-day-color: var(--lc-higlight-color, #ff0000);
   --_lc-current-day-text-color: var(--lc-current-day-text-color, #000000);
-  --_lc-event-height: var(--lc-event-height, 32px);
+  --_lc-default-event-height: 32px;
+  --_lc-event-height: var(--lc-event-height, var(--_lc-default-event-height));
   --_lc-days-per-row: var(--lc-days-per-row, 7);
   --_lc-grid-base-color: var(--lc-grid-base-color, light-dark(#222, #fff));
   --_lc-min-hour-height: var(--lc-min-hour-height, 54px);
@@ -38,6 +39,12 @@
 
 :host([variant="timed"]) {
   --_lc-grid-line-color-horizontal: light-dark(rgb(15 23 42 / 8%), rgb(255 255 255 / 10%));
+}
+
+@media (pointer: fine) {
+  :host {
+    --_lc-default-event-height: 28px;
+  }
 }
 
 :host([variant="timed"]) section {

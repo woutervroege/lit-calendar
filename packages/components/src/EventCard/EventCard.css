@@ -34,6 +34,7 @@
 :host > div {
   container-type: inline-size;
   container-name: event-card-content;
+  min-height: var(--_lc-event-height, 32px);
   width: max(
     0px,
     calc(
@@ -144,6 +145,18 @@
   :host .event-card-summary-main,
   :host .event-card-time {
     display: none;
+  }
+}
+
+/* Smaller compact cards: tighten spacing to avoid vertical clipping. */
+@container (max-height: 31px) {
+  :host .event-card-heading {
+    padding: 7px 8px;
+  }
+
+  :host .event-card-time,
+  :host .event-card-location {
+    margin-top: 0;
   }
 }
 

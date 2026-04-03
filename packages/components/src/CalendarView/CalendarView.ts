@@ -99,7 +99,7 @@ export class CalendarView extends BaseElement {
   } | null = null;
   #calendarViewProvider = new ContextProvider(this, { context: calendarViewContext });
   #styleObserver?: MutationObserver;
-  #lastDaysPerRowToken = "";
+  #lastAllDayLayoutToken = "";
   #sectionHeightPx = 0;
   #resizeObserver?: ResizeObserver;
   #resizeSyncRafId: number | null = null;
@@ -360,19 +360,23 @@ export class CalendarView extends BaseElement {
     return v ? parseInt(v, 10) || 7 : 7;
   }
 
-  #readDaysPerRowToken(): string {
+  #readAllDayLayoutToken(): string {
     if (typeof getComputedStyle === "undefined") return "";
-    return getComputedStyle(this).getPropertyValue("--lc-days-per-row").trim();
+    const style = getComputedStyle(this);
+    const daysPerRow = style.getPropertyValue("--lc-days-per-row").trim();
+    const eventHeight = style.getPropertyValue("--_lc-event-height").trim();
+    const dayNumberSpace = style.getPropertyValue("--_lc-all-day-day-number-space").trim();
+    return `${daysPerRow}|${eventHeight}|${dayNumberSpace}`;
   }
 
   #startStyleObserver() {
     if (typeof MutationObserver === "undefined") return;
-    this.#lastDaysPerRowToken = this.#readDaysPerRowToken();
+    this.#lastAllDayLayoutToken = this.#readAllDayLayoutToken();
 
     this.#styleObserver = new MutationObserver(() => {
-      const nextToken = this.#readDaysPerRowToken();
-      if (nextToken === this.#lastDaysPerRowToken) return;
-      this.#lastDaysPerRowToken = nextToken;
+      const nextToken = this.#readAllDayLayoutToken();
+      if (nextToken === this.#lastAllDayLayoutToken) return;
+      this.#lastAllDayLayoutToken = nextToken;
       this.requestUpdate();
     });
 

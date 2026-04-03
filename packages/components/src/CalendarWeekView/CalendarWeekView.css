@@ -4,6 +4,7 @@
   height: auto;
   min-height: 100%;
   container-type: inline-size;
+  --_lc-default-event-height: 32px;
 }
 
 .week-layout {
@@ -123,6 +124,10 @@
 }
 
 @media (pointer: fine) {
+  :host {
+    --_lc-default-event-height: 28px;
+  }
+
   .week-swipe {
     --_lc-combined-visible-columns: var(--_lc-combined-days);
     --_lc-swipe-overflow-x: visible;
