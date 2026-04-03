@@ -259,6 +259,9 @@ export class CalendarWeekView extends BaseElement {
     const timedContentHeight = clampedVisibleHours
       ? "var(--_lc-week-effective-timed-height)"
       : `calc(24 * ${hourCellHeight})`;
+    const timedRenderedContentHeight = clampedVisibleHours
+      ? `calc(var(--_lc-week-effective-timed-height) * ${24 / clampedVisibleHours})`
+      : timedContentHeight;
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
     const dayModeWeekStart = isWeekdayNumber(this.startDate.dayOfWeek)
       ? this.startDate.dayOfWeek
@@ -278,9 +281,10 @@ export class CalendarWeekView extends BaseElement {
             "max(0px, calc(var(--_lc-week-view-height, 100%) - var(--_lc-week-all-day-shell-height)))",
           "--_lc-week-timed-height": timedHeight,
           "--_lc-week-timed-content-height": timedContentHeight,
+          "--_lc-week-timed-rendered-height": timedRenderedContentHeight,
           "--_lc-week-hour-cell-height": hourCellHeight,
           "--_lc-week-total-height":
-            "calc(var(--_lc-week-all-day-shell-height) + var(--_lc-week-sections-gap, 8px) + var(--_lc-week-timed-content-height))",
+            "calc(var(--_lc-week-all-day-shell-height) + var(--_lc-week-sections-gap, 8px) + var(--_lc-week-timed-rendered-height))",
         })}
       >
         <calendar-time-sidebar
