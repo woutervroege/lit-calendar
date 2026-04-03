@@ -43,13 +43,9 @@
   z-index: 10;
   height: var(--_lc-week-all-day-shell-height);
   min-height: var(--_lc-week-all-day-shell-height);
-  background-color: var(--lg-background-color);
+  background-color: var(--_lc-surface-bg);
   border-bottom: var(--_lc-week-section-divider-width, 3px) solid
     var(--_lc-week-section-divider-color, light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%)));
-}
-
-.week-weekday-header {
-  background-color: var(--lg-background-color);
 }
 
 .week-time-sidebar {
