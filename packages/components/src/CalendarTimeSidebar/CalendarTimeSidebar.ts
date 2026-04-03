@@ -32,15 +32,17 @@ export class CalendarTimeSidebar extends BaseElement {
 
   render() {
     const direction = getLocaleDirection(this.locale);
-    const labels = getHourlyTimeLabels(this.locale, this.hours);
-    const hourCount = Math.max(1, labels.length);
+    const hourlyLabels = getHourlyTimeLabels(this.locale, this.hours);
+    const endLabel = getHourlyTimeLabels(this.locale, 1)[0] ?? "00:00";
+    const labels = [...hourlyLabels, endLabel];
+    const hourSlots = Math.max(1, this.hours);
 
     return html`
       <div class="time-sidebar" dir=${direction}>
         <div class="weekday-header-slot" aria-hidden="true"></div>
         <div class="all-day-slot" aria-hidden="true"></div>
         <div class="timed-slot">
-          <div class="hour-labels" style=${`--_lc-time-sidebar-hours: ${hourCount};`}>
+          <div class="hour-labels" style=${`--_lc-time-sidebar-hours: ${hourSlots};`}>
             ${labels.map(
               (label) => html`
                 <div class="hour-label-row">
