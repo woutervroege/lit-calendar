@@ -3,11 +3,11 @@ import { css, html, LitElement, type PropertyValues } from "https://esm.sh/lit@3
 type SwipeIntent = "x" | "y" | null;
 type SnapStopMode = "always" | "normal";
 
-export class SwipeSnapElement extends LitElement {
+export class SwipeContainer extends LitElement {
   static properties = {
     currentIndex: { type: Number, attribute: "current-index" },
     scrollSnapStop: { type: String, attribute: "scroll-snap-stop" },
-    swipeLocked: { type: Boolean, attribute: "swipe-locked", reflect: true },
+    disabled: { type: Boolean, attribute: "disabled", reflect: true },
     dir: { type: String, reflect: true },
   };
 
@@ -42,7 +42,7 @@ export class SwipeSnapElement extends LitElement {
 
   declare currentIndex: number;
   declare scrollSnapStop: SnapStopMode;
-  declare swipeLocked: boolean;
+  declare disabled: boolean;
   declare dir: string;
 
   #container: HTMLDivElement | null = null;
@@ -68,7 +68,7 @@ export class SwipeSnapElement extends LitElement {
     super();
     this.currentIndex = 0;
     this.scrollSnapStop = "normal";
-    this.swipeLocked = false;
+    this.disabled = false;
     this.dir = "";
   }
 
@@ -83,7 +83,7 @@ export class SwipeSnapElement extends LitElement {
   };
 
   #onPointerDown = (e: PointerEvent): void => {
-    if (this.swipeLocked) return;
+    if (this.disabled) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     this.#pointerId = e.pointerId;
     this.#intent = null;
@@ -98,7 +98,7 @@ export class SwipeSnapElement extends LitElement {
   };
 
   #onPointerMove = (e: PointerEvent): void => {
-    if (this.swipeLocked) {
+    if (this.disabled) {
       this.#cancelActiveSwipe();
       return;
     }
@@ -138,7 +138,7 @@ export class SwipeSnapElement extends LitElement {
   };
 
   #onPointerUp = (e: PointerEvent): void => {
-    if (this.swipeLocked) {
+    if (this.disabled) {
       this.#cancelActiveSwipe();
       return;
     }
@@ -199,7 +199,7 @@ export class SwipeSnapElement extends LitElement {
   }
 
   updated(changedProperties: PropertyValues<this>): void {
-    if (changedProperties.has("swipeLocked") && this.swipeLocked) {
+    if (changedProperties.has("disabled") && this.disabled) {
       this.#cancelActiveSwipe();
     }
 
@@ -365,7 +365,7 @@ export class SwipeSnapElement extends LitElement {
   }
 }
 
-if (!customElements.get("swipe-snap-element")) {
-  const SwipeSnapElementConstructor = SwipeSnapElement as unknown as CustomElementConstructor;
-  customElements.define("swipe-snap-element", SwipeSnapElementConstructor);
+if (!customElements.get("swipe-container")) {
+  const SwipeContainerConstructor = SwipeContainer as unknown as CustomElementConstructor;
+  customElements.define("swipe-container", SwipeContainerConstructor);
 }

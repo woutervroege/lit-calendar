@@ -11,7 +11,7 @@ import type { CalendarEventView as EventInput } from "../models/CalendarEvent.js
 import { type AllDayLayoutItem, buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { getLocaleDirection, getLocaleWeekInfo } from "../utils/Locale.js";
 import componentStyle from "./CalendarWeekView.css?inline";
-import "../SwipSnapElement.js";
+import "../SwipeContainer.js";
 
 type EventEntry = [id: string, event: EventInput];
 type EventsMap = Map<string, EventInput>;
@@ -251,11 +251,11 @@ export class CalendarWeekView extends BaseElement {
           .hours=${24}
         ></calendar-time-sidebar>
 
-        <swipe-snap-element
+        <swipe-container
           class="week-swipe"
           current-index="0"
           scroll-snap-stop="normal"
-          .swipeLocked=${this.#activeInteractionLocks.size > 0}
+          .disabled=${this.#activeInteractionLocks.size > 0}
           dir=${direction}
         >
           <div class="week-stack">
@@ -310,7 +310,7 @@ export class CalendarWeekView extends BaseElement {
           >
           </calendar-view>
         </div>
-        </swipe-snap-element>
+        </swipe-container>
       </div>
     `;
   }

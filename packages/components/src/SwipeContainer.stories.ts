@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import "./SwipSnapElement.js";
+import "./SwipeContainer.js";
 
-type StorySwipeSnapElement = HTMLElement & {
+type StorySwipeContainer = HTMLElement & {
   currentIndex: number;
   scrollSnapStop: "always" | "normal";
   dir: string;
+  disabled: boolean;
 };
 
 type StoryArgs = {
@@ -47,8 +48,8 @@ const createPage = (label: string, description: string, color: string): HTMLElem
 };
 
 const meta: Meta<StoryArgs> = {
-  title: "Shared/SwipeSnapElement",
-  component: "swipe-snap-element",
+  title: "Shared/SwipeContainer",
+  component: "swipe-container",
   tags: ["autodocs"],
   argTypes: {
     currentIndex: { control: { type: "number", min: 0, max: 3, step: 1 } },
@@ -67,7 +68,7 @@ const meta: Meta<StoryArgs> = {
     dir: "ltr",
   },
   render: (args) => {
-    const el = document.createElement("swipe-snap-element") as StorySwipeSnapElement;
+    const el = document.createElement("swipe-container") as StorySwipeContainer;
     el.style.display = "block";
     el.style.width = "100%";
     el.style.height = "18rem";
@@ -123,7 +124,7 @@ export const VirtualColumnsSingleChild: Story = {
     dir: "ltr",
   },
   render: (args) => {
-    const el = document.createElement("swipe-snap-element") as StorySwipeSnapElement;
+    const el = document.createElement("swipe-container") as StorySwipeContainer;
     el.style.display = "block";
     el.style.width = "100%";
     el.style.height = "18rem";
