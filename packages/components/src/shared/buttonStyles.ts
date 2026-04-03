@@ -25,7 +25,7 @@ export const sharedButtonDisabledClasses =
   "disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[var(--_lc-button-bg,var(--lc-button-bg,var(--_lc-button-bg-default)))] cursor-pointer";
 
 export const sharedButtonPeerFocusRingClasses =
-  "peer-focus-visible:outline-solid peer-focus-visible:outline-2 peer-focus-visible:outline-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_96%))] peer-focus-visible:outline-offset-2 peer-focus-visible:ring-2 peer-focus-visible:ring-[light-dark(rgb(15_23_42_/_85%),rgb(255_255_255_/_92%))] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[light-dark(rgb(255_255_255),rgb(2_6_23))]";
+  "peer-focus-visible:rounded-lg peer-focus-visible:outline-solid peer-focus-visible:outline-2 peer-focus-visible:outline-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_96%))] peer-focus-visible:outline-offset-2 peer-focus-visible:ring-2 peer-focus-visible:ring-[light-dark(rgb(15_23_42_/_85%),rgb(255_255_255_/_92%))] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[light-dark(rgb(255_255_255),rgb(2_6_23))]";
 
 export const sharedButtonPeerCheckedClasses =
   "peer-checked:bg-[var(--_lc-button-checked-bg,var(--lc-button-checked-bg,var(--_lc-button-checked-bg-default)))] peer-checked:text-[light-dark(rgb(15_23_42_/_92%),rgb(255_255_255_/_95%))] peer-checked:hover:bg-[var(--_lc-button-checked-hover-bg,var(--lc-button-checked-hover-bg,var(--_lc-button-checked-hover-bg-default)))]";
