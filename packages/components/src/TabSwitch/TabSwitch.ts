@@ -101,8 +101,8 @@ export class TabSwitch extends BaseElement {
           const isChecked = option.value === this.value;
           const checkedClasses = isChecked ? "text-[var(--_lc-switch-active-color)]" : "";
           const indicatorClasses = isChecked
-            ? "inline-flex h-full items-center -mb-px border-b-2 [border-bottom-color:currentColor]"
-            : "inline-flex h-full items-center pb-[2px]";
+            ? "inline-flex h-full box-border items-center border-b-2 [border-bottom-color:currentColor]"
+            : "inline-flex h-full box-border items-center border-b-2 border-transparent";
           const hotkey = this.showHotkeys ? option.hotkey?.trim() : "";
           return html`
             <div class=${optionClasses}>
