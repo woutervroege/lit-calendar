@@ -48,19 +48,19 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
+  top: -7px;
 }
 
 .hour-labels {
-  display: flex;
-  flex: 1;
+  display: block;
+  height: 100%;
   min-height: 0;
-  flex-direction: column;
   margin-top: var(--_lc-hour-labels-margin-top, -8px);
   pointer-events: none;
 }
 
 .hour-label-row {
-  flex: 1;
+  height: calc(100% / var(--_lc-time-sidebar-hours, 24));
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
