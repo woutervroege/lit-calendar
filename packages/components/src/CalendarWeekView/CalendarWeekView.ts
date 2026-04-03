@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
+import { styleMap } from "lit/directives/style-map.js";
 import "../CalendarView/CalendarView.js";
 import "../CalendarWeekdayHeader/CalendarWeekdayHeader.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
@@ -221,18 +222,24 @@ export class CalendarWeekView extends BaseElement {
       1,
       Math.min(24, Math.floor(Number(this.visibleHours) || 12))
     );
-    const timedHeightFactor = 24 / clampedVisibleHours;
+    const allDayHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
+    const timedHeight = `calc(${clampedVisibleHours} * var(--_lc-min-hour-height, var(--lc-min-hour-height, 54px)))`;
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
-    const allDayRowHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
 
     return html`
-
-    <swipe-snap-element current-index="0" scroll-snap-stop="normal" dir="ltr" style="--column-width: 16.6667%;">
-
-      <div style="min-width: 100%;height:100vh">
-      
+      <swipe-snap-element
+        class="week-swipe"
+        current-index="0"
+        scroll-snap-stop="normal"
+        dir=${direction}
+        style=${styleMap({
+          "--_lc-combined-days": String(this.daysPerWeek),
+        })}
+      >
+        <div class="week-stack">
         <calendar-view
-          start-date=${this.startDate.toString()}
+          class="week-all-day-view"
+          .startDate=${this.startDate}
           days=${String(this.daysPerWeek)}
           variant="all-day"
           .events=${this.#allDayEvents}
@@ -241,11 +248,16 @@ export class CalendarWeekView extends BaseElement {
           timezone=${ifDefined(this.timezone)}
           current-time=${ifDefined(this.currentTime)}
           .snapInterval=${this.snapInterval}
+          .labelsHidden=${false}
+          style=${styleMap({
+            "--_lc-week-all-day-height": allDayHeight,
+          })}
         >
         </calendar-view>
         
         <calendar-view
-          start-date=${this.startDate.toString()}
+          class="week-timed-view"
+          .startDate=${this.startDate}
           days=${String(this.daysPerWeek)}
           variant="timed"
           .events=${this.#timedEvents}
@@ -254,16 +266,16 @@ export class CalendarWeekView extends BaseElement {
           timezone=${ifDefined(this.timezone)}
           current-time=${ifDefined(this.currentTime)}
           .snapInterval=${this.snapInterval}
+          .visibleHours=${clampedVisibleHours}
+          style=${styleMap({
+            "--_lc-week-timed-height": timedHeight,
+          })}
       >
       </calendar-view>
 
       </div>
 
-
-      
-
-    
-          </swipe-snap-element>
+      </swipe-snap-element>
     `;
   }
 

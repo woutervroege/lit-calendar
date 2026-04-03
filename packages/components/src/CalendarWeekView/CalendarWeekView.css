@@ -6,11 +6,34 @@
   container-type: inline-size;
 }
 
-.combined-week-swipe-snap-element {
+.week-swipe {
   --_lc-combined-effective-visible-columns: max(
     1,
     min(var(--_lc-combined-visible-columns, 7), var(--_lc-combined-days, 7))
   );
+  --column-width: calc(100% / var(--_lc-combined-effective-visible-columns));
+}
+
+.week-stack {
+  min-width: calc(
+    (100% * var(--_lc-combined-days, 7)) / var(--_lc-combined-effective-visible-columns, 7)
+  );
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-all-day-view {
+  height: var(--_lc-week-all-day-height);
+  min-height: var(--_lc-week-all-day-height);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.week-timed-view {
+  height: var(--_lc-week-timed-height);
+  min-height: var(--_lc-week-timed-height);
 }
 
 .combined-week-grid-canvas {
@@ -100,32 +123,31 @@
 }
 
 @container (max-width: 1100px) {
-  .combined-week-swipe-snap-element {
+  .week-swipe {
     --_lc-combined-visible-columns: 6;
   }
 }
 
 @container (max-width: 980px) {
-  .combined-week-swipe-snap-element {
+  .week-swipe {
     --_lc-combined-visible-columns: 5;
   }
 }
 
 @container (max-width: 840px) {
-  .combined-week-swipe-snap-element {
+  .week-swipe {
     --_lc-combined-visible-columns: 4;
   }
 }
 
 @container (max-width: 700px) {
-  .combined-week-swipe-snap-element {
+  .week-swipe {
     --_lc-combined-visible-columns: 3;
   }
 }
 
 @container (max-width: 540px) {
-  .combined-week-swipe-snap-element {
+  .week-swipe {
     --_lc-combined-visible-columns: 2;
   }
 }
-
