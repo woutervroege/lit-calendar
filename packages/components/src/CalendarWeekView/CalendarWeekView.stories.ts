@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./CalendarWeekView.js";
 import { calendarCssProps } from "../calendarCssProps.js";
+import { attachRequestEventHandlers } from "../storyRequestHandlers.js";
 import {
   type CalendarTemporalEvent,
   localeOptions,
@@ -84,6 +85,7 @@ const meta: Meta = {
     el.setAttribute("visible-hours", String(args.visibleHours));
     const entries = Array.isArray(args.events) ? args.events : weekSplitEvents;
     el.events = new Map(entries);
+    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
     return el;
   },
 };

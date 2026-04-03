@@ -26,6 +26,12 @@
 .week-all-day-view {
   height: var(--_lc-week-all-day-height);
   min-height: var(--_lc-week-all-day-height);
+  background-color: var(--lg-background-color);
+  border-bottom: var(--_lc-week-section-divider-width, 3px) solid
+    var(
+      --_lc-week-section-divider-color,
+      light-dark(rgb(15 23 42 / 22%), rgb(255 255 255 / 28%))
+    );
   position: sticky;
   top: 0;
   z-index: 10;

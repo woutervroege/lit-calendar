@@ -251,6 +251,8 @@ export class CalendarWeekView extends BaseElement {
           .labelsHidden=${false}
           style=${styleMap({
             "--_lc-week-all-day-height": allDayHeight,
+            "--_lc-section-bg":
+              "var(--lg-background-color, var(--_lc-surface-bg, light-dark(#fff, #222)))",
           })}
           @event-create-requested=${this.#reemit}
           @event-update-requested=${this.#reemit}
@@ -270,7 +272,6 @@ export class CalendarWeekView extends BaseElement {
           timezone=${ifDefined(this.timezone)}
           current-time=${ifDefined(this.currentTime)}
           .snapInterval=${this.snapInterval}
-          .visibleHours=${clampedVisibleHours}
           style=${styleMap({
             "--_lc-week-timed-height": timedHeight,
           })}

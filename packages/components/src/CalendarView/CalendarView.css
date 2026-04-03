@@ -79,6 +79,7 @@
 }
 
 section {
+  background-color: var(--_lc-section-bg, transparent);
   background-image:
     linear-gradient(
       to left,
