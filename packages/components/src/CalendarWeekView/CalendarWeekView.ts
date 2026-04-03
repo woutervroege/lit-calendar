@@ -227,7 +227,6 @@ export class CalendarWeekView extends BaseElement {
 
     return html`
 
-    <div style="display:none;width:10vw;height:100vh;background:red;position:absolute;inset-inline-start:0;z-index: 1"></div>
     <swipe-snap-element current-index="0" scroll-snap-stop="normal" dir="ltr" style="--column-width: 16.6667%;">
 
       <div style="min-width: 100%;height:100vh">
@@ -242,7 +241,6 @@ export class CalendarWeekView extends BaseElement {
           timezone=${ifDefined(this.timezone)}
           current-time=${ifDefined(this.currentTime)}
           .snapInterval=${this.snapInterval}
-          style="min-width: 100%;height:100vh"
         >
         </calendar-view>
         
@@ -256,7 +254,6 @@ export class CalendarWeekView extends BaseElement {
           timezone=${ifDefined(this.timezone)}
           current-time=${ifDefined(this.currentTime)}
           .snapInterval=${this.snapInterval}
-          style="min-width: 100%;height:100vh"
       >
       </calendar-view>
 
