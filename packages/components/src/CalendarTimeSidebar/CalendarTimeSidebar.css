@@ -65,7 +65,7 @@
 }
 
 .hour-label-row {
-  height: calc(100% / var(--_lc-time-sidebar-hours, 24));
+  height: var(--_lc-time-sidebar-hour-cell-height, calc(100% / var(--_lc-time-sidebar-hours, 24)));
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;

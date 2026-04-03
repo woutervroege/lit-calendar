@@ -95,7 +95,7 @@ section {
     linear-gradient(to bottom, var(--_lc-grid-line-color), var(--_lc-grid-line-color));
   background-size:
     calc(100% / var(--_lc-days)) 100%,
-    100% calc(100% / var(--_lc-hours)),
+    100% var(--_lc-hour-cell-height, calc(100% / var(--_lc-hours))),
     100% var(--_lc-grid-line-width),
     var(--_lc-grid-line-width) 100%;
   background-position:

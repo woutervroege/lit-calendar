@@ -246,6 +246,7 @@ export class CalendarWeekView extends BaseElement {
     const allDayHeight = `calc(var(--_lc-all-day-day-number-space, 36px) + ${this.#allDayVisibleRowCount} * var(--_lc-event-height, 32px))`;
     const timedHeight = `calc(${clampedVisibleHours} * var(--_lc-min-hour-height, var(--lc-min-hour-height, 54px)))`;
     const timedContentHeight = `calc(${24 / clampedVisibleHours} * ${timedHeight})`;
+    const hourCellHeight = `calc(${timedContentHeight} / 24)`;
     const direction = this.rtl ? "rtl" : getLocaleDirection(this.locale);
     const dayModeWeekStart = isWeekdayNumber(this.startDate.dayOfWeek)
       ? this.startDate.dayOfWeek
@@ -263,6 +264,7 @@ export class CalendarWeekView extends BaseElement {
           "--_lc-week-all-day-shell-height": `calc(${weekdayHeaderHeight} + ${allDayHeight})`,
           "--_lc-week-timed-height": timedHeight,
           "--_lc-week-timed-content-height": timedContentHeight,
+          "--_lc-week-hour-cell-height": hourCellHeight,
           "--_lc-week-total-height":
             "calc(var(--_lc-week-all-day-shell-height) + var(--_lc-week-sections-gap, 8px) + var(--_lc-week-timed-content-height))",
         })}
