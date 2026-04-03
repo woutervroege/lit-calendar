@@ -13,9 +13,14 @@ const globalStyles = `
     background-color: var(--lg-background-color, light-dark(#fff, #222));
   }
   #storybook-root, #storybook-docs {
-    position: fixed;
-    inset: 1rem;
+    min-height: 100dvh;
+    min-width: 100dvw;
     overflow: auto;
+  }
+
+  #storybook-root > * {
+  padding: 1rem;
+  max-width: calc(100dvw - 2rem);
   }
 `;
 
