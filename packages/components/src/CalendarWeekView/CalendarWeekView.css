@@ -59,8 +59,6 @@
   height: var(--_lc-week-total-height);
   min-height: var(--_lc-week-total-height);
   background-color: var(--lg-background-color);
-  border-inline-end: var(--_lc-grid-line-width, 1px) solid
-    var(--_lc-grid-line-color, light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%)));
   --_lc-time-sidebar-header-height: var(--_lc-week-weekday-header-height);
   --_lc-time-sidebar-sticky-top-base: var(--_lc-week-sticky-top, 0px);
   --_lc-time-sidebar-all-day-height: var(--_lc-week-all-day-height);
