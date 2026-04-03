@@ -16,6 +16,7 @@ const globalStyles = `
   #storybook-root > * {
     padding: 1rem;
     max-width: calc(100dvw - 2rem);
+    max-height: calc(100dvh - 2rem);
     position: absolute;
   }
 `;
