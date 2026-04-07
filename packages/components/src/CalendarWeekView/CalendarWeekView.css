@@ -1,26 +1,19 @@
+@import "tailwindcss";
+
 :host {
-  display: block;
-  width: 100%;
-  height: auto;
-  min-height: 100%;
-  container-type: inline-size;
+  @apply block w-full h-auto min-h-full [container-type:inline-size];
   --_lc-default-event-height: 32px;
 }
 
 .week-layout {
   --_lc-week-time-sidebar-width: var(--_lc-time-sidebar-width, max-content);
-  display: grid;
+  @apply grid w-full h-auto items-start;
   grid-template-columns: var(--_lc-week-time-sidebar-width) minmax(0, 1fr);
-  width: 100%;
-  height: auto;
-  align-items: start;
 }
 
 .week-swipe {
-  grid-column: 2;
+  @apply relative [grid-column:2] [margin-inline-start:-1px];
   width: calc(100% + 1px);
-  margin-inline-start: -1px;
-  position: relative;
   --_lc-grid-line-color: color-mix(
     in srgb,
     var(--_lc-grid-base-color, light-dark(rgb(15 23 42), rgb(255 255 255))) 14%,
@@ -39,15 +32,11 @@
 }
 
 .week-swipe::before {
+  @apply absolute pointer-events-none z-[2] [inset-block-end:0] [inset-inline-start:0];
   content: "";
-  position: absolute;
   inset-block-start: calc(var(--_lc-week-all-day-shell-height) + var(--_lc-week-sections-gap, 8px));
-  inset-block-end: 0;
-  inset-inline-start: 0;
   width: var(--_lc-grid-line-width, 1px);
   background: var(--_lc-grid-line-color, light-dark(rgb(15 23 42 / 14%), rgb(255 255 255 / 16%)));
-  pointer-events: none;
-  z-index: 2;
 }
 
 .week-stack {
@@ -55,14 +44,12 @@
     (100% * var(--_lc-combined-days, 7)) /
     var(--_lc-combined-effective-visible-columns, 7)
   );
-  height: auto;
-  display: flex;
-  flex-direction: column;
+  @apply h-auto flex flex-col;
   gap: var(--_lc-week-sections-gap, 8px);
 }
 
 .week-all-day-shell {
-  position: sticky;
+  @apply sticky;
   top: var(--_lc-week-sticky-top, 0px);
   z-index: var(--_lc-week-sticky-header-z-index, 30);
   height: var(--_lc-week-all-day-shell-height);
@@ -73,8 +60,7 @@
 }
 
 .week-time-sidebar {
-  grid-column: 1;
-  position: sticky;
+  @apply sticky [grid-column:1];
   top: var(--_lc-week-sticky-top, 0px);
   inset-inline-start: 0;
   z-index: calc(var(--_lc-week-sticky-header-z-index, 30) + 1);
@@ -97,13 +83,13 @@
 }
 
 .week-layout[data-rtl] {
-  direction: rtl;
+  @apply [direction:rtl];
 }
 
 .week-all-day-view {
   height: var(--_lc-week-all-day-height);
   min-height: var(--_lc-week-all-day-height);
-  background-color: transparent;
+  @apply bg-transparent;
   --_lc-grid-line-color: color-mix(
     in srgb,
     var(--_lc-grid-base-color, light-dark(rgb(15 23 42), rgb(255 255 255))) 14%,
