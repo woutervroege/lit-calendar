@@ -58,3 +58,7 @@
 :host > div[role="radiogroup"] > div > input[type="radio"]:checked + label > span {
   @apply border-b-current;
 }
+
+:host > div[role="radiogroup"] > div > input[type="radio"] + label > span > svg {
+  @apply block h-4 w-4;
+}
