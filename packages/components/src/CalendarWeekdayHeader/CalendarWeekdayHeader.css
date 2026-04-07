@@ -1,79 +1,65 @@
+@import "tailwindcss";
+
 :host {
-  display: block;
-  width: 100%;
-  container-type: inline-size;
+  @apply block w-full [container-type:inline-size];
 }
 
 .weekday-header {
-  display: grid;
-  align-items: center;
-  gap: 0;
+  @apply grid items-center gap-0 px-0.5 pb-1 leading-none font-medium;
   min-height: var(--_lc-weekday-header-height, 26px);
-  padding: 0 2px 4px;
   color: var(--_lc-grid-line-day-color, light-dark(rgb(15 23 42 / 72%), rgb(255 255 255 / 72%)));
   --_lc-weekend-day-color: var(
     --lc-weekend-day-label-color,
     light-dark(rgb(15 23 42 / 64%), rgb(255 255 255 / 66%))
   );
   font-size: var(--_lc-weekday-header-font-size, 14px);
-  line-height: 1;
-  font-weight: 500;
 }
 
 .weekday {
-  display: inline-flex;
-  container-type: inline-size;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: start;
-  padding-inline: 6px;
-  white-space: nowrap;
+  @apply inline-flex [container-type:inline-size] items-center justify-start text-start whitespace-nowrap [padding-inline:6px];
 }
 
 .weekday-label {
-  text-align: inherit;
+  @apply text-inherit;
 }
 
 .weekday.weekend {
-  color: var(--_lc-weekend-day-color);
+  @apply text-[var(--_lc-weekend-day-color)];
 }
 
 .weekday-short {
-  display: inline;
+  @apply inline;
 }
 
 .weekday-long {
-  display: none;
+  @apply hidden;
 }
 
 .weekday-narrow {
-  display: none;
+  @apply hidden;
 }
 
 @container (max-width: 64px) {
   .weekday-label {
-    display: inline-flex;
-    width: 100%;
-    justify-content: center;
-    text-align: center;
+    @apply inline-flex w-full justify-center text-center;
   }
 
   .weekday-short {
-    display: none;
+    @apply hidden;
   }
 
   .weekday-narrow {
-    display: inline;
+    @apply inline;
   }
 }
 
 @container (min-width: 160px) {
   .weekday-long {
-    display: inline;
+    @apply inline;
   }
 
   .weekday-short,
   .weekday-narrow {
-    display: none;
+    @apply hidden;
   }
 }

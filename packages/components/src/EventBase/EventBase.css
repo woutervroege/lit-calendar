@@ -1,14 +1,14 @@
+@import "tailwindcss";
+
 :host {
-  pointer-events: none;
-  user-select: none;
+  @apply pointer-events-none select-none absolute inset-0;
   inset: 0;
-  position: absolute;
 }
 
 /* Raise z-index while dragging and briefly after drop so event is on top */
 :host([data-dragging]),
 :host([data-just-dropped]) {
-  z-index: 10;
+  @apply z-10;
 }
 
 /* Pass default so event-card can use it when no segment is hovered */
@@ -56,7 +56,7 @@
     light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%))
   );
   --_lc-event-card-overlap-shadow: 0 0 0 transparent;
-  z-index: 11;
+  @apply z-[11];
 }
 
 /* Fallback propagation for browsers with partial :focus-visible behavior in nested trees. */

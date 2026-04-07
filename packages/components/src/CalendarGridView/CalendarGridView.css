@@ -1,10 +1,10 @@
+@import "tailwindcss";
+
 :host {
-  display: block;
-  width: 100%;
+  @apply block w-full select-none;
   height: calc(var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%));
   color-scheme: light dark;
   -webkit-user-select: none;
-  user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   /* Public API: only these 6 vars are supported. */
@@ -52,17 +52,21 @@
   margin-top: var(--_lc-timed-section-top-offset);
   min-height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
 }
 
 @supports (color: color-mix(in srgb, black, white)) {
   :host {
-    --_lc-grid-line-color: color-mix(in srgb, var(--_lc-grid-base-color) 14%, var(--_lc-grid-bg-color));
+    --_lc-grid-line-color: color-mix(
+      in srgb,
+      var(--_lc-grid-base-color) 14%,
+      var(--_lc-grid-bg-color)
+    );
     --_lc-grid-line-color-horizontal: var(--_lc-grid-line-color);
     --_lc-grid-line-day-color: color-mix(in srgb, var(--_lc-grid-base-color) 72%, transparent);
     --_lc-outside-month-day-color: color-mix(in srgb, var(--_lc-grid-base-color) 42%, transparent);
@@ -71,18 +75,20 @@
   }
 
   :host([variant="timed"]) {
-    --_lc-grid-line-color-horizontal: color-mix(in srgb, var(--_lc-grid-base-color) 8%, var(--_lc-grid-bg-color));
+    --_lc-grid-line-color-horizontal: color-mix(
+      in srgb,
+      var(--_lc-grid-base-color) 8%,
+      var(--_lc-grid-bg-color)
+    );
   }
 }
 
 .calendar-layout {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  container-type: inline-size;
+  @apply flex h-full min-h-0 [container-type:inline-size];
 }
 
 section {
+  @apply relative h-full;
   background-color: var(--_lc-section-bg, transparent);
   background-image:
     linear-gradient(
@@ -108,29 +114,23 @@ section {
     left top,
     left top;
   background-repeat: repeat-x, repeat-y, no-repeat, no-repeat;
-  position: relative;
-  height: 100%;
 }
 
 section::before {
+  @apply absolute pointer-events-none opacity-0 z-[1] transition-opacity duration-150;
   content: "";
-  position: absolute;
   left: var(--_lc-hover-left, 0);
   top: var(--_lc-hover-top, 0);
   width: var(--_lc-hover-width, 0);
   height: var(--_lc-hover-height, 0);
   background: var(--_lc-grid-ghost-color);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 1;
 }
 
 section[data-drag-hover]::before {
-  opacity: 1;
+  @apply opacity-100;
   /* Ensure hover target sits above non-dragged events,
      but still below the actively dragged event (z-index 10). */
-  z-index: 9;
+  @apply z-[9];
 }
 
 section[data-touch-creating] event-card.create-preview-card {
@@ -194,7 +194,7 @@ section.month-view.compact-month-view {
 }
 
 section.month-view.compact-month-view .day-label {
-  margin-top: 0;
+  @apply mt-0;
 }
 
 @container (max-width: 520px) {
@@ -206,15 +206,13 @@ section.month-view.compact-month-view .day-label {
 
   .day-overflow-button,
   .day-overflow-indicator-anchor {
-    display: none;
+    @apply hidden;
   }
 }
 
 .weekend-cell {
-  position: absolute;
+  @apply absolute pointer-events-none z-0;
   background: var(--_lc-weekend-bg-color);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .day-label.outside-month-day-label,
@@ -231,7 +229,7 @@ time {
 }
 
 .day-label-month-prefix {
-  margin-inline-end: 0.2em;
+  @apply [margin-inline-end:0.2em];
 }
 
 .day-label:hover:not(:focus-visible):not(.current-day) {
@@ -248,24 +246,15 @@ time {
 }
 
 .day-overflow-dots {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-height: 100%;
+  @apply inline-flex items-center justify-center gap-[3px] min-h-full;
 }
 
 .day-overflow-button {
-  justify-content: flex-start;
-  padding-inline: 8px;
+  @apply justify-start [padding-inline:8px];
 }
 
 .day-overflow-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background-color: currentColor;
-  opacity: 0.85;
+  @apply w-[7px] h-[7px] rounded-full bg-current opacity-[0.85];
 }
 
 time.current-day,
@@ -280,37 +269,29 @@ time.current-day,
 
 @container (max-width: 512px) {
   section:not(.month-view) .day-label-month-prefix {
-    display: none;
+    @apply hidden;
   }
 }
 
 .hour-label {
+  @apply block text-xs leading-none font-medium whitespace-nowrap text-end tabular-nums;
   color: var(--_lc-grid-line-day-color);
-  display: block;
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 500;
-  white-space: nowrap;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
 }
 
 .time-sidebar {
-  display: flex;
-  flex-direction: column;
+  @apply flex flex-col [inset-inline-start:0];
   position: var(--_lc-time-sidebar-position);
-  inset-inline-start: 0;
   top: var(--_lc-time-sidebar-sticky-top);
   z-index: var(--_lc-time-sidebar-z-index);
   align-self: var(--_lc-time-sidebar-align-self);
   height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   width: var(--_lc-time-sidebar-width, auto);
   min-height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   color: var(--_lc-grid-line-day-color);
   margin-top: -2px;
@@ -320,20 +301,14 @@ time.current-day,
 }
 
 .hour-labels {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+  @apply flex flex-1 flex-col pointer-events-none;
   margin-top: var(--_lc-hour-labels-margin-top);
-  pointer-events: none;
 }
 
 .hour-label-row {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
+  @apply flex-1 flex justify-end items-start;
 }
 
 .calendar-layout.with-time-labels {
-  gap: var(--_lc-time-label-gap, 6px);
+  @apply [gap:var(--_lc-time-label-gap,6px)];
 }
