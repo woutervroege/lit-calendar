@@ -1,42 +1,27 @@
+@import "tailwindcss";
+
 :host {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-  container-type: inline-size;
+  @apply block w-full h-full min-h-0 overflow-auto [container-type:inline-size];
 }
 
 .year-grid {
-  display: grid;
+  @apply grid w-full h-max min-h-full content-start;
   grid-template-columns: repeat(var(--_lc-year-grid-effective-columns, 4), minmax(0, 1fr));
   gap: var(--_lc-year-grid-gap, 64px);
-  width: 100%;
-  height: max-content;
-  min-height: 100%;
-  align-content: start;
 }
 
 .month-card {
-  min-width: 0;
-  display: grid;
+  @apply min-w-0 grid;
   grid-template-rows: auto 1fr;
 }
 
 .month-card calendar-month-view {
-  aspect-ratio: 1 / 1;
-  height: auto;
+  @apply aspect-square h-auto;
 }
 
 .month-title {
-  margin: 0;
-  padding-block: 0 14px;
-  padding-inline: 2px;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.2;
+  @apply m-0 pt-0 pb-3.5 px-0.5 text-[17px] font-semibold leading-[1.2] text-start;
   color: var(--lc-higlight-color, #ff0000);
-  text-align: start;
 }
 
 @container (max-width: 1280px) {
