@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { ContextProvider } from "@lit/context";
 import { html, type PropertyValues, type TemplateResult, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { keyed } from "lit/directives/keyed.js";
 import { styleMap } from "lit/directives/style-map.js";
 import "../TimedEvent/TimedEvent.js";
@@ -571,6 +572,7 @@ export class CalendarGridView extends BaseElement {
         createPreviewSegments.length
     );
     const compactMonthView = this.#isCompactMonthView;
+    const disableAllDayInteraction = this.#shouldDisableAllDayInteractionInCompactMonth();
 
     if (this.#dragHoverDayIndex !== null) {
       if (this.variant === "all-day") {
@@ -627,10 +629,10 @@ export class CalendarGridView extends BaseElement {
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
           ?data-touch-creating=${touchCreateActive}
-          @pointerdown=${this.#handleCreatePointerDown}
-          @pointermove=${this.#handleCreatePointerMove}
-          @pointerup=${this.#handleCreatePointerUp}
-          @pointercancel=${this.#handleCreatePointerCancel}
+          @pointerdown=${disableAllDayInteraction ? null : this.#handleCreatePointerDown}
+          @pointermove=${disableAllDayInteraction ? null : this.#handleCreatePointerMove}
+          @pointerup=${disableAllDayInteraction ? null : this.#handleCreatePointerUp}
+          @pointercancel=${disableAllDayInteraction ? null : this.#handleCreatePointerCancel}
         >
           ${this.#renderWeekendHighlights()}
           ${this.variant === "timed" ? this.#renderCurrentTimeIndicator() : ""}
@@ -686,7 +688,7 @@ export class CalendarGridView extends BaseElement {
                 .color=${event.color}
                 .isRecurring=${this.#isRecurringEvent(event)}
                 .isException=${this.#isExceptionEvent(event)}
-                ?inert=${this.#isCompactMonthView}
+                ?inert=${this.#shouldDisableAllDayInteractionInCompactMonth()}
                 .viewDays=${this.viewDays}
                 .daysPerRow=${this.#isMonthView ? this.daysPerRow : 0}
                 .gridRows=${this.#isMonthView ? this.gridRows : 1}
@@ -1078,6 +1080,8 @@ export class CalendarGridView extends BaseElement {
         ?outside-visible-month=${outsideVisibleMonth}
         ?is-weekend=${this.#weekendDays.has(day.dayOfWeek)}
         .events=${popoverEvents}
+        @day-label-selection-requested=${(event: Event) =>
+          this.#handlePopoverDaySelection(day, dayIndex, event)}
         @toggle=${this.#handleOverflowPopoverToggle}
         @select=${this.#handleEventSelect}
         @update=${this.#handleEventUpdate}
@@ -1214,6 +1218,8 @@ export class CalendarGridView extends BaseElement {
     const rowIndex = this.#isMonthView ? Math.floor(dayIndex / cols) : 0;
     const top = this.#isMonthView ? (rowIndex / this.gridRows) * 100 : 0;
     const compactMonthView = this.#isCompactMonthView;
+    const opensCompactOverflowPopover =
+      compactMonthView && this.variant === "all-day" && this.#isMonthView;
     const previousDay = dayIndex > 0 ? days[dayIndex - 1] : null;
     const startsNewMonth =
       previousDay === null || previousDay.month !== day.month || previousDay.year !== day.year;
@@ -1239,6 +1245,11 @@ export class CalendarGridView extends BaseElement {
           "inset-inline-start": `calc(${inlineStart}% + 6px)`,
           top: `${top}%`,
         };
+    const compactPopoverId = `day-overflow-popover-${this.#instanceToken}-${dayIndex}`;
+    const compactPopoverAnchorName = `--day-overflow-anchor-${this.#instanceToken}-${dayIndex}`;
+    const dayLabelStyle = opensCompactOverflowPopover
+      ? { ...startOffsetStyle, "anchor-name": compactPopoverAnchorName }
+      : startOffsetStyle;
 
     return html`
       <button
@@ -1246,7 +1257,10 @@ export class CalendarGridView extends BaseElement {
         class="day-label day-grid-label ${compactMonthView ? "is-compact" : "is-standard"} ${monthPrefix ? "has-month-prefix" : "no-month-prefix"} ${isCurrentDay ? "current-day" : ""} ${outsideVisibleMonth ? "outside-month-day-label" : ""}"
         .ariaLabel=${fullDateLabel}
         .ariaCurrent=${isCurrentDay ? "date" : null}
-        style=${styleMap(startOffsetStyle)}
+        .ariaHasPopup=${opensCompactOverflowPopover ? "dialog" : null}
+        popovertarget=${ifDefined(opensCompactOverflowPopover ? compactPopoverId : undefined)}
+        popovertargetaction=${ifDefined(opensCompactOverflowPopover ? "toggle" : undefined)}
+        style=${styleMap(dayLabelStyle)}
         @click=${(event: MouseEvent) => this.#handleDayLabelClick(day, dayIndex, event)}
         @keydown=${(event: KeyboardEvent) => this.#handleDayLabelKeyDown(day, dayIndex, event)}
       >
@@ -1255,17 +1269,42 @@ export class CalendarGridView extends BaseElement {
           <span class="day-label-day-number">${dayLabel}</span>
         </time>
       </button>
+      ${
+        opensCompactOverflowPopover
+          ? this.#renderDayOverflowPopover(
+              compactPopoverId,
+              day,
+              dayIndex,
+              compactPopoverAnchorName
+            )
+          : ""
+      }
     `;
   }
 
   #handleDayLabelClick(day: Temporal.PlainDate, dayIndex: number, event: MouseEvent) {
+    if (this.#shouldOpenCompactMonthOverflowPopover()) {
+      this.#prepareOverflowPopover(`day-overflow-popover-${this.#instanceToken}-${dayIndex}`);
+      return;
+    }
     this.#emitDaySelectionRequestedEvent(day, dayIndex, "click", "mouse", event);
   }
 
   #handleDayLabelKeyDown(day: Temporal.PlainDate, dayIndex: number, event: KeyboardEvent) {
+    if (this.#shouldOpenCompactMonthOverflowPopover()) {
+      return;
+    }
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     this.#emitDaySelectionRequestedEvent(day, dayIndex, "keyboard", "keyboard", event);
+  }
+
+  #shouldOpenCompactMonthOverflowPopover(): boolean {
+    return this.variant === "all-day" && this.#isCompactMonthView && this.#isMonthView;
+  }
+
+  #shouldDisableAllDayInteractionInCompactMonth(): boolean {
+    return this.variant === "all-day" && this.#isCompactMonthView && this.#isMonthView;
   }
 
   #emitDaySelectionRequestedEvent(
@@ -2000,6 +2039,25 @@ export class CalendarGridView extends BaseElement {
       this.requestUpdate();
     }
   };
+
+  #handlePopoverDaySelection(day: Temporal.PlainDate, dayIndex: number, event: Event) {
+    if (!(event instanceof CustomEvent)) return;
+    const detail =
+      (event.detail as
+        | {
+            trigger?: "click" | "keyboard";
+            pointerType?: string;
+            sourceEvent?: Event;
+          }
+        | undefined) ?? {};
+    this.#emitDaySelectionRequestedEvent(
+      day,
+      dayIndex,
+      detail.trigger ?? "click",
+      detail.pointerType ?? "mouse",
+      detail.sourceEvent ?? event
+    );
+  }
 
   #renderCurrentTimeIndicator() {
     const days = this.viewDays;

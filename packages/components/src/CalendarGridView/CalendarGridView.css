@@ -208,6 +208,10 @@ section.month-view {
     height: auto;
   }
 
+  section.month-view event-card {
+    --_lc-event-card-compact-label-display: none;
+  }
+
   section.month-view .day-label {
     @apply mt-0;
   }
