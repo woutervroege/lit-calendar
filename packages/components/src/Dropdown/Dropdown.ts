@@ -1,21 +1,13 @@
-import { css, html, nothing } from "lit";
+import { html, nothing, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
-import {
-  sharedButtonActiveBackgroundClasses,
-  sharedButtonActiveTextClasses,
-  sharedButtonDisabledClasses,
-  sharedButtonFocusRingClasses,
-  sharedButtonHoverTintClasses,
-  sharedButtonVisualClasses,
-  sharedFocusRingColorClasses,
-} from "../shared/buttonStyles.js";
 import {
   getPlainCharacterHotkey,
   isEditableEventTarget,
   normalizeHotkey,
 } from "../shared/hotkey.js";
 import type { DropdownOption } from "../types/Dropdown.js";
+import componentStyle from "./Dropdown.css?inline";
 
 @customElement("lc-dropdown")
 export class Dropdown extends BaseElement {
@@ -63,92 +55,7 @@ export class Dropdown extends BaseElement {
   }
 
   static get styles() {
-    return [
-      ...BaseElement.styles,
-      css`
-        .lc-dropdown-root {
-          position: relative;
-          display: inline-flex;
-        }
-
-        .lc-dropdown-select {
-          appearance: none !important;
-          -webkit-appearance: none !important;
-          -moz-appearance: none !important;
-          background-image: none !important;
-          text-align: start;
-          padding-inline-start: 0.75rem;
-          padding-inline-end: 3rem;
-        }
-
-        :host([icon-only]) .lc-dropdown-select {
-          inline-size: calc(2.75rem + 2px);
-          min-inline-size: calc(2.75rem + 2px);
-          block-size: calc(2.75rem + 2px);
-          min-block-size: calc(2.75rem + 2px);
-          padding-inline-start: 0;
-          padding-inline-end: 0;
-          color: transparent;
-          text-indent: 100%;
-          white-space: nowrap;
-          overflow: hidden;
-        }
-
-        :host([icon-only]) .lc-dropdown-icon,
-        :host([icon-only]) .lc-dropdown-chevron {
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transform: none;
-        }
-
-        .lc-dropdown-select:focus:not(:focus-visible) {
-          outline: none;
-          box-shadow: none;
-        }
-
-        .lc-dropdown-select[data-pointer-focus="true"]:focus-visible {
-          outline: none !important;
-          box-shadow: none !important;
-        }
-
-        .lc-dropdown-select::-ms-expand {
-          display: none;
-        }
-
-        .lc-dropdown-chevron {
-          position: absolute;
-          inset-inline-end: 1rem;
-          top: 50%;
-          z-index: 10;
-          display: block;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: light-dark(rgb(15 23 42 / 78%), rgb(255 255 255 / 78%));
-        }
-
-        .lc-dropdown-icon {
-          position: absolute;
-          inset-inline-end: 1rem;
-          top: 50%;
-          z-index: 10;
-          display: inline-flex;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: light-dark(rgb(15 23 42 / 74%), rgb(255 255 255 / 78%));
-        }
-
-        .lc-dropdown-icon:empty {
-          display: none;
-        }
-
-        :host([icon-only]) .lc-dropdown-icon ::slotted([slot="icon"]) {
-          display: block;
-          margin: 0;
-        }
-      `,
-    ];
+    return [...BaseElement.styles, unsafeCSS(componentStyle)];
   }
 
   connectedCallback() {
@@ -179,18 +86,15 @@ export class Dropdown extends BaseElement {
     const ownHotkey = normalizeHotkey(this.hotkey);
     const hasCustomIcon = this.#hasAssignedIcon();
 
-    const selectClasses = `lc-dropdown-select ${sharedButtonVisualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses} block w-full ${
-      hasSelection
-        ? sharedButtonActiveTextClasses
-        : "text-[light-dark(rgb(15_23_42_/_56%),rgb(255_255_255_/_56%))]"
-    }`;
+    const selectState = hasSelection ? "selected" : "placeholder";
 
     return html`
-      <div class="lc-dropdown-root">
+      <div>
         <select
           .id=${this.#fallbackSelectId}
           .name=${this.name}
-          class=${selectClasses}
+          class="lc-dropdown-select"
+          data-state=${selectState}
           .ariaLabel=${this.ariaLabel}
           .ariaKeyShortcuts=${ownHotkey || null}
           ?disabled=${this.disabled}
@@ -213,12 +117,12 @@ export class Dropdown extends BaseElement {
         ${
           hasCustomIcon
             ? html`
-              <span class="lc-dropdown-icon" aria-hidden="true">
+              <span data-role="icon" aria-hidden="true">
                 <slot name="icon" @slotchange=${() => this.requestUpdate()}></slot>
               </span>
             `
             : html`
-              <span class="lc-dropdown-chevron" aria-hidden="true">
+              <span data-role="chevron" aria-hidden="true">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"

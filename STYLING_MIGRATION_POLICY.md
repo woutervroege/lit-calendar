@@ -23,6 +23,25 @@ For Lit components, this is the preferred pattern when selectors are host/part-o
 - Keep selector API explicit (`:host`, `:host([...])`, `::part(...)`).
 - Keep utility-first semantics while preserving CSS API ergonomics.
 
+### Declaration-Level Rule (No Arbitrary Mix)
+
+Inside component stylesheets:
+
+- Prefer Tailwind utilities for declarations, including arbitrary values (for example `[height:var(--x)]`).
+- Use CSS custom properties (`--token`) as the dynamic API surface.
+- Avoid mixing utility declarations with ad-hoc raw CSS in the same block when a utility form exists.
+- Allow raw declarations only when no practical utility form exists (for example vendor-prefixed properties, unsupported at-rules/selectors, browser-specific behavior).
+- Prefer readability over forcing arbitrary utility syntax; CSS variable-driven declarations may stay as normal CSS properties.
+
+### Shadow DOM Selector Rule (Minimal Class Hooks)
+
+Inside component templates and stylesheets:
+
+- Prefer selector-driven styling (`:host`, attributes, element selectors, sibling selectors, `::part`) over adding classes to every internal element.
+- Add internal classes only when necessary for clarity, JS targeting, or when structural selectors would be brittle.
+- Prefer attributes/data-attributes over extra class variants for dynamic states.
+- Keep DOM markup semantic and low-noise; do not mirror every style concern as a class name.
+
 Example:
 
 ```css
@@ -80,7 +99,7 @@ Migrate in waves, with decisive cutovers:
 
 2. **Wave 2: Convert classes to `@apply`**
    - Move inline Tailwind classes from templates into component CSS selectors.
-   - Use `@apply` in `:host`, `:host([...])`, internal class selectors, and state selectors.
+   - Use `@apply` in `:host`, `:host([...])`, and minimal selector hooks (prefer structural/state selectors before adding classes).
    - Preserve behavior and visual output while moving declarations.
 
 3. **Wave 3: Move inline style attributes to CSS variables/selectors**

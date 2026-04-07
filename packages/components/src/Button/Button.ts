@@ -1,24 +1,14 @@
-import { css, html, nothing } from "lit";
+import { html, nothing, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
-import {
-  sharedButtonActiveBackgroundClasses,
-  sharedButtonActiveTextClasses,
-  sharedButtonCompactVisualClasses,
-  sharedButtonDisabledClasses,
-  sharedButtonFocusRingClasses,
-  sharedButtonHoverTintClasses,
-  sharedButtonVisualClasses,
-  sharedFocusRingColorClasses,
-} from "../shared/buttonStyles.js";
 import {
   eventMatchesHotkey,
   getHotkeyDisplay,
   isEditableEventTarget,
   normalizeHotkey,
-  sharedHotkeyBadgeClasses,
   toAriaHotkey,
 } from "../shared/hotkey.js";
+import componentStyle from "./Button.css?inline";
 
 type ButtonType = "button" | "submit" | "reset";
 
@@ -57,44 +47,7 @@ export class Button extends BaseElement {
   }
 
   static get styles() {
-    return [
-      ...BaseElement.styles,
-      css`
-        @media (max-width: 54rem) {
-          :host([raised]) button {
-            backdrop-filter: blur(10px) saturate(140%);
-            -webkit-backdrop-filter: blur(10px) saturate(140%);
-            box-shadow:
-              0 10px 28px rgb(15 23 42 / 20%),
-              0 1px 0 rgb(255 255 255 / 58%) inset;
-            --_lc-button-bg: var(
-              --lc-button-raised-bg,
-              light-dark(rgb(255 255 255 / 78%), rgb(15 23 42 / 52%))
-            );
-            --_lc-button-hover-bg: var(
-              --lc-button-raised-hover-bg,
-              light-dark(rgb(255 255 255 / 88%), rgb(15 23 42 / 62%))
-            );
-            --_lc-button-border-color: var(
-              --lc-button-raised-border-color,
-              light-dark(rgb(15 23 42 / 18%), rgb(255 255 255 / 24%))
-            );
-          }
-
-          @media (prefers-color-scheme: dark) {
-            :host([raised]) button {
-              box-shadow:
-                0 12px 30px rgb(0 0 0 / 58%),
-                0 1px 0 rgb(255 255 255 / 10%) inset;
-            }
-          }
-
-          :host([raised][disabled]) button {
-            box-shadow: none;
-          }
-        }
-      `,
-    ];
+    return [...BaseElement.styles, unsafeCSS(componentStyle)];
   }
 
   connectedCallback() {
@@ -108,10 +61,6 @@ export class Button extends BaseElement {
   }
 
   render() {
-    const visualClasses = this.compact
-      ? sharedButtonCompactVisualClasses
-      : sharedButtonVisualClasses;
-    const buttonClasses = `${visualClasses} ${sharedButtonActiveBackgroundClasses} ${sharedButtonActiveTextClasses} ${sharedButtonHoverTintClasses} ${sharedFocusRingColorClasses} ${sharedButtonFocusRingClasses} ${sharedButtonDisabledClasses}`;
     const hotkey = normalizeHotkey(this.hotkey);
     const hotkeyDisplay = getHotkeyDisplay(hotkey);
     const ariaHotkey = toAriaHotkey(hotkey);
@@ -120,22 +69,15 @@ export class Button extends BaseElement {
     return html`
       <button
         type=${this.type}
-        class=${buttonClasses}
+        class="lc-button"
         ?disabled=${this.disabled}
         .ariaLabel=${this.label || null}
         .ariaKeyShortcuts=${ariaHotkey || null}
         .title=${hotkeyDisplay && this.label ? `${this.label} (${hotkeyDisplay})` : ""}
       >
-        <span class="inline-flex items-center gap-2">
+        <span>
           <slot></slot>
-          ${
-            showHotkeyBadge
-              ? html`<span
-                class=${sharedHotkeyBadgeClasses}
-                >${hotkeyDisplay}</span
-              >`
-              : nothing
-          }
+          ${showHotkeyBadge ? html`<span data-hotkey-badge>${hotkeyDisplay}</span>` : nothing}
         </span>
       </button>
     `;
