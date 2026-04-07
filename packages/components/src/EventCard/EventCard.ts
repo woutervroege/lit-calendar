@@ -81,7 +81,13 @@ export class EventCard extends BaseElement {
       .filter(Boolean)
       .join(" ");
     return html`
-          <div class=${classMap(this.#cardClasses)} dir="${this.dir}">
+          <div
+            class=${classMap(this.#cardClasses)}
+            dir="${this.dir}"
+            data-segment-direction=${this.segmentDirection}
+            ?data-first-segment=${this.firstSegment}
+            ?data-last-segment=${this.lastSegment}
+          >
               ${this.past ? html`<span class="sr-only">Past event.</span>` : ""}
               ${this.#recurrenceStatusSrLabel ? html`<span class="sr-only">${this.#recurrenceStatusSrLabel}</span>` : ""}
               <h6 class=${classMap(this.#summaryClasses)}>
@@ -144,133 +150,52 @@ export class EventCard extends BaseElement {
   get #compactLabelClasses() {
     return {
       "event-card-compact-label": true,
-      "min-w-0": true,
-      "max-w-full": true,
-      hidden: true,
-      truncate: true,
     };
   }
 
   get #summaryClasses() {
     return {
       "event-card-heading": true,
-      "m-0": true,
-      "text-xs": true,
-      "text-start": true,
-      "font-bold": true,
-      "flex-1": true,
-      "min-w-0": true,
-      "px-2": true,
-      "pt-2": true,
-      "pb-2": true,
-      "leading-tight": true,
-      "max-w-full": true,
-      "overflow-hidden": true,
-      "line-through": this.past,
-      "decoration-[1.5px]": this.past,
-      "opacity-80": this.past,
-      sticky: true,
+      "is-past": this.past,
     };
   }
 
   get #summaryMainClasses() {
     return {
       "event-card-summary-main": true,
-      "min-w-0": true,
-      "max-w-full": true,
-      block: true,
-      truncate: true,
     };
   }
 
   get #summaryTimeClasses() {
     return {
       "event-card-time": true,
-      "text-xs": true,
-      "text-start": true,
-      "font-light": true,
-      "tabular-nums": true,
-      block: true,
-      "min-w-0": true,
-      "max-w-full": true,
-      "overflow-hidden": true,
-      "leading-tight": true,
     };
   }
 
   get #summaryTimeMainClasses() {
     return {
       "event-card-time-main": true,
-      "min-w-0": true,
-      "max-w-full": true,
-      "inline-block": true,
-      truncate: true,
     };
   }
 
   get #summaryTimeDetailClasses() {
     return {
       "event-card-time-detail": true,
-      "min-w-0": true,
-      "max-w-full": true,
-      "inline-block": true,
-      truncate: true,
     };
   }
 
   get #summaryLocationClasses() {
     return {
       "event-card-location": true,
-      "text-xs": true,
-      "font-light": true,
-      "min-w-0": true,
-      "max-w-full": true,
-      block: true,
-      "overflow-hidden": true,
-      "leading-tight": true,
-      truncate: true,
     };
   }
 
   get #cardClasses() {
-    const isVertical = this.segmentDirection === "vertical";
-    const isRtl = this.dir === "rtl";
     const isOverlapping = this.#isOverlappingIndentedCard;
-    const horizontalStartEdge = this.firstSegment;
-    const horizontalEndEdge = this.lastSegment;
-    const horizontalLeftEdge = isRtl ? horizontalEndEdge : horizontalStartEdge;
-    const horizontalRightEdge = isRtl ? horizontalStartEdge : horizontalEndEdge;
 
     return {
-      "[@container(max-height:47px)]:flex": true,
-      "[@container(max-height:47px)]:gap-1": true,
-      "before:content-['']": true,
-      "before:absolute": true,
-      "before:bg-[var(--_lc-event-card-bg)]": true,
-      "before:border-l-2": true,
-      "before:border-l-[var(--_lc-event-card-accent-color)]": true,
-      "before:text-[var(--_lc-event-card-accent-color)]": true,
-      "before:transition-colors": true,
-      "before:duration-100": true,
-      "before:top-[1px]": isVertical ? this.firstSegment : true,
-      "before:top-0": isVertical ? !this.firstSegment : false,
-      "before:bottom-[1px]": isVertical ? this.lastSegment : true,
-      "before:bottom-0": isVertical ? !this.lastSegment : false,
-      "before:left-[1px]": true,
-      "before:left-0": false,
-      "before:right-[1px]": true,
-      "before:right-0": false,
-      "before:rounded-t-sm": isVertical ? this.firstSegment : false,
-      "before:rounded-b-sm": isVertical ? this.lastSegment : false,
-      "before:rounded-l-sm": isVertical ? false : horizontalLeftEdge,
-      "before:rounded-r-sm": isVertical ? false : horizontalRightEdge,
-      "before:-z-1": true,
-      "transition-transform duration-100": true,
       "event-card-overlap": isOverlapping,
-      relative: true,
-      "h-full": true,
-      "[@container(max-height:47px)]:whitespace-nowrap": true,
-      "pointer-events-auto": true,
+      "event-card-shell": true,
     };
   }
 

@@ -1,37 +1,41 @@
+@import "tailwindcss";
+
 :host {
-  position: absolute;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  @apply absolute z-10 flex justify-center items-center;
 }
 
 :host([axis="vertical"]) {
-  padding: 6px 8px;
-  margin: -6px -8px;
-  width: 100%;
-  left: 0;
+  @apply py-1.5 px-2 -my-1.5 -mx-2 w-full left-0;
 }
 
 :host([axis="vertical"][position="start"]) {
-  top: 0;
+  @apply top-0;
 }
 
 :host([axis="vertical"][position="end"]) {
-  bottom: 0;
+  @apply bottom-0;
 }
 
 :host([axis="horizontal"]) {
-  padding: 8px 6px;
-  margin: -8px -6px;
-  height: 100%;
-  top: 0;
+  @apply py-2 px-1.5 -my-2 -mx-1.5 h-full top-0;
 }
 
 :host([axis="horizontal"][position="start"]) {
-  inset-inline-start: 0;
+  @apply [inset-inline-start:0];
 }
 
 :host([axis="horizontal"][position="end"]) {
-  inset-inline-end: 0;
+  @apply [inset-inline-end:0];
+}
+
+:host > div {
+  @apply relative z-10 opacity-80 transition-opacity duration-200 ease-in-out hover:opacity-100;
+}
+
+:host([axis="vertical"]) > div {
+  @apply w-full h-2 cursor-ns-resize;
+}
+
+:host([axis="horizontal"]) > div {
+  @apply h-full w-2 cursor-ew-resize;
 }

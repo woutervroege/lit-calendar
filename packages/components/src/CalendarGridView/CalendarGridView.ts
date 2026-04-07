@@ -15,7 +15,6 @@ import {
 } from "../context/CalendarViewContext.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
 import type { EventBase } from "../EventBase/EventBase.js";
-import { sharedFocusRingColorClasses } from "../shared/buttonStyles.js";
 import { buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { clampGridDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
@@ -23,15 +22,16 @@ import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/L
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
-  CalendarEventViewEntry as EventEntry,
-  CalendarEventViewMap as EventsMap,
   DayOverflowPopoverEvent,
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
+  CalendarEventViewEntry as EventEntry,
   CalendarEventView as EventInput,
   EventSelectionRequestDetail,
+  CalendarEventViewMap as EventsMap,
   EventUpdateRequestDetail,
 } from "../types/index.js";
+
 type AllDayOverflowLayout = {
   maxVisibleRows: number;
   maxVisibleRowsByDay: Map<number, number>;
@@ -40,7 +40,6 @@ type AllDayOverflowLayout = {
   hiddenEventIdsByDay: Map<number, string[]>;
   forceIndicatorsByDay: Set<number>;
 };
-const COMPACT_MONTH_MAX_INLINE_SIZE_PX = 520;
 // Keep touch-create activation aligned with timed event move/resize activation.
 const CREATE_TOUCH_LONG_PRESS_MS = 160;
 const CREATE_TOUCH_CANCEL_DISTANCE_PX = 10;
@@ -105,7 +104,6 @@ export class CalendarGridView extends BaseElement {
   #resizeDebounceTimerId: number | null = null;
   #resizeDebounceDelayMs = 17;
   #lastObservedHostHeightPx = 0;
-  #lastObservedHostWidthPx = 0;
   #isCompactMonth = false;
   #cachedViewDaysKey = "";
   #cachedViewDays: Temporal.PlainDate[] = [];
@@ -429,13 +427,6 @@ export class CalendarGridView extends BaseElement {
     if (typeof ResizeObserver === "undefined") return;
     if (this.#resizeObserver) return;
     this.#resizeObserver = new ResizeObserver((entries) => {
-      const nextWidth = entries[0]?.contentRect.width;
-      if (
-        Number.isFinite(nextWidth) &&
-        Math.abs(nextWidth - this.#lastObservedHostWidthPx) >= 0.5
-      ) {
-        this.#lastObservedHostWidthPx = nextWidth;
-      }
       const nextHeight = entries[0]?.contentRect.height;
       if (
         Number.isFinite(nextHeight) &&
@@ -453,7 +444,6 @@ export class CalendarGridView extends BaseElement {
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = undefined;
     this.#lastObservedHostHeightPx = 0;
-    this.#lastObservedHostWidthPx = 0;
     this.#isCompactMonth = false;
   }
 
@@ -464,7 +454,7 @@ export class CalendarGridView extends BaseElement {
     }
     this.#resizeDebounceTimerId = window.setTimeout(() => {
       this.#resizeDebounceTimerId = null;
-      this.#syncCompactMonthState(this.#lastObservedHostWidthPx);
+      this.#syncCompactMonthState();
       if (this.variant === "all-day") {
         this.#scheduleSectionHeightSync();
         return;
@@ -517,7 +507,16 @@ export class CalendarGridView extends BaseElement {
     return this.#isMonthView && this.#isCompactMonth;
   }
 
-  #syncCompactMonthState(observedWidth?: number) {
+  #readCompactMonthCssState(): boolean {
+    if (typeof getComputedStyle === "undefined") return false;
+    const section = this.renderRoot.querySelector<HTMLElement>("section.month-view");
+    const styleTarget = section ?? this;
+    const rawValue = getComputedStyle(styleTarget).getPropertyValue("--_lc-compact-month-view");
+    const compactState = Number.parseFloat(rawValue.trim());
+    return Number.isFinite(compactState) && compactState >= 0.5;
+  }
+
+  #syncCompactMonthState() {
     if (!this.#isMonthView) {
       if (!this.#isCompactMonth) return;
       this.#isCompactMonth = false;
@@ -525,12 +524,7 @@ export class CalendarGridView extends BaseElement {
       return;
     }
 
-    const width =
-      observedWidth ??
-      (this.#lastObservedHostWidthPx ||
-        this.getBoundingClientRect().width ||
-        Number.POSITIVE_INFINITY);
-    const shouldBeCompact = width <= COMPACT_MONTH_MAX_INLINE_SIZE_PX;
+    const shouldBeCompact = this.#readCompactMonthCssState();
     if (shouldBeCompact === this.#isCompactMonth) return;
     this.#isCompactMonth = shouldBeCompact;
     this.requestUpdate();
@@ -626,9 +620,9 @@ export class CalendarGridView extends BaseElement {
     const allDayOverflow = this.#getAllDayOverflowLayout();
 
     return html`
-      <div class="calendar-layout flex h-full min-h-0">
+      <div class="calendar-layout">
         <section
-          class="min-w-0 flex-1 relative flex-row h-full text-[0px] ${sharedFocusRingColorClasses} ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
+          class="calendar-grid-section ${this.#isMonthView ? "month-view" : ""} ${compactMonthView ? "compact-month-view" : ""}"
           dir=${this.#isRtl ? "rtl" : "ltr"}
           style=${styleMap({ ...this.sectionStyle, ...hoverStyle })}
           ?data-drag-hover=${this.#dragHoverDayIndex !== null}
@@ -993,7 +987,7 @@ export class CalendarGridView extends BaseElement {
       return html`
         <button
           type="button"
-          class="day-label day-overflow-button absolute z-[3] p-0 text-sm font-medium rounded-sm flex items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
+          class="day-label day-overflow-button"
           style=${styleMap(buttonStyle)}
           .ariaLabel=${accessibilityLabel}
           tabindex="0"
@@ -1009,7 +1003,7 @@ export class CalendarGridView extends BaseElement {
       <div class="day-overflow-indicator-anchor">
         <button
           type="button"
-          class="day-label day-overflow-button day-overflow-toggle absolute z-[3] p-0 text-sm font-medium rounded-sm flex items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis ${sharedFocusRingColorClasses}"
+          class="day-label day-overflow-button day-overflow-toggle"
           style=${styleMap(buttonStyle)}
           .ariaLabel=${accessibilityLabel}
           aria-haspopup="dialog"
@@ -1249,11 +1243,7 @@ export class CalendarGridView extends BaseElement {
     return html`
       <button
         type="button"
-        class="day-label absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none ${sharedFocusRingColorClasses} ${
-          compactMonthView ? "" : "mt-2"
-        } ${monthPrefix ? "min-w-6 px-2" : "w-6"} h-6 ${isCurrentDay ? "current-day" : ""} ${
-          outsideVisibleMonth ? "outside-month-day-label" : ""
-        }"
+        class="day-label day-grid-label ${compactMonthView ? "is-compact" : "is-standard"} ${monthPrefix ? "has-month-prefix" : "no-month-prefix"} ${isCurrentDay ? "current-day" : ""} ${outsideVisibleMonth ? "outside-month-day-label" : ""}"
         .ariaLabel=${fullDateLabel}
         .ariaCurrent=${isCurrentDay ? "date" : null}
         style=${styleMap(startOffsetStyle)}
@@ -2036,7 +2026,7 @@ export class CalendarGridView extends BaseElement {
 
     return html`
       <div
-        class="current-time-indicator absolute z-[20] m-0 pointer-events-none before:content-[''] before:absolute before:left-0 before:top-0 before:rounded-full before:-translate-x-[2px] before:-translate-y-1/2 before:[width:var(--_lc-current-time-dot-size)] before:[height:var(--_lc-current-time-dot-size)] before:[background-color:var(--_lc-current-day-color)]"
+        class="current-time-indicator"
         style=${styleMap({
           top: `${top}%`,
           left: `${left}%`,
@@ -2393,6 +2383,7 @@ export class CalendarGridView extends BaseElement {
 
   protected firstUpdated(changedProperties: PropertyValues<this>) {
     super.firstUpdated(changedProperties);
+    this.#syncCompactMonthState();
     this.#syncTimedHostHeightFactor();
   }
 

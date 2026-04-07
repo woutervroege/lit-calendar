@@ -1,4 +1,5 @@
-import { css, html, LitElement, type PropertyValues } from "lit";
+import { html, LitElement, type PropertyValues, unsafeCSS } from "lit";
+import componentStyle from "./SwipeContainer.css?inline";
 
 type SwipeIntent = "x" | "y" | null;
 type SnapStopMode = "always" | "normal";
@@ -11,43 +12,8 @@ export class SwipeContainer extends LitElement {
     dir: { type: String, reflect: true },
   };
 
-  static styles = css`
-    :host {
-      display: block;
-      width: 100%;
-      height: var(--_lc-swipe-height, 100%);
-      min-height: var(--_lc-swipe-min-height, 0);
-      overflow-x: var(--_lc-swipe-overflow-x, hidden);
-      overflow-y: var(--_lc-swipe-overflow-y, auto);
-      position: relative;
-      touch-action: pan-y;
-      user-select: none;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .container {
-      display: flex;
-      width: 100%;
-      align-items: flex-start;
-      will-change: transform;
-      transform: translate3d(0, 0, 0);
-      position: relative;
-    }
-
-    ::slotted(*) {
-      flex: 0 0 var(--page-width, 100%);
-      width: var(--page-width, 100%);
-      touch-action: pan-y;
-    }
-
-    @media (pointer: fine) {
-      :host {
-        overflow-x: visible;
-        overflow-y: visible;
-        touch-action: auto;
-      }
-    }
-  `;
+  /* tailwind-exception: Uses stylesheet import compiled from Tailwind @apply for Shadow DOM swipe behavior. */
+  static styles = unsafeCSS(componentStyle);
 
   #currentIndex = 0;
   declare scrollSnapStop: SnapStopMode;

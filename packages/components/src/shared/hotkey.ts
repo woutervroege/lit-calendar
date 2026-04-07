@@ -1,6 +1,3 @@
-export const sharedHotkeyBadgeClasses =
-  "mt-[2px] inline-flex h-[1.05rem] min-w-[1.05rem] items-center justify-center rounded border-[1px] border-solid border-current px-1 text-[0.68rem] leading-none text-[light-dark(rgb(15_23_42_/_58%),rgb(255_255_255_/_64%))]";
-
 const keyAliases: Record<string, string> = {
   left: "arrowleft",
   right: "arrowright",

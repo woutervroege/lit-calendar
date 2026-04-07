@@ -1,16 +1,13 @@
-import { html, nothing } from "lit";
+import { html, nothing, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
-import {
-  sharedButtonPeerDisabledClasses,
-  sharedButtonPeerFocusRingClasses,
-} from "../shared/buttonStyles.js";
 import {
   getPlainCharacterHotkey,
   isEditableEventTarget,
   normalizeHotkey,
 } from "../shared/hotkey.js";
 import type { TabSwitchOption } from "../types/TabSwitch.js";
+import componentStyle from "./TabSwitch.css?inline";
 
 let tabSwitchInstanceId = 0;
 
@@ -53,7 +50,7 @@ export class TabSwitch extends BaseElement {
   }
 
   static get styles() {
-    return [...BaseElement.styles];
+    return [...BaseElement.styles, unsafeCSS(componentStyle)];
   }
 
   connectedCallback() {
@@ -78,44 +75,25 @@ export class TabSwitch extends BaseElement {
   render() {
     const groupName = this.name || this.#groupName;
     const normalizedOptions = this.options.map((option) => this.#normalizeOption(option));
-    const optionClasses = "flex items-center";
-    const inputClasses = "sr-only peer";
-    const sizeClasses = this.compact ? "h-9 min-w-9 px-2" : "h-9 px-3";
-    const labelClasses = `${sizeClasses} inline-flex items-center justify-center border-0 rounded-none bg-transparent text-[light-dark(rgb(15_23_42_/_56%),rgb(255_255_255_/_58%))] hover:text-[var(--_lc-switch-active-color)] transition-colors duration-150 ${sharedButtonPeerFocusRingClasses} ${sharedButtonPeerDisabledClasses}`;
-    const wrapperClasses =
-      "inline-flex items-stretch gap-0 [--_lc-switch-active-color:var(--lc-switch-active-color,light-dark(rgb(15_23_42_/_95%),rgb(255_255_255_/_98%)))] [--_lc-switch-border-color:light-dark(var(--_lc-grid-line-color,rgb(15_23_42_/_14%)),var(--_lc-grid-line-color,rgb(255_255_255_/_16%)))] border-0 border-b border-solid border-[var(--_lc-switch-border-color)]";
     return html`
-      <div
-        class=${wrapperClasses}
-        role="radiogroup"
-        aria-label=${this.ariaLabel}
-      >
+      <div role="radiogroup" aria-label=${this.ariaLabel}>
         ${normalizedOptions.map((option, index) => {
           const inputId = `${groupName}-${option.value}-${index}`;
           const isChecked = option.value === this.value;
-          const checkedClasses = isChecked ? "text-[var(--_lc-switch-active-color)]" : "";
-          const indicatorClasses = isChecked
-            ? "inline-flex h-full box-border items-center border-b-2 [border-bottom-color:currentColor]"
-            : "inline-flex h-full box-border items-center border-b-2 border-transparent";
           const hotkey = this.showHotkeys ? option.hotkey?.trim() : "";
           return html`
-            <div class=${optionClasses}>
+            <div>
               <input
                 id=${inputId}
                 type="radio"
                 name=${groupName}
-                class=${inputClasses}
                 value=${option.value}
                 .checked=${isChecked}
                 aria-keyshortcuts=${hotkey || nothing}
                 @change=${(e: Event) => this.#handleChange(e)}
               />
-              <label
-                for=${inputId}
-                class="${labelClasses} ${checkedClasses}"
-                title=${this.#optionTitle(option)}
-              >
-                <span class=${indicatorClasses}>${option.label}</span>
+              <label for=${inputId} title=${this.#optionTitle(option)}>
+                <span>${option.label}</span>
               </label>
             </div>
           `;

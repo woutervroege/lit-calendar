@@ -1,10 +1,11 @@
+@import "tailwindcss";
+@import "../styles/z-index.css";
+
 :host {
-  display: block;
-  width: 100%;
+  @apply block w-full select-none;
   height: calc(var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%));
   color-scheme: light dark;
   -webkit-user-select: none;
-  user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   /* Public API: only these 6 vars are supported. */
@@ -52,17 +53,21 @@
   margin-top: var(--_lc-timed-section-top-offset);
   min-height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
 }
 
 @supports (color: color-mix(in srgb, black, white)) {
   :host {
-    --_lc-grid-line-color: color-mix(in srgb, var(--_lc-grid-base-color) 14%, var(--_lc-grid-bg-color));
+    --_lc-grid-line-color: color-mix(
+      in srgb,
+      var(--_lc-grid-base-color) 14%,
+      var(--_lc-grid-bg-color)
+    );
     --_lc-grid-line-color-horizontal: var(--_lc-grid-line-color);
     --_lc-grid-line-day-color: color-mix(in srgb, var(--_lc-grid-base-color) 72%, transparent);
     --_lc-outside-month-day-color: color-mix(in srgb, var(--_lc-grid-base-color) 42%, transparent);
@@ -71,18 +76,27 @@
   }
 
   :host([variant="timed"]) {
-    --_lc-grid-line-color-horizontal: color-mix(in srgb, var(--_lc-grid-base-color) 8%, var(--_lc-grid-bg-color));
+    --_lc-grid-line-color-horizontal: color-mix(
+      in srgb,
+      var(--_lc-grid-base-color) 8%,
+      var(--_lc-grid-bg-color)
+    );
   }
 }
 
 .calendar-layout {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  container-type: inline-size;
+  @apply flex h-full min-h-0 [container-type:inline-size];
+}
+
+.calendar-grid-section {
+  @apply min-w-0 flex-1 relative h-full [font-size:0];
+  --_lc-focus-outline-color: light-dark(rgb(15 23 42 / 92%), rgb(255 255 255 / 96%));
+  --_lc-focus-ring-color: light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%));
+  --_lc-focus-ring-offset-color: light-dark(rgb(255 255 255), rgb(2 6 23));
 }
 
 section {
+  @apply relative h-full;
   background-color: var(--_lc-section-bg, transparent);
   background-image:
     linear-gradient(
@@ -108,29 +122,24 @@ section {
     left top,
     left top;
   background-repeat: repeat-x, repeat-y, no-repeat, no-repeat;
-  position: relative;
-  height: 100%;
 }
 
 section::before {
+  @apply absolute pointer-events-none opacity-0 transition-opacity duration-150;
   content: "";
-  position: absolute;
+  z-index: var(--_lc-z-base);
   left: var(--_lc-hover-left, 0);
   top: var(--_lc-hover-top, 0);
   width: var(--_lc-hover-width, 0);
   height: var(--_lc-hover-height, 0);
   background: var(--_lc-grid-ghost-color);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 1;
 }
 
 section[data-drag-hover]::before {
-  opacity: 1;
+  @apply opacity-100;
   /* Ensure hover target sits above non-dragged events,
      but still below the actively dragged event (z-index 10). */
-  z-index: 9;
+  z-index: calc(var(--_lc-z-focus) - 2);
 }
 
 section[data-touch-creating] event-card.create-preview-card {
@@ -161,6 +170,7 @@ section[data-touch-creating] event-card.create-preview-card {
 
 /* Month view: multi-row grid (e.g. 7 columns × N weeks) */
 section.month-view {
+  --_lc-compact-month-view: 0;
   background-image:
     linear-gradient(
       to right,
@@ -187,34 +197,29 @@ section.month-view {
   background-repeat: repeat-x, repeat-y, no-repeat, no-repeat;
 }
 
-section.month-view.compact-month-view {
-  background-image: none;
-  --_lc-event-height: 3px;
-  --_lc-all-day-day-number-space: 36px;
-}
-
-section.month-view.compact-month-view .day-label {
-  margin-top: 0;
-}
-
-@container (max-width: 520px) {
+@container (max-width: 512px) {
   section.month-view {
+    --_lc-compact-month-view: 1;
+    --_lc-event-height: 3px;
+    --_lc-all-day-day-number-space: 36px;
     background-image: none;
     aspect-ratio: 1 / 1;
     height: auto;
   }
 
+  section.month-view .day-label {
+    @apply mt-0;
+  }
+
   .day-overflow-button,
   .day-overflow-indicator-anchor {
-    display: none;
+    @apply hidden;
   }
 }
 
 .weekend-cell {
-  position: absolute;
+  @apply absolute pointer-events-none z-0;
   background: var(--_lc-weekend-bg-color);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .day-label.outside-month-day-label,
@@ -228,10 +233,29 @@ time {
 
 .day-label {
   color: var(--_lc-grid-line-day-color);
+  --_lc-focus-outline-color: light-dark(rgb(15 23 42 / 92%), rgb(255 255 255 / 96%));
+  --_lc-focus-ring-color: light-dark(rgb(15 23 42 / 85%), rgb(255 255 255 / 92%));
+  --_lc-focus-ring-offset-color: light-dark(rgb(255 255 255), rgb(2 6 23));
 }
 
 .day-label-month-prefix {
-  margin-inline-end: 0.2em;
+  @apply [margin-inline-end:0.2em];
+}
+
+.day-grid-label {
+  @apply absolute p-1 text-sm z-0 font-medium rounded-full flex justify-center items-center cursor-pointer border-0 bg-transparent text-inherit leading-none h-6;
+}
+
+.day-grid-label.is-standard {
+  @apply mt-2;
+}
+
+.day-grid-label.has-month-prefix {
+  @apply min-w-6 px-2;
+}
+
+.day-grid-label.no-month-prefix {
+  @apply w-6;
 }
 
 .day-label:hover:not(:focus-visible):not(.current-day) {
@@ -248,24 +272,17 @@ time {
 }
 
 .day-overflow-dots {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-height: 100%;
+  @apply inline-flex items-center justify-center gap-[3px] min-h-full;
 }
 
 .day-overflow-button {
-  justify-content: flex-start;
-  padding-inline: 8px;
+  @apply absolute p-0 text-sm font-medium rounded-sm flex items-center cursor-pointer border-0 bg-transparent text-inherit leading-none whitespace-nowrap overflow-hidden text-ellipsis justify-start [padding-inline:8px];
+  z-index: var(--_lc-z-overlay-raised);
 }
 
 .day-overflow-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background-color: currentColor;
-  opacity: 0.85;
+  @apply w-[7px] h-[7px] bg-current opacity-[0.85];
+  border-radius: var(--lc-event-card-radius, var(--radius-sm));
 }
 
 time.current-day,
@@ -280,37 +297,42 @@ time.current-day,
 
 @container (max-width: 512px) {
   section:not(.month-view) .day-label-month-prefix {
-    display: none;
+    @apply hidden;
   }
 }
 
 .hour-label {
+  @apply block text-xs leading-none font-medium whitespace-nowrap text-end tabular-nums;
   color: var(--_lc-grid-line-day-color);
-  display: block;
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 500;
-  white-space: nowrap;
-  text-align: end;
-  font-variant-numeric: tabular-nums;
+}
+
+.current-time-indicator {
+  @apply absolute m-0 pointer-events-none;
+  z-index: calc(var(--_lc-z-sticky) - 10);
+}
+
+.current-time-indicator::before {
+  content: "";
+  @apply absolute left-0 top-0 rounded-full -translate-x-[2px] -translate-y-1/2;
+  width: var(--_lc-current-time-dot-size);
+  height: var(--_lc-current-time-dot-size);
+  background-color: var(--_lc-current-day-color);
 }
 
 .time-sidebar {
-  display: flex;
-  flex-direction: column;
+  @apply flex flex-col [inset-inline-start:0];
   position: var(--_lc-time-sidebar-position);
-  inset-inline-start: 0;
   top: var(--_lc-time-sidebar-sticky-top);
   z-index: var(--_lc-time-sidebar-z-index);
   align-self: var(--_lc-time-sidebar-align-self);
   height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   width: var(--_lc-time-sidebar-width, auto);
   min-height: calc(
     (var(--_lc-host-height-factor, 1) * var(--_lc-host-base-height, 100%)) -
-      var(--_lc-timed-section-top-offset)
+    var(--_lc-timed-section-top-offset)
   );
   color: var(--_lc-grid-line-day-color);
   margin-top: -2px;
@@ -320,20 +342,14 @@ time.current-day,
 }
 
 .hour-labels {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+  @apply flex flex-1 flex-col pointer-events-none;
   margin-top: var(--_lc-hour-labels-margin-top);
-  pointer-events: none;
 }
 
 .hour-label-row {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
+  @apply flex-1 flex justify-end items-start;
 }
 
 .calendar-layout.with-time-labels {
-  gap: var(--_lc-time-label-gap, 6px);
+  @apply [gap:var(--_lc-time-label-gap,6px)];
 }
