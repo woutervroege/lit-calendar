@@ -1,17 +1,14 @@
 import { html } from "lit";
-import { ifDefined } from "lit/directives/if-defined.js";
 
 type ListIconOptions = {
   className?: string;
-  slot?: string;
 };
 
 export function renderListIcon(options: ListIconOptions = {}) {
-  const { className, slot } = options;
+  const { className = "" } = options;
   return html`
     <svg
-      slot=${ifDefined(slot)}
-      class=${ifDefined(className)}
+      class=${className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

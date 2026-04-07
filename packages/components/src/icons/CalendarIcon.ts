@@ -1,17 +1,14 @@
 import { html } from "lit";
-import { ifDefined } from "lit/directives/if-defined.js";
 
 type CalendarIconOptions = {
   className?: string;
-  slot?: string;
 };
 
 export function renderCalendarIcon(options: CalendarIconOptions = {}) {
-  const { className, slot } = options;
+  const { className = "" } = options;
   return html`
     <svg
-      slot=${ifDefined(slot)}
-      class=${ifDefined(className)}
+      class=${className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
