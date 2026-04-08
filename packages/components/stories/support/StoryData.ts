@@ -186,7 +186,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-13T09:00:00",
-          end: "2025-01-13T09:20:00",
+          end: "2025-01-13T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -203,7 +203,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-14T09:00:00",
-          end: "2025-01-14T09:20:00",
+          end: "2025-01-14T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -220,7 +220,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-15T09:00:00",
-          end: "2025-01-15T09:20:00",
+          end: "2025-01-15T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -237,7 +237,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-16T09:00:00",
-          end: "2025-01-16T09:20:00",
+          end: "2025-01-16T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -254,7 +254,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-17T09:00:00",
-          end: "2025-01-17T09:20:00",
+          end: "2025-01-17T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -271,7 +271,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-18T09:00:00",
-          end: "2025-01-18T09:20:00",
+          end: "2025-01-18T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
@@ -288,7 +288,7 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         },
         content: {
           start: "2025-01-19T09:00:00",
-          end: "2025-01-19T09:20:00",
+          end: "2025-01-19T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
         },
