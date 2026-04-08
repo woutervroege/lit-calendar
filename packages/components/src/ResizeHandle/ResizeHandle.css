@@ -69,3 +69,10 @@
   width: var(--_lc-resize-handle-thickness);
   height: min(var(--_lc-resize-handle-length-horizontal), calc(100% - 8px));
 }
+
+@media (hover: none), (pointer: coarse) {
+  :host {
+    display: none;
+    pointer-events: none;
+  }
+}
