@@ -14,7 +14,6 @@ type StoryEventCardElement = HTMLElement & {
   segmentDirection: "horizontal" | "vertical";
   firstSegment: boolean;
   lastSegment: boolean;
-  eventCardRadius: string;
 };
 
 const meta: Meta = {
@@ -34,10 +33,6 @@ const meta: Meta = {
     firstSegment: { control: "boolean" },
     lastSegment: { control: "boolean" },
     lang: { control: "text" },
-    eventCardRadius: {
-      control: "text",
-      description: "Maps to CSS var --lc-event-card-radius.",
-    },
   },
   args: {
     summary: "Weekly product sync",
@@ -52,7 +47,6 @@ const meta: Meta = {
     firstSegment: true,
     lastSegment: true,
     lang: "en",
-    eventCardRadius: "var(--radius-md, 0.375rem)",
   },
   render: (args) => {
     const frame = document.createElement("div");
@@ -82,7 +76,7 @@ const meta: Meta = {
     card.style.setProperty("--_lc-event-accent-color", "#0ea5e9");
     card.style.setProperty("--_lc-event-text-color", "CanvasText");
     card.style.setProperty("--_lc-event-height", "42px");
-    card.style.setProperty("--lc-event-card-radius", String(args.eventCardRadius ?? ""));
+    card.style.setProperty("--lc-event-card-radius", "var(--radius-md, 0.375rem)");
 
     if (card.layout === "absolute") {
       frame.style.position = "relative";
