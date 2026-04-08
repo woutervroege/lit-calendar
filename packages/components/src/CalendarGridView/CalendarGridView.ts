@@ -114,6 +114,9 @@ export class CalendarGridView extends BaseElement {
   #cachedEventEntries: EventEntry[] = [];
   #instanceToken = Math.random().toString(36).slice(2, 10);
   #activeOverflowPopoverId: string | null = null;
+  #pendingKeyboardRefocusEventId: string | null = null;
+  #keyboardRefocusRafId: number | null = null;
+  #keyboardRefocusAttemptsRemaining = 0;
   #createInteractionLockActive = false;
   #createTouchMoveBlocker = (event: TouchEvent) => {
     const pending = this.#pendingCreatePointer;
@@ -267,6 +270,7 @@ export class CalendarGridView extends BaseElement {
     this.#stopStyleObserver();
     this.#stopResizeObserver();
     this.#cancelScheduledResizeSync();
+    this.#cancelKeyboardRefocusLoop();
     this.removeEventListener("interaction-drag-hover", this.#handleDragHover as EventListener);
     super.disconnectedCallback();
   }
@@ -281,6 +285,7 @@ export class CalendarGridView extends BaseElement {
       this.#updateCalendarViewContext();
     }
     this.#scheduleSectionHeightSync();
+    this.#restorePendingKeyboardEventFocus();
   }
 
   get startDate(): Temporal.PlainDate {
@@ -1150,6 +1155,13 @@ export class CalendarGridView extends BaseElement {
         ? (event.detail as { source?: string }).source
         : undefined;
     if (updateSource !== "interaction") return;
+    const updateInputMethod =
+      event instanceof CustomEvent &&
+      event.detail &&
+      typeof event.detail === "object" &&
+      "inputMethod" in event.detail
+        ? (event.detail as { inputMethod?: string }).inputMethod
+        : undefined;
 
     const detailTarget =
       event instanceof CustomEvent &&
@@ -1182,7 +1194,53 @@ export class CalendarGridView extends BaseElement {
         cancelable: true,
       })
     );
+
+    if (updateInputMethod === "keyboard") {
+      this.#pendingKeyboardRefocusEventId = target.eventId;
+      this.#startKeyboardRefocusLoop();
+    }
   };
+
+  #restorePendingKeyboardEventFocus() {
+    const eventId = this.#pendingKeyboardRefocusEventId;
+    if (!eventId) return;
+
+    const renderedEvents = this.renderRoot.querySelectorAll<EventBase>("timed-event, all-day-event");
+    const target = Array.from(renderedEvents).find((renderedEvent) => renderedEvent.eventId === eventId);
+    if (!target) return;
+
+    const interactionSurface = target.shadowRoot?.querySelector<HTMLElement>(".interaction-surface");
+    if (!interactionSurface) return;
+
+    interactionSurface.focus({ preventScroll: true });
+  }
+
+  #startKeyboardRefocusLoop() {
+    this.#cancelKeyboardRefocusLoop();
+    this.#keyboardRefocusAttemptsRemaining = 10;
+    this.#runKeyboardRefocusAttempt();
+  }
+
+  #runKeyboardRefocusAttempt() {
+    this.#restorePendingKeyboardEventFocus();
+    if (this.#keyboardRefocusAttemptsRemaining <= 0) {
+      this.#pendingKeyboardRefocusEventId = null;
+      this.#keyboardRefocusRafId = null;
+      return;
+    }
+    this.#keyboardRefocusAttemptsRemaining -= 1;
+    this.#keyboardRefocusRafId = requestAnimationFrame(() => {
+      this.#runKeyboardRefocusAttempt();
+    });
+  }
+
+  #cancelKeyboardRefocusLoop() {
+    if (this.#keyboardRefocusRafId !== null) {
+      cancelAnimationFrame(this.#keyboardRefocusRafId);
+      this.#keyboardRefocusRafId = null;
+    }
+    this.#keyboardRefocusAttemptsRemaining = 0;
+  }
 
   #handleEventDelete = (event: Event) => {
     const detailTarget =

@@ -248,7 +248,7 @@ export class TimedEventInteractionController {
       const delta = Temporal.Duration.from({ days: direction });
       this.#setHostStart(start.add(delta));
       this.#setHostEnd(end.add(delta));
-      this.#dispatchUpdate();
+      this.#dispatchUpdate("keyboard");
       return;
     }
 
@@ -257,7 +257,7 @@ export class TimedEventInteractionController {
     const delta = Temporal.Duration.from({ minutes });
     this.#setHostStart(start.add(delta));
     this.#setHostEnd(end.add(delta));
-    this.#dispatchUpdate();
+    this.#dispatchUpdate("keyboard");
   }
 
   #moveByHours(hours: number) {
@@ -268,7 +268,7 @@ export class TimedEventInteractionController {
     const delta = Temporal.Duration.from({ hours });
     this.#setHostStart(start.add(delta));
     this.#setHostEnd(end.add(delta));
-    this.#dispatchUpdate();
+    this.#dispatchUpdate("keyboard");
   }
 
   #adjustEndBySingleStep(direction: -1 | 1) {
@@ -301,7 +301,7 @@ export class TimedEventInteractionController {
     }
 
     this.#setHostEnd(nextEnd);
-    this.#dispatchUpdate();
+    this.#dispatchUpdate("keyboard");
   }
 
   #deriveOperation(event: PointerEvent): InteractionOperation | null {
@@ -898,10 +898,13 @@ export class TimedEventInteractionController {
     return host instanceof HTMLElement && host.tagName === "EVENT-CARD" ? host : null;
   }
 
-  #dispatchUpdate() {
+  #dispatchUpdate(inputMethod: "keyboard" | "pointer" = "pointer") {
     this.#host.dispatchEvent(
       new CustomEvent("update", {
-        detail: { source: "interaction" as const },
+        detail: {
+          source: "interaction" as const,
+          inputMethod,
+        },
       })
     );
   }
