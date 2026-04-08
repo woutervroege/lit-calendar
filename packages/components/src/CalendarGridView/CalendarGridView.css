@@ -131,7 +131,7 @@ section::before {
   left: var(--_lc-hover-left, 0);
   top: var(--_lc-hover-top, 0);
   width: var(--_lc-hover-width, 0);
-  height: var(--_lc-hover-height, 0);
+  height: min(var(--_lc-hover-height, 0), var(--_lc-hover-max-height, 100%));
   background: var(--_lc-grid-ghost-color);
 }
 
