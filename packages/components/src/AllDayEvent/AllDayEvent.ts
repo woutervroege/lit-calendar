@@ -4,6 +4,7 @@ import { html, unsafeCSS } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { getEventColorStyles } from "../utils/EventColor";
+import { formatShortTime } from "../utils/TimeFormatting";
 import "../EventCard/EventCard";
 import "../ResizeHandle/ResizeHandle";
 import { EventBase } from "../EventBase/EventBase.js";
@@ -357,10 +358,7 @@ export class AllDayEvent extends EventBase {
     );
     if (!isStartVisible) return "";
 
-    return startTime.toLocaleString(this.lang, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatShortTime(this.lang, startTime);
   }
 
   #handleInteractionDragHover = (event: Event) => {
@@ -394,10 +392,7 @@ export class AllDayEvent extends EventBase {
       return;
     }
 
-    this.#previewDisplayTime = startTime.toLocaleString(this.lang, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    this.#previewDisplayTime = formatShortTime(this.lang, startTime);
     this.requestUpdate();
   };
 

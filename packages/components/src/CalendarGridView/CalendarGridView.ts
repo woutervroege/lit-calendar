@@ -20,6 +20,7 @@ import { buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { clampGridDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
+import { formatShortTimeRange } from "../utils/TimeFormatting.js";
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
@@ -1890,12 +1891,7 @@ export class CalendarGridView extends BaseElement {
     startDateTime: Temporal.PlainDateTime,
     endDateTime: Temporal.PlainDateTime
   ): string {
-    const format = (dateTime: Temporal.PlainDateTime): string =>
-      dateTime.toPlainTime().toLocaleString(this.lang, {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    return `${format(startDateTime)} - ${format(endDateTime)}`;
+    return formatShortTimeRange(this.lang, startDateTime, endDateTime);
   }
 
   #startGlobalCreatePointerTracking() {

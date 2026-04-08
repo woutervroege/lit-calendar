@@ -12,6 +12,7 @@ import type {
 import { clampAgendaDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { resolveLocale } from "../utils/Locale.js";
+import { formatShortTime } from "../utils/TimeFormatting.js";
 import componentStyle from "./CalendarListView.css?inline";
 
 type AgendaItem = {
@@ -311,11 +312,7 @@ export class CalendarListView extends CalendarViewBase {
   }
 
   #formatTime(dateTime: Temporal.PlainDateTime): string {
-    return new Intl.DateTimeFormat(this.#resolvedLocale, {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }).format(this.#toDate(dateTime));
+    return formatShortTime(this.#resolvedLocale, dateTime);
   }
 
   #toDate(value: Temporal.PlainDate | Temporal.PlainDateTime): Date {

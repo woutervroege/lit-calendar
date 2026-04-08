@@ -3,6 +3,7 @@ import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { getEventColorStyles } from "../utils/EventColor";
+import { formatShortTime, formatShortTimeRange } from "../utils/TimeFormatting";
 import "../EventCard/EventCard";
 import "../ResizeHandle/ResizeHandle";
 import { EventBase } from "../EventBase/EventBase.js";
@@ -161,18 +162,11 @@ export class TimedEvent extends EventBase {
   }
 
   #formatDisplayTime(start: Temporal.PlainTime | null, end: Temporal.PlainTime | null): string {
-    const startLabel = this.#formatTimeLabel(start);
-    const endLabel = this.#formatTimeLabel(end);
-    return `${startLabel} - ${endLabel}`;
+    return formatShortTimeRange(this.lang, start, end);
   }
 
   #formatTimeLabel(time: Temporal.PlainTime | null): string {
-    return (
-      time?.toLocaleString(this.lang, {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) ?? ""
-    );
+    return formatShortTime(this.lang, time);
   }
 
   get displayTime(): string {
@@ -234,15 +228,8 @@ export class TimedEvent extends EventBase {
     startTime: Temporal.PlainTime,
     endTime: Temporal.PlainTime
   ): string {
-    const startTimeLabel = startTime.toLocaleString(this.lang, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const endTimeLabel = endTime.toLocaleString(this.lang, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const startTimeLabel = formatShortTime(this.lang, startTime);
+    const endTimeLabel = formatShortTime(this.lang, endTime);
 
     const viewStartDate = this.#getViewStartDate();
     const showStartDate =
