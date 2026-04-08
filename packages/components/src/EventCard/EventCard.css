@@ -66,7 +66,7 @@
   @apply relative h-full pointer-events-auto transition-transform duration-100;
 }
 
-@container (max-height: 47px) {
+@container (max-height: 40px) {
   :host .event-card-shell {
     @apply flex gap-1 whitespace-nowrap;
   }
@@ -226,8 +226,8 @@
   @apply h-full w-full;
 }
 
-/* Compact cards: keep summary + time on a single row. */
-@container (max-height: 47px) {
+/* Compact cards: keep summary + time on a single row only when truly short. */
+@container (max-height: 40px) {
   :host {
     --_lc-event-recurring-icon-size: 12px;
   }
