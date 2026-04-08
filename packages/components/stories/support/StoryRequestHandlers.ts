@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { action } from "storybook/actions";
+import { isCalendarEventException, isCalendarEventRecurring } from "../../src/types/CalendarEvent.js";
 import type {
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
@@ -176,8 +177,9 @@ export function attachRequestEventHandlers(
     if (!eventKey) return;
     const current = el.events.get(eventKey);
     if (!current) return;
-    const isRecurring = detail.envelope.isRecurring ?? current.isRecurring ?? false;
-    const shouldPromptForSeries = isRecurring && !current.isException;
+    const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries =
+      isRecurring && !(detail.envelope.isException ?? isCalendarEventException(current));
     const nextStartForCurrent = toNextEventValue(detail.content.start, current.start, preserveDateOnly);
     const nextEndForCurrent = toNextEventValue(detail.content.end, current.end, preserveDateOnly);
     const startShift = computeDateValueShift(current.start, nextStartForCurrent);
@@ -267,8 +269,9 @@ export function attachRequestEventHandlers(
     const current = el.events.get(eventKey);
     if (!current) return;
     logDeleteRequested(detail);
-    const isRecurring = detail?.envelope.isRecurring ?? current.isRecurring ?? false;
-    const shouldPromptForSeries = isRecurring && !current.isException;
+    const isRecurring = detail?.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries =
+      isRecurring && !(detail.envelope.isException ?? isCalendarEventException(current));
 
     const nextEvents = new Map(el.events);
     if (isRecurring && shouldPromptForSeries) {

@@ -7,6 +7,12 @@ export type {
   CalendarEventMap,
   CalendarEventPendingByCalendarId,
   CalendarEventPendingByEventId,
+  CalendarExclusionDates,
+  CalendarRecurrenceFrequency,
+  CalendarRecurrenceRule,
+  CalendarRecurrenceTermination,
+  CalendarRecurrenceWeekday,
+  CalendarRecurrenceWeekdayRule,
   CalendarEventPendingGroupBy,
   CalendarEventPendingByOperation,
   CalendarEventPendingGroups,
@@ -44,3 +50,5 @@ export type { TabSwitchOption } from "./TabSwitch.js";
 export type { AllDayLayout, AllDayLayoutItem } from "./AllDayLayout.js";
 
 export type { WeekdayNumber } from "./Weekday.js";
+
+export { isCalendarEventException, isCalendarEventExcluded, isCalendarEventRecurring } from "./CalendarEvent.js";

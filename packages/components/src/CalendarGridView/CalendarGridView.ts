@@ -6,7 +6,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { keyed } from "lit/directives/keyed.js";
 import { styleMap } from "lit/directives/style-map.js";
 import "../TimedEvent/TimedEvent.js";
-import { BaseElement } from "../BaseElement/BaseElement.js";
+import { CalendarViewBase } from "../CalendarViewBase/CalendarViewBase.js";
 import componentStyle from "./CalendarGridView.css?inline";
 import "../AllDayEvent/AllDayEvent.js";
 import "../DayOverflowPopover/DayOverflowPopover.js";
@@ -21,6 +21,7 @@ import { clampGridDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { formatShortTimeRange } from "../utils/TimeFormatting.js";
+import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
@@ -63,9 +64,8 @@ type CreateHit = {
 };
 
 @customElement("calendar-grid-view")
-export class CalendarGridView extends BaseElement {
+export class CalendarGridView extends CalendarViewBase {
   #startDate?: string;
-  #currentTime?: string;
   #timezone?: string;
   #lang?: string;
   #daysPerWeekStored = 7;
@@ -79,7 +79,6 @@ export class CalendarGridView extends BaseElement {
   rtl = false;
   defaultEventSummary = "New event";
   defaultEventColor = "#0ea5e9";
-  defaultCalendarId?: string;
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
   #dragHoverMaxHeightPx: number | null = null;
@@ -110,8 +109,6 @@ export class CalendarGridView extends BaseElement {
   #isCompactMonth = false;
   #cachedViewDaysKey = "";
   #cachedViewDays: Temporal.PlainDate[] = [];
-  #cachedEventEntriesSource?: EventsMap;
-  #cachedEventEntries: EventEntry[] = [];
   #instanceToken = Math.random().toString(36).slice(2, 10);
   #activeOverflowPopoverId: string | null = null;
   #pendingKeyboardRefocusEventId: string | null = null;
@@ -147,8 +144,11 @@ export class CalendarGridView extends BaseElement {
   get #viewportEvents(): EventEntry[] {
     const viewport = this.#renderedViewportRange;
     if (!viewport) return [];
-    return this.#eventsAsEntries.filter(
-      ([, event]) => event.pendingOp !== "deleted" && this.#eventOverlapsViewport(event, viewport)
+    return Array.from(
+      this.getRenderedEvents({
+        start: viewport.start,
+        end: viewport.endExclusive,
+      }).entries()
     );
   }
 
@@ -179,69 +179,29 @@ export class CalendarGridView extends BaseElement {
     return { start, endExclusive };
   }
 
-  #eventOverlapsViewport(
-    event: EventInput,
-    viewport: { start: Temporal.PlainDateTime; endExclusive: Temporal.PlainDateTime }
-  ): boolean {
-    const eventStart = this.#toPlainDateTime(event.start);
-    const eventEnd = this.#toPlainDateTime(event.end);
-
-    if (Temporal.PlainDateTime.compare(eventEnd, eventStart) <= 0) return false;
-    return (
-      Temporal.PlainDateTime.compare(eventStart, viewport.endExclusive) < 0 &&
-      Temporal.PlainDateTime.compare(eventEnd, viewport.start) > 0
-    );
-  }
-
   #isRecurringEvent(event: EventInput): boolean {
-    const envelope = (
-      event as EventInput & {
-        envelope?: { isRecurring?: boolean; recurrenceId?: string; isException?: boolean };
-      }
-    ).envelope;
-    const isException = this.#isExceptionEvent(event);
-    if (isException) return false;
-    return Boolean(
-      event.isRecurring || event.recurrenceId || envelope?.isRecurring || envelope?.recurrenceId
-    );
+    return isCalendarEventRecurring(event);
   }
 
   #isExceptionEvent(event: EventInput): boolean {
-    const envelope = (
-      event as EventInput & {
-        envelope?: { isException?: boolean };
-      }
-    ).envelope;
-    return Boolean(event.isException || envelope?.isException);
+    return isCalendarEventException(event);
   }
 
   static get properties() {
     return {
+      ...CalendarViewBase.properties,
       startDate: { type: String, attribute: "start-date" },
       daysPerWeek: { type: Number, attribute: "days-per-week" },
-      events: {
-        type: Object,
-        converter: {
-          fromAttribute: (value: string | null): EventsMap =>
-            new Map(JSON.parse(value || "[]") as EventEntry[]),
-        },
-      },
       variant: { type: String, attribute: "variant", reflect: true },
       labelsHidden: { type: Boolean, attribute: "labels-hidden", reflect: true },
       rtl: { type: Boolean, reflect: true },
-      defaultEventSummary: { type: String, attribute: "default-event-summary" },
-      defaultEventColor: { type: String, attribute: "default-event-color" },
-      defaultCalendarId: { type: String, attribute: "default-source-id" },
-      lang: { type: String },
-      timezone: { type: String },
       snapInterval: { type: Number, attribute: "snap-interval" },
       visibleHours: { type: Number, attribute: "visible-hours" },
-      currentTime: { type: String, attribute: "current-time" },
     } as const;
   }
 
   static get styles() {
-    return [...BaseElement.styles, unsafeCSS(componentStyle)];
+    return [...CalendarViewBase.styles, unsafeCSS(componentStyle)];
   }
 
   get variant(): "timed" | "all-day" {
@@ -296,21 +256,6 @@ export class CalendarGridView extends BaseElement {
     this.#startDate = startDate;
   }
 
-  get currentTime(): Temporal.PlainDateTime {
-    if (!this.#currentTime) {
-      return Temporal.Now.zonedDateTimeISO(this.timezone).toPlainDateTime();
-    }
-    return this.#toPlainDateTimeFromString(this.#currentTime);
-  }
-
-  set currentTime(currentTime:
-    | Temporal.PlainDateTime
-    | Temporal.ZonedDateTime
-    | string
-    | undefined) {
-    this.#currentTime = currentTime?.toString();
-  }
-
   get timezone(): string {
     return this.#timezone ?? Temporal.Now.timeZoneId();
   }
@@ -325,6 +270,10 @@ export class CalendarGridView extends BaseElement {
 
   set lang(lang: string | undefined) {
     this.#lang = lang || undefined;
+  }
+
+  get #resolvedCurrentDateTime(): Temporal.PlainDateTime {
+    return this.#toPlainDateTimeFromString(this.currentTime);
   }
 
   get daysPerWeek(): number {
@@ -1073,7 +1022,7 @@ export class CalendarGridView extends BaseElement {
       hidden: false,
     }));
     const dayLabel = this.#getPopoverDayLabel(day, dayIndex);
-    const isCurrentDay = Temporal.PlainDate.compare(day, this.currentTime.toPlainDate()) === 0;
+    const isCurrentDay = Temporal.PlainDate.compare(day, this.#resolvedCurrentDateTime.toPlainDate()) === 0;
     const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
 
     return html`
@@ -1126,8 +1075,8 @@ export class CalendarGridView extends BaseElement {
         eventId: current?.eventId ?? target.eventId,
         calendarId: current?.calendarId,
         recurrenceId: current?.recurrenceId,
-        isException: current?.isException,
-        isRecurring: current?.isRecurring,
+        isException: current ? isCalendarEventException(current) : undefined,
+        isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
       content: {
         start: current?.start ?? target.start,
@@ -1178,8 +1127,8 @@ export class CalendarGridView extends BaseElement {
         eventId: target.eventId,
         calendarId: current?.calendarId,
         recurrenceId: current?.recurrenceId,
-        isException: current?.isException,
-        isRecurring: current?.isRecurring,
+        isException: current ? isCalendarEventException(current) : undefined,
+        isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
       content: {
         start: target.start,
@@ -1255,7 +1204,7 @@ export class CalendarGridView extends BaseElement {
         calendarId,
         eventId,
         recurrenceId: current?.recurrenceId,
-        isRecurring: current?.isRecurring,
+        isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
     };
 
@@ -1273,7 +1222,7 @@ export class CalendarGridView extends BaseElement {
     if (cols <= 0 || totalDays <= 0) return html``;
 
     const days = this.viewDays;
-    const currentDay = this.currentTime.toPlainDate();
+    const currentDay = this.#resolvedCurrentDateTime.toPlainDate();
     const monthFormatter = new Intl.DateTimeFormat(this.lang, { month: "short" });
     const dayFormatter = new Intl.NumberFormat(this.lang);
     const fullDateFormatter = new Intl.DateTimeFormat(this.lang, { dateStyle: "full" });
@@ -2122,7 +2071,7 @@ export class CalendarGridView extends BaseElement {
     const days = this.viewDays;
     if (!days.length || this.daysPerWeek <= 0) return "";
 
-    const currentDateTime = this.currentTime;
+    const currentDateTime = this.#resolvedCurrentDateTime;
     const currentDay = currentDateTime.toPlainDate();
     const currentDayIndex = days.findIndex(
       (day) => Temporal.PlainDate.compare(day, currentDay) === 0
@@ -2250,15 +2199,6 @@ export class CalendarGridView extends BaseElement {
 
   #isDateOnlyValue(value: EventInput["start"]): boolean {
     return value instanceof Temporal.PlainDate;
-  }
-
-  get #eventsAsEntries(): EventEntry[] {
-    if (this.events === this.#cachedEventEntriesSource) {
-      return this.#cachedEventEntries;
-    }
-    this.#cachedEventEntriesSource = this.events;
-    this.#cachedEventEntries = Array.from(this.events?.entries() ?? []);
-    return this.#cachedEventEntries;
   }
 
   #getAllDayOverflowLayout(): AllDayOverflowLayout {
@@ -2506,7 +2446,7 @@ export class CalendarGridView extends BaseElement {
     const value: CalendarViewContextValue = {
       lang: this.lang,
       timezone: this.timezone,
-      currentTime: this.currentTime.toString(),
+      currentTime: this.currentTime,
     };
     this.#calendarViewProvider.setValue(value);
   }

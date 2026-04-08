@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { action } from "storybook/actions";
+import { Temporal } from "@js-temporal/polyfill";
 import "../src/EventCalendar/EventCalendar.js";
+import { isCalendarEventException, isCalendarEventRecurring } from "../src/types/CalendarEvent.js";
 import { calendarCssProps } from "./support/CalendarCssProps.js";
 import {
   AUTO_LOCALE_OPTION,
@@ -45,6 +47,49 @@ function resolveEventMapKey(
     return key;
   }
   return undefined;
+}
+
+function isSameSeries(event: CalendarEvent, envelope: { eventId?: string; calendarId?: string }): boolean {
+  if (!envelope.eventId) return false;
+  if (event.eventId !== envelope.eventId) return false;
+  if (envelope.calendarId !== undefined && event.calendarId !== envelope.calendarId) return false;
+  return true;
+}
+
+function resolveSeriesEventKeys(
+  events: Map<string, CalendarEvent>,
+  envelope: { eventId?: string; calendarId?: string }
+): string[] {
+  return Array.from(events.entries())
+    .filter(([, event]) => isSameSeries(event, envelope))
+    .map(([key]) => key);
+}
+
+function computeDateValueShift(
+  from: CalendarEvent["start"],
+  to: CalendarEvent["start"]
+): Temporal.Duration | null {
+  if (from instanceof Temporal.PlainDate && to instanceof Temporal.PlainDate) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  if (from instanceof Temporal.PlainDateTime && to instanceof Temporal.PlainDateTime) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  if (from instanceof Temporal.ZonedDateTime && to instanceof Temporal.ZonedDateTime) {
+    return from.until(to, { largestUnit: "day" });
+  }
+  return null;
+}
+
+function applyDateValueShift(
+  value: CalendarEvent["start"],
+  shift: Temporal.Duration | null
+): CalendarEvent["start"] {
+  if (!shift) return value;
+  if (value instanceof Temporal.PlainDate) return value.add(shift);
+  if (value instanceof Temporal.PlainDateTime) return value.add(shift);
+  if (value instanceof Temporal.ZonedDateTime) return value.add(shift);
+  return value;
 }
 
 function summarizePendingGroups(pendingEvents: CalendarEventPendingGroups) {
@@ -100,16 +145,51 @@ function attachUnsyncedRequestEventHandlers(el: StoryEventCalendarElement) {
     if (!eventKey) return;
     const current = el.events.get(eventKey);
     if (!current) return;
+    const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries =
+      isRecurring && !(detail.envelope.isException ?? isCalendarEventException(current));
+    const nextStartForCurrent = detail.content.start ?? current.start;
+    const nextEndForCurrent = detail.content.end ?? current.end;
+    const startShift = computeDateValueShift(current.start, nextStartForCurrent);
+    const endShift = computeDateValueShift(current.end, nextEndForCurrent);
 
     const nextEvents = new Map(el.events);
+    if (isRecurring && shouldPromptForSeries) {
+      const commitSeries = window.confirm(
+        "Apply changes to the whole series?\n\nOK = series\nCancel = only this instance"
+      );
+      if (commitSeries) {
+        const seriesKeys = resolveSeriesEventKeys(nextEvents, {
+          calendarId: current.calendarId,
+          eventId: current.eventId,
+        });
+        for (const key of seriesKeys) {
+          const seriesEvent = nextEvents.get(key);
+          if (!seriesEvent || isCalendarEventException(seriesEvent)) continue;
+          nextEvents.set(key, {
+            ...seriesEvent,
+            start: applyDateValueShift(seriesEvent.start, startShift),
+            end: applyDateValueShift(seriesEvent.end, endShift),
+            summary: detail.content.summary ?? seriesEvent.summary,
+            color: detail.content.color ?? seriesEvent.color,
+            pendingOp: seriesEvent.pendingOp === "created" ? "created" : "updated",
+          });
+        }
+        el.events = nextEvents;
+        reportPendingEvents(el, "update-series");
+        return;
+      }
+    }
+
     nextEvents.set(eventKey, {
       ...current,
-      start: detail.content.start ?? current.start,
-      end: detail.content.end ?? current.end,
+      start: nextStartForCurrent,
+      end: nextEndForCurrent,
       summary: detail.content.summary ?? current.summary,
       color: detail.content.color ?? current.color,
       // Keep creates as creates; persisted events become pending updates.
       pendingOp: current.pendingOp === "created" ? "created" : "updated",
+      isException: isRecurring ? true : current.isException,
     });
     el.events = nextEvents;
     reportPendingEvents(el, "update");
@@ -124,11 +204,44 @@ function attachUnsyncedRequestEventHandlers(el: StoryEventCalendarElement) {
     if (!eventKey) return;
     const current = el.events.get(eventKey);
     if (!current) return;
+    const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries =
+      isRecurring && !(detail.envelope.isException ?? isCalendarEventException(current));
 
     const nextEvents = new Map(el.events);
+    if (isRecurring && shouldPromptForSeries) {
+      const commitSeries = window.confirm(
+        "Delete the whole series?\n\nOK = series\nCancel = only this instance"
+      );
+      if (commitSeries) {
+        const seriesKeys = resolveSeriesEventKeys(nextEvents, {
+          calendarId: current.calendarId,
+          eventId: current.eventId,
+        });
+        for (const key of seriesKeys) {
+          const seriesEvent = nextEvents.get(key);
+          if (!seriesEvent) continue;
+          nextEvents.set(key, {
+            ...seriesEvent,
+            pendingOp: "deleted",
+          });
+        }
+        el.events = nextEvents;
+        reportPendingEvents(el, "delete-series");
+        return;
+      }
+    } else {
+      const doDelete = confirm("Are you sure you want to delete this event?");
+      if (!doDelete) {
+        event.preventDefault();
+        return;
+      }
+    }
+
     nextEvents.set(eventKey, {
       ...current,
       pendingOp: "deleted",
+      isException: isRecurring ? true : current.isException,
     });
     el.events = nextEvents;
     reportPendingEvents(el, "delete");
