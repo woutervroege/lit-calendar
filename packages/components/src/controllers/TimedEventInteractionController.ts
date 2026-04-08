@@ -613,8 +613,25 @@ export class TimedEventInteractionController {
       viewDays
     );
 
+    if (this.#isUnchangedMove(savedStart, savedEnd, targetStart, targetEnd)) {
+      this.#cleanupAfterFinalMove();
+      return;
+    }
+
     this.#applyFinalMove(targetStart, targetEnd);
     this.#cleanupAfterFinalMove();
+  }
+
+  #isUnchangedMove(
+    originalStart: Temporal.PlainDateTime,
+    originalEnd: Temporal.PlainDateTime,
+    targetStart: Temporal.PlainDateTime,
+    targetEnd: Temporal.PlainDateTime
+  ): boolean {
+    return (
+      Temporal.PlainDateTime.compare(originalStart, targetStart) === 0 &&
+      Temporal.PlainDateTime.compare(originalEnd, targetEnd) === 0
+    );
   }
 
   #getFinalizeMoveContext(): {
@@ -802,13 +819,30 @@ export class TimedEventInteractionController {
       this.#dispatchDragOffset({ offsetX: 0, offsetY: 0 });
     }
 
-    if (this.#operation !== "move") {
+    if (this.#shouldDispatchNonMoveUpdate()) {
       this.#dispatchUpdate();
     }
 
     if (wasDragging) {
       this.#dispatchDragStateChange(false, oldPointerType);
     }
+  }
+
+  #shouldDispatchNonMoveUpdate(): boolean {
+    if (this.#operation === "move") {
+      return false;
+    }
+
+    const originalStart = this.#savedStart;
+    const originalEnd = this.#savedEnd;
+    const currentStart = this.#toPlainDateTimeOrNull(this.#host.start);
+    const currentEnd = this.#toPlainDateTimeOrNull(this.#host.end);
+
+    if (!originalStart || !originalEnd || !currentStart || !currentEnd) {
+      return true;
+    }
+
+    return !this.#isUnchangedMove(originalStart, originalEnd, currentStart, currentEnd);
   }
 
   #getAllowedTarget(target: EventTarget | null, composedPath: EventTarget[]): HTMLElement | null {
