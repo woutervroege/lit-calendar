@@ -25,6 +25,7 @@
   --_lc-event-focus-ring-inset-width: 0px;
   --_lc-event-recurring-icon-size: 13px;
   --_lc-event-card-segment-radius: var(--lc-event-card-radius, var(--radius-sm));
+  --_lc-resize-handle-color: var(--_lc-event-card-text-color);
 }
 
 :host([layout="flow"]) {
@@ -309,4 +310,8 @@
 
 ::slotted(*) {
   position: absolute;
+}
+
+::slotted(resize-handle) {
+  --_lc-resize-handle-color: var(--_lc-event-card-text-color);
 }
