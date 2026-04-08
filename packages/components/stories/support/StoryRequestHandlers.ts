@@ -91,16 +91,16 @@ function computeDateValueShift(
   from: CalendarEvent["start"],
   to: CalendarEvent["start"]
 ): Temporal.Duration | null {
-  if (from instanceof Temporal.PlainDate && to instanceof Temporal.PlainDate) {
-    return from.until(to, { largestUnit: "day" });
-  }
-  if (from instanceof Temporal.PlainDateTime && to instanceof Temporal.PlainDateTime) {
-    return from.until(to, { largestUnit: "day" });
-  }
-  if (from instanceof Temporal.ZonedDateTime && to instanceof Temporal.ZonedDateTime) {
-    return from.until(to, { largestUnit: "day" });
-  }
-  return null;
+  const toPlainDateTime = (value: CalendarEvent["start"]): Temporal.PlainDateTime => {
+    if (value instanceof Temporal.PlainDate) {
+      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    }
+    if (value instanceof Temporal.PlainDateTime) {
+      return value;
+    }
+    return value.toPlainDateTime();
+  };
+  return toPlainDateTime(from).until(toPlainDateTime(to), { largestUnit: "day" });
 }
 
 function applyDateValueShift(
@@ -150,6 +150,47 @@ function parseRecurrenceStart(
   if (template instanceof Temporal.PlainDate) return plainDateTime.toPlainDate();
   if (template instanceof Temporal.PlainDateTime) return plainDateTime;
   return plainDateTime.toZonedDateTime(template.timeZoneId);
+}
+
+function toRecurrenceId(
+  value: CalendarEvent["start"],
+  template: CalendarEvent["start"]
+): string {
+  const pad = (segment: number) => String(segment).padStart(2, "0");
+  const date = `${value.year}${pad(value.month)}${pad(value.day)}`;
+  if (template instanceof Temporal.PlainDate) return date;
+  return `${date}T${pad(value.hour)}${pad(value.minute)}${pad(value.second)}`;
+}
+
+function shiftExclusionDates(
+  event: CalendarEvent,
+  shift: Temporal.Duration | null
+): Set<string> | undefined {
+  if (!event.exclusionDates?.size) return event.exclusionDates;
+  if (!shift) return event.exclusionDates;
+
+  const shifted = new Set<string>();
+  for (const recurrenceId of event.exclusionDates) {
+    const parsed = parseRecurrenceStart(recurrenceId, event.start);
+    if (!parsed) {
+      shifted.add(recurrenceId);
+      continue;
+    }
+    const shiftedValue = applyDateValueShift(parsed, shift);
+    shifted.add(toRecurrenceId(shiftedValue, event.start));
+  }
+  return shifted;
+}
+
+function shiftRecurrenceId(
+  recurrenceId: string | undefined,
+  template: CalendarEvent["start"],
+  shift: Temporal.Duration | null
+): string | undefined {
+  if (!recurrenceId || !shift) return recurrenceId;
+  const parsed = parseRecurrenceStart(recurrenceId, template);
+  if (!parsed) return recurrenceId;
+  return toRecurrenceId(applyDateValueShift(parsed, shift), template);
 }
 
 function withExcludedRecurrence(
@@ -304,11 +345,21 @@ export function attachRequestEventHandlers(
       for (const key of seriesKeys) {
         const seriesEvent = nextEvents.get(key);
         if (!seriesEvent) continue;
-        if (seriesEvent.isException) continue;
+        if (isCalendarEventException(seriesEvent)) {
+          nextEvents.set(key, {
+            ...applySharedUpdate(seriesEvent),
+            recurrenceId: shiftRecurrenceId(seriesEvent.recurrenceId, seriesEvent.start, startShift),
+            start: applyDateValueShift(seriesEvent.start, startShift),
+            end: applyDateValueShift(seriesEvent.end, endShift),
+            isException: true,
+          });
+          continue;
+        }
         nextEvents.set(key, {
           ...applySharedUpdate(seriesEvent),
           start: applyDateValueShift(seriesEvent.start, startShift),
           end: applyDateValueShift(seriesEvent.end, endShift),
+          exclusionDates: shiftExclusionDates(seriesEvent, startShift),
           isException: false,
         });
       }

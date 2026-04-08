@@ -1,11 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type {
-  CalendarRecurrenceRule,
   CalendarEventDateValue,
   CalendarEventEntry,
   CalendarEvent as CalendarEventRecord,
   CalendarEventView,
   CalendarEventViewEntry,
+  CalendarRecurrenceRule,
 } from "../../src/types/CalendarEvent.js";
 import { resolveLocale } from "../../src/utils/Locale.js";
 
@@ -164,7 +164,23 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
             interval: 1,
             until: "2025-01-31T00:00:00",
           },
-          exclusionDates: ["20250118T090000"],
+          exclusionDates: ["20250120T090000"],
+        },
+      },
+    ],
+    [
+      "event-daily-standup-exception-20250118-1100",
+      {
+        envelope: {
+          calendarId: CALENDAR_IDS.work,
+          eventId: "daily-standup@example.test",
+          recurrenceId: "20250118T090000",
+        },
+        content: {
+          start: "2025-01-18T11:00:00",
+          end: "2025-01-18T11:15:00",
+          summary: "Daily Standup (moved)",
+          color: "#10B981",
         },
       },
     ],

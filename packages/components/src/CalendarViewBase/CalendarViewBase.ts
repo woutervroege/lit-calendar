@@ -132,6 +132,13 @@ export abstract class CalendarViewBase extends BaseElement {
     const rangeEnd = toPlainDateTime(range.end);
     if (Temporal.PlainDateTime.compare(rangeEnd, rangeStart) <= 0) return new Map();
 
+    const detachedExceptionKeys = new Set<string>();
+    for (const [, event] of this.events ?? []) {
+      if (event.pendingOp === "deleted") continue;
+      if (!event.eventId || !event.recurrenceId) continue;
+      detachedExceptionKeys.add(`${event.eventId}::${event.recurrenceId}`);
+    }
+
     const renderedEvents: EventsMap = new Map();
     for (const [id, event] of this.events ?? []) {
       if (event.pendingOp === "deleted") continue;
@@ -159,7 +166,14 @@ export abstract class CalendarViewBase extends BaseElement {
 
           const recurrenceId = toRecurrenceId(occurrenceStart, event.start);
           const isExcluded = event.exclusionDates?.has(recurrenceId) ?? false;
-          if (!isExcluded && rangeOverlaps(occurrenceStart, occurrenceEnd, rangeStart, rangeEnd)) {
+          const hasDetachedException =
+            Boolean(event.eventId) &&
+            detachedExceptionKeys.has(`${event.eventId}::${recurrenceId}`);
+          if (
+            !isExcluded &&
+            !hasDetachedException &&
+            rangeOverlaps(occurrenceStart, occurrenceEnd, rangeStart, rangeEnd)
+          ) {
             renderedEvents.set(`${id}::${recurrenceId}`, {
               ...event,
               recurrenceId,
