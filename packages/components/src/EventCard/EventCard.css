@@ -233,7 +233,7 @@
   }
 
   :host .event-card-heading {
-    @apply items-center overflow-hidden whitespace-nowrap text-ellipsis;
+    @apply items-start overflow-hidden whitespace-nowrap text-ellipsis py-2;
   }
 
   :host .event-card-compact-label {
@@ -247,7 +247,7 @@
   }
 
   :host .event-card-recurring-icon-wrap {
-    @apply mt-0 self-center;
+    @apply mt-0 self-start;
   }
 }
 
