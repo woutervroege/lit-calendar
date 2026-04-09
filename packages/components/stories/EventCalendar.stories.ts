@@ -12,6 +12,7 @@ import {
   weekStartControlLabels,
   weekStartControlOptions,
 } from "./support/StoryData.js";
+import { attachRequestEventHandlers } from "./support/StoryRequestHandlers.js";
 
 type StoryEventCalendarElement = HTMLElement & {
   events: Map<string, CalendarEvent>;
@@ -67,6 +68,7 @@ function renderCalendar(args: Record<string, unknown>) {
 
   const entries = Array.isArray(args.events) ? args.events : sampleEvents;
   el.events = new Map(entries as Array<[string, CalendarEvent]>);
+  attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
 
   return el;
 }
