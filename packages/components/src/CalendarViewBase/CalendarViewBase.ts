@@ -167,7 +167,8 @@ export abstract class CalendarViewBase extends BaseElement {
           cancelable: true,
         })
       );
-      if (!accepted) {
+      const keepException = window.confirm("Save this as an exception?\n\nOK = keep\nCancel = revert");
+      if (!accepted || !keepException) {
         return { handled: true, accepted: false };
       }
       this.#applyEventOperation({

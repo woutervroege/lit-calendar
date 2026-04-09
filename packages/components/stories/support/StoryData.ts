@@ -185,6 +185,44 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
       },
     ],
     [
+      "event-all-day-ops-rotation-20250106",
+      {
+        envelope: {
+          calendarId: CALENDAR_IDS.work,
+          eventId: "all-day-ops-rotation@example.test",
+        },
+        content: {
+          start: "2025-01-06",
+          end: "2025-01-07",
+          summary: "Ops Rotation (All day)",
+          color: "#0EA5E9",
+          recurrenceRule: {
+            freq: "WEEKLY",
+            interval: 1,
+            byDay: [{ day: "MO" }],
+            until: "2025-02-28",
+          },
+          exclusionDates: ["20250120"],
+        },
+      },
+    ],
+    [
+      "event-all-day-ops-rotation-exception-20250120",
+      {
+        envelope: {
+          calendarId: CALENDAR_IDS.work,
+          eventId: "all-day-ops-rotation@example.test",
+          recurrenceId: "20250120",
+        },
+        content: {
+          start: "2025-01-21",
+          end: "2025-01-22",
+          summary: "Ops Rotation (moved to Tuesday)",
+          color: "#0EA5E9",
+        },
+      },
+    ],
+    [
       "event-meeting-john-20250110",
       {
         envelope: { calendarId: CALENDAR_IDS.personal, eventId: "meeting-with-john@example.test" },
