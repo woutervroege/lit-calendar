@@ -345,6 +345,27 @@ export abstract class CalendarViewBase extends BaseElement {
 
     const recurrenceId = detail.envelope.recurrenceId ?? current.recurrenceId;
     const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries = isRecurring && !isCalendarEventException(current);
+
+    if (!shouldPromptForSeries) {
+      const doDelete = window.confirm("Are you sure you want to delete this event?");
+      if (!doDelete) return true;
+    } else {
+      const commitSeries = window.confirm(
+        "Delete the whole series?\n\nOK = series\nCancel = only this instance"
+      );
+      if (commitSeries) {
+        this.#applyEventOperation({
+          type: "remove",
+          input: {
+            ...fromDeleteRequest(detail),
+            target: { key: eventKey },
+            scope: "series",
+          },
+        });
+        return true;
+      }
+    }
 
     if (isCalendarEventException(current)) {
       this.#applyEventOperation({
@@ -375,6 +396,7 @@ export abstract class CalendarViewBase extends BaseElement {
       input: {
         ...removeInput,
         target: { key: eventKey },
+        scope: "single",
       },
     });
     return true;
