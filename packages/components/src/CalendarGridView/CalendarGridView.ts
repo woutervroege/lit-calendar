@@ -22,6 +22,7 @@ import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { formatShortTimeRange } from "../utils/TimeFormatting.js";
 import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
+import { parseRecurrenceId } from "../domain/event-ops/recurrence.js";
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
@@ -1139,18 +1140,49 @@ export class CalendarGridView extends CalendarViewBase {
         color: target.color,
       },
     };
-    this.dispatchEvent(
+    const updateRequested = this.dispatchEvent(
       new CustomEvent("event-update-requested", {
         detail,
         cancelable: true,
       })
     );
+    if (!updateRequested) {
+      this.#restoreRenderedEventRange(target, current, recurrenceId);
+      return;
+    }
 
     if (updateInputMethod === "keyboard") {
       this.#pendingKeyboardRefocusEventId = target.eventId;
       this.#startKeyboardRefocusLoop();
     }
   };
+
+  #restoreRenderedEventRange(
+    target: EventBase,
+    current: EventInput | undefined,
+    recurrenceId?: string
+  ) {
+    if (!current) return;
+
+    if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
+      const parsedRecurrence = parseRecurrenceId(recurrenceId, current.start);
+      if (parsedRecurrence) {
+        const masterStart = this.#toPlainDateTime(current.start);
+        const masterEnd = this.#toPlainDateTime(current.end);
+        const duration = masterStart.until(masterEnd);
+        const occurrenceStart = this.#toPlainDateTime(parsedRecurrence);
+        const occurrenceEnd = occurrenceStart.add(duration);
+        const restoredStart = this.#coerceUpdatedEventDateValue(occurrenceStart, current.start);
+        const restoredEnd = this.#coerceUpdatedEventDateValue(occurrenceEnd, current.end);
+        target.start = restoredStart.toString();
+        target.end = restoredEnd.toString();
+        return;
+      }
+    }
+
+    target.start = current.start.toString();
+    target.end = current.end.toString();
+  }
 
   #restorePendingKeyboardEventFocus() {
     const eventId = this.#pendingKeyboardRefocusEventId;

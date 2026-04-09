@@ -15,6 +15,7 @@ import { isCalendarEventException, isCalendarEventRecurring } from "../../src/ty
 import type {
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
+  EventExceptionRequestDetail,
   EventSelectionRequestDetail,
   EventUpdateRequestDetail,
 } from "../../src/types/CalendarEventRequests.js";
@@ -38,6 +39,19 @@ const logDeleteCommittedInstance = action("event-delete-committed-instance");
 const logDeleteCommittedSeries = action("event-delete-committed-series");
 const logDeleteCancelled = action("event-delete-requested (cancelled)");
 const logSelectionRequested = action("event-selection-requested");
+const logExceptionRequested = action("event-exception-requested");
+
+function cloneEventMap(events: Map<string, CalendarEvent>): Map<string, CalendarEvent> {
+  return new Map(
+    Array.from(events.entries()).map(([key, value]) => [
+      key,
+      {
+        ...value,
+        exclusionDates: value.exclusionDates ? new Set(value.exclusionDates) : undefined,
+      },
+    ])
+  );
+}
 
 function resolveEventMapKey(
   events: Map<string, CalendarEvent>,
@@ -198,6 +212,60 @@ export function attachRequestEventHandlers(
     const occurrenceEnd = shiftDateValue(occurrenceStart, baseDuration);
     const updateKind = getUpdateKind(occurrenceStart, occurrenceEnd, nextStart, nextEnd);
     const baseUpdateInput = fromUpdateRequest(detail);
+    const isRecurringInstanceMove =
+      updateKind === "move" &&
+      Boolean(recurrenceId && current.recurrenceRule && !current.recurrenceId);
+
+    if (isRecurringInstanceMove && recurrenceId) {
+      const previousEvents = cloneEventMap(el.events);
+      api.addException({
+        target: { key: eventKey },
+        recurrenceId,
+        event: {
+          start: nextStart,
+          end: nextEnd,
+          summary: detail.content.summary,
+          color: detail.content.color,
+          location: detail.content.location,
+          calendarId: detail.envelope.calendarId,
+        },
+      });
+      applyApiResult(el, api, options.onPendingChanged);
+
+      const exceptionRequestDetail: EventExceptionRequestDetail = {
+        envelope: {
+          eventId: detail.envelope.eventId,
+          calendarId: detail.envelope.calendarId,
+          recurrenceId,
+          isException: true,
+          isRecurring: true,
+        },
+        content: {
+          start: nextStart,
+          end: nextEnd,
+          summary: detail.content.summary,
+          color: detail.content.color,
+          location: detail.content.location,
+        },
+        source: "move",
+      };
+      logExceptionRequested(exceptionRequestDetail);
+      const notCancelled = el.dispatchEvent(
+        new CustomEvent("event-exception-requested", {
+          detail: exceptionRequestDetail,
+          cancelable: true,
+          composed: true,
+        })
+      );
+      const keepException =
+        mode === "sync" ? window.confirm("Save this as an exception?\n\nOK = keep\nCancel = revert") : true;
+      if (!notCancelled || !keepException) {
+        if (event.cancelable) event.preventDefault();
+        el.events = previousEvents;
+        options.onPendingChanged?.();
+      }
+      return;
+    }
 
     if (!isRecurring || !shouldPromptForSeries) {
       logUpdateCommittedInstance({
