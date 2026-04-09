@@ -1,15 +1,27 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { ContextProvider } from "@lit/context";
 import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import "../Button/Button.js";
 import "../CalendarViewGroup/CalendarViewGroup.js";
 import type { CalendarViewGroup } from "../CalendarViewGroup/CalendarViewGroup.js";
-import type { CalendarEventViewMap as EventsMap } from "../types/CalendarEvent.js";
+import type {
+  CalendarEventPendingByCalendarId,
+  CalendarEventPendingByOperation,
+  CalendarEventPendingGroups,
+  CalendarEventPendingOperation,
+  CalendarEventPendingOptions,
+  CalendarEventPendingResult,
+  CalendarEventView,
+  CalendarEventViewMap as EventsMap,
+} from "../types/CalendarEvent.js";
 import type { CalendarPresentationMode, CalendarViewMode } from "../types/CalendarViewGroup.js";
 import type { TabSwitchOption } from "../types/TabSwitch.js";
 import type { WeekdayNumber } from "../types/Weekday.js";
 import "../TabSwitch/TabSwitch.js";
+import { type EventsAPIContextValue, eventsAPIContext } from "../context/EventsAPIContext.js";
+import { EventsAPI, type EventOperation } from "@lit-calendar/events-api";
 import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import { renderGridIcon } from "../icons/GridIcon.js";
 import { renderListIcon } from "../icons/ListIcon.js";
@@ -103,6 +115,28 @@ export class EventCalendar extends BaseElement {
   defaultEventSummary = "New event";
   defaultEventColor = "#0ea5e9";
   defaultCalendarId?: string;
+  #eventsAPIProvider = new ContextProvider(this, {
+    context: eventsAPIContext,
+  });
+  #eventsAPIContextValue: EventsAPIContextValue = {
+    getState: () => this.events ?? new Map(),
+    getApi: () =>
+      new EventsAPI(this.events ?? new Map(), {
+        timezone: this.timezone,
+        trackPending: true,
+      }),
+    apply: (operation) => this.#applyOperation(operation),
+    create: (input) => this.#applyOperation({ type: "create", input }),
+    update: (input) => this.#applyOperation({ type: "update", input }),
+    move: (input) => this.#applyOperation({ type: "move", input }),
+    resizeStart: (input) => this.#applyOperation({ type: "resize-start", input }),
+    resizeEnd: (input) => this.#applyOperation({ type: "resize-end", input }),
+    remove: (input) => this.#applyOperation({ type: "remove", input }),
+    addExclusion: (input) => this.#applyOperation({ type: "add-exclusion", input }),
+    removeExclusion: (input) => this.#applyOperation({ type: "remove-exclusion", input }),
+    addException: (input) => this.#applyOperation({ type: "add-exception", input }),
+    removeException: (input) => this.#applyOperation({ type: "remove-exception", input }),
+  };
 
   static get styles() {
     return [...BaseElement.styles, unsafeCSS(componentStyle)];
@@ -190,6 +224,48 @@ export class EventCalendar extends BaseElement {
     if (this.#startDate === nextValue) return;
     this.#startDate = nextValue;
     this.requestUpdate();
+  }
+
+  get pendingByCalendarId(): CalendarEventPendingByCalendarId {
+    return this.getPendingEvents({ groupBy: "calendarId" });
+  }
+
+  getPendingEvents(options: { groupBy: "pendingOp" }): CalendarEventPendingGroups;
+  getPendingEvents(options: { groupBy: "calendarId" }): CalendarEventPendingByCalendarId;
+  getPendingEvents(options: CalendarEventPendingOptions = {}): CalendarEventPendingResult {
+    if (options.groupBy === "calendarId") return this.#collectPendingByCalendarId();
+    return this.#collectPendingByOperation();
+  }
+
+  #collectPendingByOperation(): CalendarEventPendingGroups {
+    const grouped: CalendarEventPendingGroups = this.#createPendingGroupsMap();
+    for (const [id, event] of this.events ?? []) {
+      const pendingOp = this.#resolvePendingOperation(event);
+      if (!pendingOp) continue;
+      const bucket = grouped.get(pendingOp);
+      if (!bucket) continue;
+      bucket.set(id, event);
+    }
+    return grouped;
+  }
+
+  #collectPendingByCalendarId(): CalendarEventPendingByCalendarId {
+    const grouped: CalendarEventPendingByCalendarId = new Map();
+    for (const [id, event] of this.events ?? []) {
+      const pendingOp = this.#resolvePendingOperation(event);
+      if (!pendingOp) continue;
+      if (!event.calendarId || !event.eventId) continue;
+
+      const byEventId =
+        grouped.get(event.calendarId) ?? new Map<string, CalendarEventPendingByOperation>();
+      const byOperation = byEventId.get(event.eventId) ?? this.#createPendingOperationMap();
+      const bucket = byOperation.get(pendingOp);
+      if (!bucket) continue;
+      bucket.set(id, event);
+      byEventId.set(event.eventId, byOperation);
+      grouped.set(event.calendarId, byEventId);
+    }
+    return grouped;
   }
 
   get #calendarViewGroup(): CalendarViewGroup | null {
@@ -356,11 +432,11 @@ export class EventCalendar extends BaseElement {
           .defaultCalendarId=${this.defaultCalendarId}
           @view-changed=${this.#syncFromViewGroup}
           @start-date-changed=${this.#syncFromViewGroup}
-          @day-selection-requested=${this.#syncFromViewGroup}
-          @event-create-requested=${this.#reemit}
-          @event-selection-requested=${this.#reemit}
-          @event-update-requested=${this.#reemit}
-          @event-delete-requested=${this.#reemit}
+          @day-selection=${this.#syncFromViewGroup}
+          @event-created=${this.#reemit}
+          @event-selection=${this.#reemit}
+          @event-updated=${this.#reemit}
+          @event-deleted=${this.#reemit}
         ></calendar-grid-view-group>
       </div>
     `;
@@ -408,6 +484,40 @@ export class EventCalendar extends BaseElement {
     this.#rangeLabelParts = target.rangeLabelParts;
   }
 
+  #applyOperation(operation: EventOperation) {
+    const api = this.#eventsAPIContextValue.getApi();
+    const result = api.apply(operation);
+    this.events = result.nextState;
+    return result;
+  }
+
+  #resolvePendingOperation(event: CalendarEventView): CalendarEventPendingOperation | undefined {
+    if (
+      event.pendingOp === "created" ||
+      event.pendingOp === "updated" ||
+      event.pendingOp === "deleted"
+    ) {
+      return event.pendingOp;
+    }
+    return undefined;
+  }
+
+  #createPendingGroupsMap(): CalendarEventPendingGroups {
+    return new Map([
+      ["created", new Map()],
+      ["updated", new Map()],
+      ["deleted", new Map()],
+    ]);
+  }
+
+  #createPendingOperationMap(): CalendarEventPendingByOperation {
+    return new Map([
+      ["created", new Map()],
+      ["updated", new Map()],
+      ["deleted", new Map()],
+    ]);
+  }
+
   #reemit = (event: Event) => {
     event.stopPropagation();
     const forwardedEvent = new CustomEvent(event.type, {
@@ -423,6 +533,7 @@ export class EventCalendar extends BaseElement {
 
   override updated(changedProperties: Map<PropertyKey, unknown>): void {
     super.updated(changedProperties);
+    this.#eventsAPIProvider.setValue(this.#eventsAPIContextValue, true);
     const viewGroup = this.#calendarViewGroup;
     if (!viewGroup) return;
     const nextRangeLabel = viewGroup.rangeLabel;

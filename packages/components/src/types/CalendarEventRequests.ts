@@ -19,6 +19,15 @@ export type EventDeleteRequestDetail = {
   envelope: Pick<CalendarEventEnvelope, "calendarId" | "eventId" | "recurrenceId" | "isRecurring">;
 };
 
+export type EventExceptionRequestDetail = {
+  envelope: Pick<
+    CalendarEventEnvelope,
+    "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
+  >;
+  content: CalendarEventContent;
+  source: "move";
+};
+
 export type EventSelectionRequestDetail = {
   envelope: Pick<
     CalendarEventEnvelope,

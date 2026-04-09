@@ -5,8 +5,9 @@ import type {
   CalendarEvent as CalendarEventRecord,
   CalendarEventView,
   CalendarEventViewEntry,
+  CalendarRecurrenceRule,
 } from "../../src/types/CalendarEvent.js";
-import { getLocaleWeekInfo, resolveLocale } from "../../src/utils/Locale.js";
+import { resolveLocale } from "../../src/utils/Locale.js";
 
 export type { CalendarEvent as CalendarEventRecord } from "../../src/types/CalendarEvent.js";
 
@@ -32,6 +33,23 @@ type CalendarEventSeedInput = {
     summary: string;
     color: string;
     location?: string;
+    recurrenceRule?: {
+      freq: CalendarRecurrenceRule["freq"];
+      interval?: number;
+      wkst?: CalendarRecurrenceRule["wkst"];
+      bySecond?: number[];
+      byMinute?: number[];
+      byHour?: number[];
+      byDay?: CalendarRecurrenceRule["byDay"];
+      byMonthDay?: number[];
+      byYearDay?: number[];
+      byWeekNo?: number[];
+      byMonth?: number[];
+      bySetPos?: number[];
+      until?: string;
+      count?: number;
+    };
+    exclusionDates?: string[];
   };
 };
 
@@ -112,8 +130,6 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         envelope: {
           calendarId: CALENDAR_IDS.personal,
           eventId: "drinks-weekly@example.test",
-          recurrenceId: "20250108T163000",
-          isRecurring: true,
         },
         content: {
           start: "2025-01-08T16:30:00",
@@ -121,57 +137,13 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
           summary: "Drinks",
           color: "#9f3cfa",
           location: "Bar Noord",
-        },
-      },
-    ],
-    [
-      "event-drinks-20250115-1630",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.personal,
-          eventId: "drinks-weekly@example.test",
-          recurrenceId: "20250115T163000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-15T16:30:00",
-          end: "2025-01-15T17:30:00",
-          summary: "Drinks",
-          color: "#9f3cfa",
-        },
-      },
-    ],
-    [
-      "event-drinks-20250122-1630",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.personal,
-          eventId: "drinks-weekly@example.test",
-          recurrenceId: "20250122T163000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-22T16:30:00",
-          end: "2025-01-22T17:30:00",
-          summary: "Drinks",
-          color: "#9f3cfa",
-        },
-      },
-    ],
-    [
-      "event-drinks-20250129-1630",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.personal,
-          eventId: "drinks-weekly@example.test",
-          recurrenceId: "20250129T163000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-29T16:30:00",
-          end: "2025-01-29T17:30:00",
-          summary: "Drinks",
-          color: "#9f3cfa",
+          recurrenceRule: {
+            freq: "WEEKLY",
+            interval: 1,
+            byDay: [{ day: "WE" }],
+            until: "2025-02-28T00:00:00",
+          },
+          exclusionDates: ["20250122T163000"],
         },
       },
     ],
@@ -181,116 +153,72 @@ export const sampleCalendarEvents: CalendarEventEntry[] = (
         envelope: {
           calendarId: CALENDAR_IDS.work,
           eventId: "daily-standup@example.test",
-          recurrenceId: "20250113T090000",
-          isRecurring: true,
         },
         content: {
           start: "2025-01-13T09:00:00",
           end: "2025-01-13T09:15:00",
           summary: "Daily Standup",
           color: "#10B981",
+          recurrenceRule: {
+            freq: "DAILY",
+            interval: 1,
+            until: "2025-01-31T00:00:00",
+          },
+          exclusionDates: ["20250120T090000"],
         },
       },
     ],
     [
-      "event-daily-standup-20250114-0900",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.work,
-          eventId: "daily-standup@example.test",
-          recurrenceId: "20250114T090000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-14T09:00:00",
-          end: "2025-01-14T09:15:00",
-          summary: "Daily Standup",
-          color: "#10B981",
-        },
-      },
-    ],
-    [
-      "event-daily-standup-20250115-0900",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.work,
-          eventId: "daily-standup@example.test",
-          recurrenceId: "20250115T090000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-15T09:00:00",
-          end: "2025-01-15T09:15:00",
-          summary: "Daily Standup",
-          color: "#10B981",
-        },
-      },
-    ],
-    [
-      "event-daily-standup-20250116-0900",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.work,
-          eventId: "daily-standup@example.test",
-          recurrenceId: "20250116T090000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-16T09:00:00",
-          end: "2025-01-16T09:15:00",
-          summary: "Daily Standup",
-          color: "#10B981",
-        },
-      },
-    ],
-    [
-      "event-daily-standup-20250117-0900",
-      {
-        envelope: {
-          calendarId: CALENDAR_IDS.work,
-          eventId: "daily-standup@example.test",
-          recurrenceId: "20250117T090000",
-          isRecurring: true,
-        },
-        content: {
-          start: "2025-01-17T09:00:00",
-          end: "2025-01-17T09:15:00",
-          summary: "Daily Standup",
-          color: "#10B981",
-        },
-      },
-    ],
-    [
-      "event-daily-standup-20250118-0900",
+      "event-daily-standup-exception-20250118-1100",
       {
         envelope: {
           calendarId: CALENDAR_IDS.work,
           eventId: "daily-standup@example.test",
           recurrenceId: "20250118T090000",
-          isRecurring: true,
         },
         content: {
-          start: "2025-01-18T09:00:00",
-          end: "2025-01-18T09:15:00",
-          summary: "Daily Standup",
+          start: "2025-01-18T11:00:00",
+          end: "2025-01-18T11:15:00",
+          summary: "Daily Standup (moved)",
           color: "#10B981",
         },
       },
     ],
     [
-      "event-daily-standup-20250119-0900",
+      "event-all-day-ops-rotation-20250106",
       {
         envelope: {
           calendarId: CALENDAR_IDS.work,
-          eventId: "daily-standup@example.test",
-          recurrenceId: "20250119T090000",
-          isRecurring: true,
+          eventId: "all-day-ops-rotation@example.test",
         },
         content: {
-          start: "2025-01-19T09:00:00",
-          end: "2025-01-19T09:15:00",
-          summary: "Daily Standup",
-          color: "#10B981",
+          start: "2025-01-06",
+          end: "2025-01-07",
+          summary: "Ops Rotation (All day)",
+          color: "#0EA5E9",
+          recurrenceRule: {
+            freq: "WEEKLY",
+            interval: 1,
+            byDay: [{ day: "MO" }],
+            until: "2025-02-28",
+          },
+          exclusionDates: ["20250120"],
+        },
+      },
+    ],
+    [
+      "event-all-day-ops-rotation-exception-20250120",
+      {
+        envelope: {
+          calendarId: CALENDAR_IDS.work,
+          eventId: "all-day-ops-rotation@example.test",
+          recurrenceId: "20250120",
+        },
+        content: {
+          start: "2025-01-21",
+          end: "2025-01-22",
+          summary: "Ops Rotation (moved to Tuesday)",
+          color: "#0EA5E9",
         },
       },
     ],
@@ -435,6 +363,23 @@ export function toTemporalDateLike(
 }
 
 function toCalendarEvent(event: CalendarEventSeedInput): CalendarEventRecord {
+  let recurrenceRule: CalendarRecurrenceRule | undefined;
+  if (event.content.recurrenceRule) {
+    const { until, count, ...baseRule } = event.content.recurrenceRule;
+    if (until !== undefined) {
+      recurrenceRule = {
+        ...baseRule,
+        until: toTemporalDateLike(until),
+      };
+    } else if (count !== undefined) {
+      recurrenceRule = {
+        ...baseRule,
+        count,
+      };
+    } else {
+      recurrenceRule = baseRule;
+    }
+  }
   return {
     envelope: { ...event.envelope },
     content: {
@@ -443,6 +388,10 @@ function toCalendarEvent(event: CalendarEventSeedInput): CalendarEventRecord {
       summary: event.content.summary,
       color: event.content.color,
       location: event.content.location,
+      recurrenceRule,
+      exclusionDates: event.content.exclusionDates
+        ? new Set(event.content.exclusionDates)
+        : undefined,
     },
   };
 }

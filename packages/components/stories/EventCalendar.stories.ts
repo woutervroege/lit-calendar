@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { action } from "storybook/actions";
 import "../src/EventCalendar/EventCalendar.js";
 import { calendarCssProps } from "./support/CalendarCssProps.js";
 import {
@@ -12,10 +13,106 @@ import {
   weekStartControlLabels,
   weekStartControlOptions,
 } from "./support/StoryData.js";
-import { attachRequestEventHandlers } from "./support/StoryRequestHandlers.js";
+import type { CalendarEventPendingGroups } from "../src/types/CalendarEvent.js";
+import {
+  attachRequestEventHandlers,
+  attachUnsyncedRequestEventHandlers,
+} from "./support/StoryRequestHandlers.js";
 
-type StoryEventCalendarElement = HTMLElement & { events: Map<string, CalendarEvent> };
+type StoryEventCalendarElement = HTMLElement & {
+  events: Map<string, CalendarEvent>;
+  getPendingEvents: (options?: { groupBy?: "pendingOp" | "calendarId" }) => CalendarEventPendingGroups;
+};
+
+type RequestHandlingMode = "sync" | "unsynced";
+
 const VISIBLE_HOUR_OPTIONS = ["auto", ...Array.from({ length: 24 }, (_, index) => index + 1)];
+const logPendingEvents = action("pending-events");
+
+function summarizePendingGroups(pendingGroups: CalendarEventPendingGroups) {
+  const summarize = (entries: Map<string, CalendarEvent> | undefined) =>
+    Array.from(entries?.entries() ?? []).map(([key, event]) => ({
+      key,
+      eventId: event.eventId,
+      summary: event.summary,
+      pendingOp: event.pendingOp,
+    }));
+
+  return {
+    created: summarize(pendingGroups.get("created")),
+    updated: summarize(pendingGroups.get("updated")),
+    deleted: summarize(pendingGroups.get("deleted")),
+  };
+}
+
+function reportPendingEvents(el: StoryEventCalendarElement, reason: string) {
+  logPendingEvents({
+    reason,
+    pendingEvents: summarizePendingGroups(el.getPendingEvents({ groupBy: "pendingOp" })),
+  });
+}
+
+function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode = "sync") {
+  const el = document.createElement("event-calendar") as StoryEventCalendarElement;
+  el.style.display = "block";
+  el.style.width = "100%";
+  el.style.height = "100%";
+
+  el.setAttribute("view", String(args.view ?? "month"));
+  el.setAttribute("presentation", String(args.presentation ?? "grid"));
+  if (args.startDate) {
+    el.setAttribute("start-date", String(args.startDate));
+  }
+  if (typeof args.weekStart === "number") {
+    el.setAttribute("week-start", String(args.weekStart));
+  } else if (args.weekStart === AUTO_WEEK_START_OPTION) {
+    el.removeAttribute("week-start");
+  }
+  el.setAttribute("days-per-week", String(args.daysPerWeek));
+  if (args.lang && args.lang !== AUTO_LOCALE_OPTION) {
+    el.setAttribute("lang", String(args.lang));
+  } else {
+    el.removeAttribute("lang");
+  }
+  if (args.timezone) {
+    el.setAttribute("timezone", String(args.timezone));
+  }
+  if (args.currentTime) {
+    el.setAttribute("current-time", String(args.currentTime));
+  }
+  el.setAttribute("snap-interval", String(args.snapInterval));
+  if (args.visibleHours === "auto" || args.visibleHours === undefined || args.visibleHours === null) {
+    el.removeAttribute("visible-hours");
+  } else {
+    el.setAttribute("visible-hours", String(args.visibleHours));
+  }
+  if (args.defaultEventSummary) {
+    el.setAttribute("default-event-summary", String(args.defaultEventSummary));
+  }
+  if (args.defaultEventColor) {
+    el.setAttribute("default-event-color", String(args.defaultEventColor));
+  }
+  if (args.defaultCalendarId) {
+    el.setAttribute("default-source-id", String(args.defaultCalendarId));
+  } else {
+    el.removeAttribute("default-source-id");
+  }
+
+  const entries = Array.isArray(args.events) ? args.events : sampleEvents;
+  el.events = new Map(entries as Array<[string, CalendarEvent]>);
+
+  if (mode === "unsynced") {
+    attachUnsyncedRequestEventHandlers(el, {
+      preserveDateOnlyShape: true,
+      onPendingChanged: () => reportPendingEvents(el, "changed"),
+    });
+    reportPendingEvents(el, "initial");
+  } else {
+    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
+  }
+
+  return el;
+}
 
 const meta: Meta = {
   title: "Calendar/EventCalendar",
@@ -78,62 +175,7 @@ const meta: Meta = {
     defaultCalendarId: "",
     events: sampleEvents,
   },
-  render: (args) => {
-    const el = document.createElement("event-calendar") as StoryEventCalendarElement;
-    el.style.display = "block";
-    el.style.width = "100%";
-    el.style.height = "100%";
-
-    el.setAttribute("view", String(args.view ?? "month"));
-    el.setAttribute("presentation", String(args.presentation ?? "grid"));
-    if (args.startDate) {
-      el.setAttribute("start-date", String(args.startDate));
-    }
-    if (typeof args.weekStart === "number") {
-      el.setAttribute("week-start", String(args.weekStart));
-    } else if (args.weekStart === AUTO_WEEK_START_OPTION) {
-      el.removeAttribute("week-start");
-    }
-    el.setAttribute("days-per-week", String(args.daysPerWeek));
-    if (args.lang && args.lang !== AUTO_LOCALE_OPTION) {
-      el.setAttribute("lang", args.lang);
-    } else {
-      el.removeAttribute("lang");
-    }
-    if (args.timezone) {
-      el.setAttribute("timezone", args.timezone);
-    }
-    if (args.currentTime) {
-      el.setAttribute("current-time", args.currentTime);
-    }
-    el.setAttribute("snap-interval", String(args.snapInterval));
-    if (
-      args.visibleHours === "auto" ||
-      args.visibleHours === undefined ||
-      args.visibleHours === null
-    ) {
-      el.removeAttribute("visible-hours");
-    } else {
-      el.setAttribute("visible-hours", String(args.visibleHours));
-    }
-    if (args.defaultEventSummary) {
-      el.setAttribute("default-event-summary", String(args.defaultEventSummary));
-    }
-    if (args.defaultEventColor) {
-      el.setAttribute("default-event-color", String(args.defaultEventColor));
-    }
-    if (args.defaultCalendarId) {
-      el.setAttribute("default-source-id", String(args.defaultCalendarId));
-    } else {
-      el.removeAttribute("default-source-id");
-    }
-
-    const entries = Array.isArray(args.events) ? args.events : sampleEvents;
-    el.events = new Map(entries);
-    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
-
-    return el;
-  },
+  render: (args) => renderCalendar(args),
 };
 
 export default meta;
@@ -178,4 +220,17 @@ export const WeekList: Story = {
     view: "week",
     presentation: "list",
   },
+};
+
+export const PendingEventsUnsynced: Story = {
+  name: "Pending Events (Unsynced)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Does not auto-commit create/update/delete operations. Inspect pending changes in the console with `document.querySelector('event-calendar')?.getPendingEvents({ groupBy: 'pendingOp' })`.",
+      },
+    },
+  },
+  render: (args) => renderCalendar(args, "unsynced"),
 };

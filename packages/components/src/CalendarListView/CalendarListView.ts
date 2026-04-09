@@ -5,10 +5,8 @@ import { styleMap } from "lit/directives/style-map.js";
 import { CalendarViewBase } from "../CalendarViewBase/CalendarViewBase.js";
 import "../EventCard/EventCard.js";
 import { renderCalendarIcon } from "../icons/CalendarIcon.js";
-import type {
-  CalendarEventView as EventInput,
-  CalendarEventViewEntry as EventEntry,
-} from "../types/CalendarEvent.js";
+import type { CalendarEventView as EventInput } from "../types/CalendarEvent.js";
+import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
 import { clampAgendaDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { resolveLocale } from "../utils/Locale.js";
@@ -140,14 +138,14 @@ export class CalendarListView extends CalendarViewBase {
 
   #handleEventClick(item: AgendaItem, sourceEvent: MouseEvent) {
     this.dispatchEvent(
-      new CustomEvent("event-selection-requested", {
+      new CustomEvent("event-selection", {
         detail: {
           envelope: {
             eventId: item.event.eventId ?? item.id,
             calendarId: item.event.calendarId,
             recurrenceId: item.event.recurrenceId,
-            isException: item.event.isException,
-            isRecurring: item.event.isRecurring,
+            isException: isCalendarEventException(item.event),
+            isRecurring: isCalendarEventRecurring(item.event),
           },
           content: {
             start: item.event.start,
@@ -168,9 +166,12 @@ export class CalendarListView extends CalendarViewBase {
     const grouped = new Map<string, AgendaItem[]>();
     const rangeStart = this.startDate;
     const rangeEndExclusive = rangeStart.add({ days: this.daysPerWeek });
+    const renderedEvents = this.getRenderedEvents({
+      start: rangeStart.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+      end: rangeEndExclusive.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+    });
 
-    for (const [id, event] of this.#eventsAsEntries) {
-      if (event.isRemoved) continue;
+    for (const [id, event] of renderedEvents.entries()) {
       const start = this.#toPlainDateTime(event.start);
       const end = this.#toPlainDateTime(event.end);
       if (Temporal.PlainDateTime.compare(end, start) <= 0) continue;
@@ -347,29 +348,11 @@ export class CalendarListView extends CalendarViewBase {
   }
 
   #isRecurringEvent(event: EventInput): boolean {
-    const envelope = (
-      event as EventInput & {
-        envelope?: { isRecurring?: boolean; recurrenceId?: string; isException?: boolean };
-      }
-    ).envelope;
-    const isException = this.#isExceptionEvent(event);
-    if (isException) return false;
-    return Boolean(
-      event.isRecurring || event.recurrenceId || envelope?.isRecurring || envelope?.recurrenceId
-    );
+    return isCalendarEventRecurring(event);
   }
 
   #isExceptionEvent(event: EventInput): boolean {
-    const envelope = (
-      event as EventInput & {
-        envelope?: { isException?: boolean };
-      }
-    ).envelope;
-    return Boolean(event.isException || envelope?.isException);
-  }
-
-  get #eventsAsEntries(): EventEntry[] {
-    return Array.from(this.events?.entries() ?? []);
+    return isCalendarEventException(event);
   }
 
   get #resolvedLocale(): string {

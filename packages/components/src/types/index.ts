@@ -5,6 +5,21 @@ export type {
   CalendarEventEntry,
   CalendarEventEnvelope,
   CalendarEventMap,
+  CalendarEventPendingByCalendarId,
+  CalendarEventPendingByEventId,
+  CalendarExclusionDates,
+  CalendarRecurrenceFrequency,
+  CalendarRecurrenceRule,
+  CalendarRecurrenceTermination,
+  CalendarRecurrenceWeekday,
+  CalendarRecurrenceWeekdayRule,
+  CalendarEventPendingGroupBy,
+  CalendarEventPendingByOperation,
+  CalendarEventPendingGroups,
+  CalendarEventPendingGroupKey,
+  CalendarEventPendingOptions,
+  CalendarEventPendingOperation,
+  CalendarEventPendingResult,
   CalendarEventView,
   CalendarEventViewEntry,
   CalendarEventViewMap,
@@ -14,6 +29,7 @@ export type {
   CalendarEventRequestTrigger,
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
+  EventExceptionRequestDetail,
   EventSelectionRequestDetail,
   EventUpdateRequestDetail,
 } from "./CalendarEventRequests.js";
@@ -35,3 +51,5 @@ export type { TabSwitchOption } from "./TabSwitch.js";
 export type { AllDayLayout, AllDayLayoutItem } from "./AllDayLayout.js";
 
 export type { WeekdayNumber } from "./Weekday.js";
+
+export { isCalendarEventException, isCalendarEventExcluded, isCalendarEventRecurring } from "./CalendarEvent.js";

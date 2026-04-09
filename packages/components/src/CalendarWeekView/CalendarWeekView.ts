@@ -8,8 +8,8 @@ import "../CalendarTimeSidebar/CalendarTimeSidebar.js";
 import { CalendarViewBase, isWeekdayNumber } from "../CalendarViewBase/CalendarViewBase.js";
 import type { AllDayLayoutItem } from "../types/AllDayLayout.js";
 import type {
-  CalendarEventView as EventInput,
   CalendarEventViewEntry as EventEntry,
+  CalendarEventView as EventInput,
   CalendarEventViewMap as EventsMap,
 } from "../types/CalendarEvent.js";
 import type { WeekdayNumber } from "../types/Weekday.js";
@@ -135,17 +135,48 @@ export class CalendarWeekView extends CalendarViewBase {
   }
 
   get #allDayLayoutItems(): AllDayLayoutItem[] {
-    return this.#eventEntries
-      .filter(([, event]) => this.#isAllDayEvent(event))
-      .map(([id, event]) => ({
-        id,
-        start: this.#toPlainDateTime(event.start).toPlainDate(),
-        endInclusive: this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate(),
-      }));
+    return this.#renderedAllDayEntries.map(([id, event]) => ({
+      id,
+      start: this.#toPlainDateTime(event.start).toPlainDate(),
+      endInclusive: this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate(),
+    }));
   }
 
-  get #eventEntries(): EventEntry[] {
-    return Array.from(this.events?.entries() ?? []);
+  get #renderedAllDayEntries(): EventEntry[] {
+    const range = this.#renderedViewportRange;
+    if (!range) return [];
+    return Array.from(this.getRenderedEvents(range).entries()).filter(([, event]) =>
+      this.#isAllDayEvent(event)
+    );
+  }
+
+  get #renderedViewportRange():
+    | {
+        start: Temporal.PlainDateTime;
+        end: Temporal.PlainDateTime;
+      }
+    | undefined {
+    const viewDays = this.#viewDays;
+    if (!viewDays.length) return undefined;
+
+    const start = viewDays[0].toPlainDateTime({
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    const lastRenderedDay = viewDays[viewDays.length - 1];
+    const end = lastRenderedDay.add({ days: 1 }).toPlainDateTime({
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    return { start, end };
   }
 
   #isAllDayEvent(event: EventInput): boolean {
@@ -308,11 +339,11 @@ export class CalendarWeekView extends CalendarViewBase {
                 "--_lc-section-bg":
                   "var(--lg-background-color, var(--_lc-surface-bg, light-dark(#fff, #222)))",
               })}
-              @event-create-requested=${this.forwardCalendarEvent}
-              @event-selection-requested=${this.forwardCalendarEvent}
-              @event-update-requested=${this.forwardCalendarEvent}
-              @event-delete-requested=${this.forwardCalendarEvent}
-              @day-selection-requested=${this.forwardCalendarEvent}
+              @event-created=${this.forwardCalendarEvent}
+              @event-selection=${this.forwardCalendarEvent}
+              @event-updated=${this.forwardCalendarEvent}
+              @event-deleted=${this.forwardCalendarEvent}
+              @day-selection=${this.forwardCalendarEvent}
               @interaction-lock-change=${this.#handleInteractionLockChange}
             >
             </calendar-grid-view>
@@ -330,11 +361,11 @@ export class CalendarWeekView extends CalendarViewBase {
             .timezone=${this.timezone}
             current-time=${this.currentTime}
             .snapInterval=${this.snapInterval}
-            @event-create-requested=${this.forwardCalendarEvent}
-            @event-selection-requested=${this.forwardCalendarEvent}
-            @event-update-requested=${this.forwardCalendarEvent}
-            @event-delete-requested=${this.forwardCalendarEvent}
-            @day-selection-requested=${this.forwardCalendarEvent}
+            @event-created=${this.forwardCalendarEvent}
+            @event-selection=${this.forwardCalendarEvent}
+            @event-updated=${this.forwardCalendarEvent}
+            @event-deleted=${this.forwardCalendarEvent}
+            @day-selection=${this.forwardCalendarEvent}
             @interaction-lock-change=${this.#handleInteractionLockChange}
           >
           </calendar-grid-view>
