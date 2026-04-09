@@ -1140,6 +1140,18 @@ export class CalendarGridView extends CalendarViewBase {
         color: target.color,
       },
     };
+    const eventOpsUpdate = this.applyUpdateRequestToEventOps(detail);
+    if (eventOpsUpdate.handled) {
+      if (!eventOpsUpdate.accepted) {
+        this.#restoreRenderedEventRange(target, current, recurrenceId);
+        return;
+      }
+      if (updateInputMethod === "keyboard") {
+        this.#pendingKeyboardRefocusEventId = target.eventId;
+        this.#startKeyboardRefocusLoop();
+      }
+      return;
+    }
     const updateRequested = this.dispatchEvent(
       new CustomEvent("event-update-requested", {
         detail,
@@ -1241,6 +1253,9 @@ export class CalendarGridView extends CalendarViewBase {
         isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
     };
+    if (this.applyDeleteRequestToEventOps(detail)) {
+      return;
+    }
 
     this.dispatchEvent(
       new CustomEvent("event-delete-requested", {
@@ -1964,6 +1979,9 @@ export class CalendarGridView extends CalendarViewBase {
         color: input.color,
       },
     };
+    if (this.applyCreateRequestToEventOps(detail)) {
+      return;
+    }
     console.info("event-create-requested", detail);
     this.dispatchEvent(
       new CustomEvent("event-create-requested", {

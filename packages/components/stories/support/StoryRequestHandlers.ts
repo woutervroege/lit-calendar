@@ -122,6 +122,13 @@ function getUpdateKind(
   return unchangedDuration ? "move" : "update";
 }
 
+function movedToDifferentDay(currentStart: CalendarEvent["start"], nextStart: CalendarEvent["start"]): boolean {
+  return (
+    Temporal.PlainDate.compare(toPlainDateTime(currentStart).toPlainDate(), toPlainDateTime(nextStart).toPlainDate()) !==
+    0
+  );
+}
+
 function applyApiResult(el: StoryCalendarElement, api: EventsAPI, onPendingChanged?: () => void) {
   el.events = api.getState();
   onPendingChanged?.();
@@ -214,7 +221,12 @@ export function attachRequestEventHandlers(
     const baseUpdateInput = fromUpdateRequest(detail);
     const isRecurringInstanceMove =
       updateKind === "move" &&
-      Boolean(recurrenceId && current.recurrenceRule && !current.recurrenceId);
+      Boolean(
+        recurrenceId &&
+          current.recurrenceRule &&
+          !current.recurrenceId &&
+          movedToDifferentDay(occurrenceStart, nextStart)
+      );
 
     if (isRecurringInstanceMove && recurrenceId) {
       const previousEvents = cloneEventMap(el.events);

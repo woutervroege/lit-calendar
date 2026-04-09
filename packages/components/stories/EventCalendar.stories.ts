@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
-import { action } from "storybook/actions";
 import "../src/EventCalendar/EventCalendar.js";
 import { calendarCssProps } from "./support/CalendarCssProps.js";
 import {
@@ -13,46 +12,14 @@ import {
   weekStartControlLabels,
   weekStartControlOptions,
 } from "./support/StoryData.js";
-import {
-  attachRequestEventHandlers,
-  attachUnsyncedRequestEventHandlers,
-} from "./support/StoryRequestHandlers.js";
-import type { CalendarEventPendingGroups } from "../src/types/CalendarEvent.js";
 
 type StoryEventCalendarElement = HTMLElement & {
   events: Map<string, CalendarEvent>;
-  getPendingEvents: (options?: { groupBy?: "pendingOp" | "calendarId" }) => unknown;
 };
 
-type RequestHandlingMode = "sync" | "unsynced";
-
 const VISIBLE_HOUR_OPTIONS = ["auto", ...Array.from({ length: 24 }, (_, index) => index + 1)];
-const logPendingEvents = action("pending-events");
 
-function summarizePendingGroups(pendingEvents: CalendarEventPendingGroups) {
-  const summarize = (entries: Map<string, CalendarEvent> | undefined) =>
-    Array.from(entries?.entries() ?? []).map(([id, event]) => ({
-      id,
-      eventId: event.eventId,
-      summary: event.summary,
-      pendingOp: event.pendingOp,
-    }));
-  return {
-    created: summarize(pendingEvents.get("created")),
-    updated: summarize(pendingEvents.get("updated")),
-    deleted: summarize(pendingEvents.get("deleted")),
-  };
-}
-
-function reportPendingEvents(el: StoryEventCalendarElement, reason: string) {
-  const pendingEvents = el.getPendingEvents({ groupBy: "pendingOp" }) as CalendarEventPendingGroups;
-  logPendingEvents({
-    reason,
-    pendingEvents: summarizePendingGroups(pendingEvents),
-  });
-}
-
-function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode = "sync") {
+function renderCalendar(args: Record<string, unknown>) {
   const el = document.createElement("event-calendar") as StoryEventCalendarElement;
   el.style.display = "block";
   el.style.width = "100%";
@@ -100,15 +67,6 @@ function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode
 
   const entries = Array.isArray(args.events) ? args.events : sampleEvents;
   el.events = new Map(entries as Array<[string, CalendarEvent]>);
-
-  if (mode === "unsynced") {
-    attachUnsyncedRequestEventHandlers(el, {
-      onPendingChanged: () => reportPendingEvents(el, "change"),
-    });
-    reportPendingEvents(el, "initial");
-  } else {
-    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
-  }
 
   return el;
 }
@@ -219,17 +177,4 @@ export const WeekList: Story = {
     view: "week",
     presentation: "list",
   },
-};
-
-export const PendingEventsUnsynced: Story = {
-  name: "Pending Events (Unsynced)",
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "No backend sync. Create/update/delete requests are stored as optimistic local changes so `pendingEvents` remains inspectable.",
-      },
-    },
-  },
-  render: (args) => renderCalendar(args, "unsynced"),
 };

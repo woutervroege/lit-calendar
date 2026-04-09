@@ -7,7 +7,6 @@ import {
   type CalendarEvent,
   toTemporalDateLike,
 } from "./support/StoryData.js";
-import { attachRequestEventHandlers } from "./support/StoryRequestHandlers.js";
 
 type StoryEventCalendarElement = HTMLElement & { events: Map<string, CalendarEvent> };
 
@@ -111,7 +110,6 @@ function renderCalendar(args: RecurrenceStoryArgs) {
   el.setAttribute("timezone", args.timezone);
   el.setAttribute("current-time", args.currentTime);
   el.events = new Map(buildSeriesEvents(args));
-  attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
 
   return el;
 }

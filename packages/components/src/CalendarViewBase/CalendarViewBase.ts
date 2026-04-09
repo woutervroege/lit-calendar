@@ -1,6 +1,17 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { ContextConsumer } from "@lit/context";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import { expandEvents } from "../domain/event-ops/expand.js";
+import {
+  fromCreateRequest,
+  fromDeleteRequest,
+  fromUpdateRequest,
+  moveFromUpdateRequest,
+  parseRecurrenceId,
+  shiftDateValue,
+} from "../domain/event-ops/index.js";
+import type { EventOperation } from "../domain/event-ops/index.js";
+import { eventOpsContext, type EventOpsContextValue } from "../context/EventOpsContext.js";
 import type {
   CalendarEventDateValue,
   CalendarEventPendingByCalendarId,
@@ -13,6 +24,13 @@ import type {
   CalendarEventViewEntry as EventEntry,
   CalendarEventViewMap as EventsMap,
 } from "../types/CalendarEvent.js";
+import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
+import type {
+  EventCreateRequestDetail,
+  EventDeleteRequestDetail,
+  EventExceptionRequestDetail,
+  EventUpdateRequestDetail,
+} from "../types/CalendarEventRequests.js";
 import type { WeekdayNumber } from "../types/Weekday.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 
@@ -24,6 +42,15 @@ export abstract class CalendarViewBase extends BaseElement {
   #lang?: string;
   #timezone?: string;
   #currentTime?: string;
+  #eventOps?: EventOpsContextValue;
+  #eventOpsConsumer = new ContextConsumer(this, {
+    context: eventOpsContext,
+    subscribe: true,
+    callback: (value: EventOpsContextValue | undefined) => {
+      this.#eventOps = value;
+      this.requestUpdate();
+    },
+  });
 
   declare events?: EventsMap;
   defaultEventSummary = "New event";
@@ -76,6 +103,281 @@ export abstract class CalendarViewBase extends BaseElement {
     | null
     | undefined) {
     this.#currentTime = currentTime?.toString() ?? undefined;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    void this.#eventOpsConsumer;
+  }
+
+  protected applyCreateRequestToEventOps(detail: EventCreateRequestDetail): boolean {
+    if (!this.#eventOps) return false;
+    this.#applyEventOperation({ type: "create", input: fromCreateRequest(detail) });
+    return true;
+  }
+
+  protected applyUpdateRequestToEventOps(detail: EventUpdateRequestDetail): { handled: boolean; accepted: boolean } {
+    if (!this.#eventOps || !detail.envelope.eventId) return { handled: false, accepted: true };
+    const events = this.#eventOps.getState() ?? new Map();
+    const eventKey = this.#resolveEventMapKey(events, detail.envelope);
+    if (!eventKey) return { handled: false, accepted: true };
+    const current = events.get(eventKey);
+    if (!current) return { handled: false, accepted: true };
+
+    const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+    const shouldPromptForSeries = isRecurring && !isCalendarEventException(current);
+    const recurrenceId = detail.envelope.recurrenceId ?? current.recurrenceId;
+    const occurrenceStart =
+      current.recurrenceRule && !current.recurrenceId && recurrenceId
+        ? (parseRecurrenceId(recurrenceId, current.start) ?? current.start)
+        : current.start;
+    const baseDuration = this.#toPlainDateTime(current.start).until(this.#toPlainDateTime(current.end));
+    const occurrenceEnd = shiftDateValue(occurrenceStart, baseDuration);
+    const updateKind = this.#getUpdateKind(
+      occurrenceStart,
+      occurrenceEnd,
+      detail.content.start,
+      detail.content.end
+    );
+
+    const shouldCreateExceptionFromMove = Boolean(
+      updateKind === "move" &&
+        recurrenceId &&
+        current.recurrenceRule &&
+        !current.recurrenceId &&
+        this.#movedToDifferentDay(occurrenceStart, detail.content.start)
+    );
+
+    if (shouldCreateExceptionFromMove && recurrenceId) {
+      const exceptionRequestedDetail: EventExceptionRequestDetail = {
+        envelope: {
+          eventId: detail.envelope.eventId,
+          calendarId: detail.envelope.calendarId,
+          recurrenceId,
+          isException: true,
+          isRecurring: true,
+        },
+        content: { ...detail.content },
+        source: "move",
+      };
+      const accepted = this.dispatchEvent(
+        new CustomEvent("event-exception-requested", {
+          detail: exceptionRequestedDetail,
+          composed: true,
+          cancelable: true,
+        })
+      );
+      if (!accepted) {
+        return { handled: true, accepted: false };
+      }
+      this.#applyEventOperation({
+        type: "add-exception",
+        input: {
+          target: { key: eventKey },
+          recurrenceId,
+          event: {
+            start: detail.content.start,
+            end: detail.content.end,
+            summary: detail.content.summary,
+            color: detail.content.color,
+            location: detail.content.location,
+            calendarId: detail.envelope.calendarId,
+          },
+        },
+      });
+      return { handled: true, accepted: true };
+    }
+
+    if (shouldPromptForSeries) {
+      const commitSeries = window.confirm(
+        "Apply changes to the whole series?\n\nOK = series\nCancel = only this instance"
+      );
+      if (!commitSeries) {
+        if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
+          this.#applyEventOperation({
+            type: "add-exception",
+            input: {
+              target: { key: eventKey },
+              recurrenceId,
+              event: {
+                start: detail.content.start,
+                end: detail.content.end,
+                summary: detail.content.summary,
+                color: detail.content.color,
+                location: detail.content.location,
+                calendarId: detail.envelope.calendarId,
+              },
+            },
+          });
+          return { handled: true, accepted: true };
+        }
+        this.#applyEventOperation({
+          type: "update",
+          input: {
+            target: { key: eventKey },
+            scope: "single",
+            patch: {
+              start: detail.content.start,
+              end: detail.content.end,
+              summary: detail.content.summary,
+              color: detail.content.color,
+              location: detail.content.location,
+              calendarId: detail.envelope.calendarId,
+            },
+          },
+        });
+        return { handled: true, accepted: true };
+      }
+
+      if (updateKind === "move") {
+        const delta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
+        const moveInput = moveFromUpdateRequest(detail, delta);
+        this.#applyEventOperation({
+          type: "move",
+          input: {
+            ...moveInput,
+            target: { key: eventKey },
+            scope: "series",
+          },
+        });
+        return { handled: true, accepted: true };
+      }
+
+      if (updateKind === "resize-start") {
+        const startDelta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
+        this.#applyEventOperation({
+          type: "resize-start",
+          input: {
+            target: { key: eventKey },
+            scope: "series",
+            toStart: shiftDateValue(current.start, startDelta),
+          },
+        });
+        return { handled: true, accepted: true };
+      }
+
+      if (updateKind === "resize-end") {
+        const endDelta = this.#toPlainDateTime(occurrenceEnd).until(this.#toPlainDateTime(detail.content.end));
+        this.#applyEventOperation({
+          type: "resize-end",
+          input: {
+            target: { key: eventKey },
+            scope: "series",
+            toEnd: shiftDateValue(current.end, endDelta),
+          },
+        });
+        return { handled: true, accepted: true };
+      }
+
+      this.#applyEventOperation({
+        type: "update",
+        input: {
+          target: { key: eventKey },
+          scope: "series",
+          patch: {
+            start: detail.content.start,
+            end: detail.content.end,
+            summary: detail.content.summary,
+            color: detail.content.color,
+            location: detail.content.location,
+            calendarId: detail.envelope.calendarId,
+          },
+        },
+      });
+      return { handled: true, accepted: true };
+    }
+
+    if (updateKind === "move") {
+      const delta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
+      const moveInput = moveFromUpdateRequest(detail, delta);
+      this.#applyEventOperation({
+        type: "move",
+        input: {
+          ...moveInput,
+          target: { key: eventKey },
+        },
+      });
+      return { handled: true, accepted: true };
+    }
+
+    if (updateKind === "resize-start") {
+      this.#applyEventOperation({
+        type: "resize-start",
+        input: {
+          target: { key: eventKey },
+          scope: detail.envelope.isRecurring && !detail.envelope.isException ? "series" : "single",
+          toStart: detail.content.start,
+        },
+      });
+      return { handled: true, accepted: true };
+    }
+
+    if (updateKind === "resize-end") {
+      this.#applyEventOperation({
+        type: "resize-end",
+        input: {
+          target: { key: eventKey },
+          scope: detail.envelope.isRecurring && !detail.envelope.isException ? "series" : "single",
+          toEnd: detail.content.end,
+        },
+      });
+      return { handled: true, accepted: true };
+    }
+
+    const updateInput = fromUpdateRequest(detail);
+    this.#applyEventOperation({
+      type: "update",
+      input: {
+        ...updateInput,
+        target: { key: eventKey },
+      },
+    });
+    return { handled: true, accepted: true };
+  }
+
+  protected applyDeleteRequestToEventOps(detail: EventDeleteRequestDetail): boolean {
+    if (!this.#eventOps || !detail.envelope.eventId) return false;
+    const events = this.#eventOps.getState() ?? new Map();
+    const eventKey = this.#resolveEventMapKey(events, detail.envelope);
+    if (!eventKey) return false;
+    const current = events.get(eventKey);
+    if (!current) return false;
+
+    const recurrenceId = detail.envelope.recurrenceId ?? current.recurrenceId;
+    const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
+
+    if (isCalendarEventException(current)) {
+      this.#applyEventOperation({
+        type: "remove-exception",
+        input: {
+          target: { key: eventKey },
+          recurrenceId,
+          options: { asExclusion: true },
+        },
+      });
+      return true;
+    }
+
+    if (isRecurring && recurrenceId && current.recurrenceRule && !current.recurrenceId) {
+      this.#applyEventOperation({
+        type: "add-exclusion",
+        input: {
+          target: { key: eventKey },
+          recurrenceId,
+        },
+      });
+      return true;
+    }
+
+    const removeInput = fromDeleteRequest(detail);
+    this.#applyEventOperation({
+      type: "remove",
+      input: {
+        ...removeInput,
+        target: { key: eventKey },
+      },
+    });
+    return true;
   }
 
   getRenderedEvents(range: {
@@ -165,6 +467,60 @@ export abstract class CalendarViewBase extends BaseElement {
       event.preventDefault();
     }
   }
+
+  #applyEventOperation(operation: EventOperation) {
+    if (!this.#eventOps) return;
+    const result = this.#eventOps.apply(operation);
+    this.events = result.nextState;
+  }
+
+  #resolveEventMapKey(
+    events: EventsMap,
+    envelope: { eventId?: string; calendarId?: string; recurrenceId?: string }
+  ): string | undefined {
+    if (!envelope.eventId) return undefined;
+    if (events.has(envelope.eventId)) return envelope.eventId;
+    let fallbackSeriesKey: string | undefined;
+    for (const [key, event] of events.entries()) {
+      if (event.eventId !== envelope.eventId) continue;
+      if (envelope.calendarId !== undefined && event.calendarId !== envelope.calendarId) continue;
+      if (envelope.recurrenceId === undefined || event.recurrenceId === envelope.recurrenceId) return key;
+      if (event.recurrenceId === undefined && fallbackSeriesKey === undefined) fallbackSeriesKey = key;
+    }
+    return fallbackSeriesKey;
+  }
+
+  #toPlainDateTime(value: CalendarEventView["start"]): Temporal.PlainDateTime {
+    if (value instanceof Temporal.PlainDate) {
+      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    }
+    if (value instanceof Temporal.PlainDateTime) return value;
+    return value.toPlainDateTime();
+  }
+
+  #getUpdateKind(
+    currentStart: CalendarEventView["start"],
+    currentEnd: CalendarEventView["start"],
+    nextStart: CalendarEventView["start"],
+    nextEnd: CalendarEventView["start"]
+  ): "move" | "resize-start" | "resize-end" | "update" {
+    const sameStart = Temporal.PlainDateTime.compare(this.#toPlainDateTime(currentStart), this.#toPlainDateTime(nextStart)) === 0;
+    const sameEnd = Temporal.PlainDateTime.compare(this.#toPlainDateTime(currentEnd), this.#toPlainDateTime(nextEnd)) === 0;
+    if (sameStart && sameEnd) return "update";
+    if (!sameStart && sameEnd) return "resize-start";
+    if (sameStart && !sameEnd) return "resize-end";
+    const oldDuration = this.#toPlainDateTime(currentStart).until(this.#toPlainDateTime(currentEnd));
+    const newDuration = this.#toPlainDateTime(nextStart).until(this.#toPlainDateTime(nextEnd));
+    return oldDuration.total({ unit: "seconds" }) === newDuration.total({ unit: "seconds" }) ? "move" : "update";
+  }
+
+  #movedToDifferentDay(currentStart: CalendarEventView["start"], nextStart: CalendarEventView["start"]): boolean {
+    return (
+      Temporal.PlainDate.compare(this.#toPlainDateTime(currentStart).toPlainDate(), this.#toPlainDateTime(nextStart).toPlainDate()) !==
+      0
+    );
+  }
+
 
   #resolvePendingOperation(event: CalendarEventView): CalendarEventPendingOperation | undefined {
     if (

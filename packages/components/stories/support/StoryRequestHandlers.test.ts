@@ -38,7 +38,7 @@ describe("StoryRequestHandlers recurring updates", () => {
     vi.restoreAllMocks();
   });
 
-  it("turns recurring instance move into detached exception by default", () => {
+  it("applies series occurrence move delta relative to occurrence start", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     const el = new MockCalendarElement();
     el.events = createSeriesEventMap();
@@ -70,10 +70,10 @@ describe("StoryRequestHandlers recurring updates", () => {
     const master = el.events.get("daily");
     expect(master).toBeDefined();
     const exception = el.events.get("daily::20250118T090000");
-    expect(master?.start.toString()).toBe("2025-01-13T09:00:00");
-    expect(master?.end.toString()).toBe("2025-01-13T09:15:00");
-    expect(master?.exclusionDates?.has("20250118T090000")).toBe(true);
-    expect(exception?.start.toString()).toBe("2025-01-18T10:00:00");
+    expect(master?.start.toString()).toBe("2025-01-13T10:00:00");
+    expect(master?.end.toString()).toBe("2025-01-13T10:15:00");
+    expect(master?.exclusionDates?.size ?? 0).toBe(0);
+    expect(exception).toBeUndefined();
   });
 
   it("applies series occurrence resize-start relative to occurrence start", () => {
@@ -112,7 +112,7 @@ describe("StoryRequestHandlers recurring updates", () => {
     expect(master?.end.toString()).toBe("2025-01-13T09:15:00");
   });
 
-  it("creates detached exception for occurrence-only move and keeps master start", () => {
+  it("creates detached exception when moving occurrence to another day", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     const el = new MockCalendarElement();
     el.events = createSeriesEventMap();
@@ -127,8 +127,8 @@ describe("StoryRequestHandlers recurring updates", () => {
         isException: false,
       },
       content: {
-        start: Temporal.PlainDateTime.from("2025-01-18T10:00:00"),
-        end: Temporal.PlainDateTime.from("2025-01-18T10:15:00"),
+        start: Temporal.PlainDateTime.from("2025-01-19T10:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-19T10:15:00"),
         summary: "Daily Standup",
         color: "#10B981",
       },
@@ -145,7 +145,7 @@ describe("StoryRequestHandlers recurring updates", () => {
     const exception = el.events.get("daily::20250118T090000");
     expect(master?.start.toString()).toBe("2025-01-13T09:00:00");
     expect(master?.exclusionDates?.has("20250118T090000")).toBe(true);
-    expect(exception?.start.toString()).toBe("2025-01-18T10:00:00");
+    expect(exception?.start.toString()).toBe("2025-01-19T10:00:00");
     expect(exception?.isException).toBe(true);
   });
 
@@ -167,8 +167,8 @@ describe("StoryRequestHandlers recurring updates", () => {
         isException: false,
       },
       content: {
-        start: Temporal.PlainDateTime.from("2025-01-18T10:00:00"),
-        end: Temporal.PlainDateTime.from("2025-01-18T10:15:00"),
+        start: Temporal.PlainDateTime.from("2025-01-19T10:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-19T10:15:00"),
         summary: "Daily Standup",
         color: "#10B981",
       },

@@ -1,4 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { ContextProvider } from "@lit/context";
 import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
@@ -23,6 +24,9 @@ import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import { renderGridIcon } from "../icons/GridIcon.js";
 import { renderListIcon } from "../icons/ListIcon.js";
 import { getLocaleDirection, resolveLocale } from "../utils/Locale.js";
+import { EventsAPI } from "../domain/event-ops/index.js";
+import type { EventOperation } from "../domain/event-ops/index.js";
+import { eventOpsContext, type EventOpsContextValue } from "../context/EventOpsContext.js";
 import componentStyle from "./EventCalendar.css?inline";
 
 type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
@@ -112,6 +116,24 @@ export class EventCalendar extends BaseElement {
   defaultEventSummary = "New event";
   defaultEventColor = "#0ea5e9";
   defaultCalendarId?: string;
+  #eventOpsProvider = new ContextProvider(this, {
+    context: eventOpsContext,
+  });
+  #eventOpsContextValue: EventOpsContextValue = {
+    getState: () => this.events ?? new Map(),
+    getApi: () => new EventsAPI(this.events ?? new Map(), { timezone: this.timezone }),
+    apply: (operation) => this.#applyOperation(operation),
+    create: (input) => this.#applyOperation({ type: "create", input }),
+    update: (input) => this.#applyOperation({ type: "update", input }),
+    move: (input) => this.#applyOperation({ type: "move", input }),
+    resizeStart: (input) => this.#applyOperation({ type: "resize-start", input }),
+    resizeEnd: (input) => this.#applyOperation({ type: "resize-end", input }),
+    remove: (input) => this.#applyOperation({ type: "remove", input }),
+    addExclusion: (input) => this.#applyOperation({ type: "add-exclusion", input }),
+    removeExclusion: (input) => this.#applyOperation({ type: "remove-exclusion", input }),
+    addException: (input) => this.#applyOperation({ type: "add-exception", input }),
+    removeException: (input) => this.#applyOperation({ type: "remove-exception", input }),
+  };
 
   static get styles() {
     return [...BaseElement.styles, unsafeCSS(componentStyle)];
@@ -458,6 +480,13 @@ export class EventCalendar extends BaseElement {
     this.#rangeLabelParts = target.rangeLabelParts;
   }
 
+  #applyOperation(operation: EventOperation) {
+    const api = this.#eventOpsContextValue.getApi();
+    const result = api.apply(operation);
+    this.events = result.nextState;
+    return result;
+  }
+
   #resolvePendingOperation(event: CalendarEventView): CalendarEventPendingOperation | undefined {
     if (
       event.pendingOp === "created" ||
@@ -500,6 +529,7 @@ export class EventCalendar extends BaseElement {
 
   override updated(changedProperties: Map<PropertyKey, unknown>): void {
     super.updated(changedProperties);
+    this.#eventOpsProvider.setValue(this.#eventOpsContextValue, true);
     const viewGroup = this.#calendarViewGroup;
     if (!viewGroup) return;
     const nextRangeLabel = viewGroup.rangeLabel;
