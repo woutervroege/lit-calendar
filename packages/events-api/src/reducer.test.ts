@@ -254,4 +254,36 @@ describe("EventsAPI", () => {
     });
     expect(api.getState().has("draft")).toBe(false);
   });
+
+  it("series update skips detached exceptions", () => {
+    const state = createWeeklySeriesWithExceptionState();
+    const api = new EventsAPI(state, { trackPending: true });
+
+    api.update({
+      target: { key: "weekly" },
+      scope: "series",
+      patch: { summary: "Weekly (series updated)" },
+    });
+
+    const next = api.getState();
+    expect(next.get("weekly")?.summary).toBe("Weekly (series updated)");
+    expect(next.get("weekly")?.pendingOp).toBe("updated");
+    expect(next.get("weekly::20250120T090000")?.summary).toBe("Weekly (moved)");
+    expect(next.get("weekly::20250120T090000")?.pendingOp).toBeUndefined();
+  });
+
+  it("series move updates exception recurrence anchors without pending updates", () => {
+    const api = new EventsAPI(createWeeklySeriesWithExceptionState(), { trackPending: true });
+
+    api.move({
+      target: { key: "weekly" },
+      scope: "series",
+      delta: Temporal.Duration.from({ hours: 1 }),
+    });
+
+    const next = api.getState();
+    expect(next.get("weekly")?.pendingOp).toBe("updated");
+    expect(next.get("weekly::20250120T090000")?.recurrenceId).toBe("20250120T100000");
+    expect(next.get("weekly::20250120T090000")?.pendingOp).toBeUndefined();
+  });
 });

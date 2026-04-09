@@ -179,6 +179,7 @@ function applyUpdate(input: UpdateInput, context: ReduceContext): ApplyResult {
   for (const updateKey of keys) {
     const event = state.get(updateKey);
     if (!event) continue;
+    if (input.scope === "series" && isCalendarEventException(event)) continue;
     const updated = asPendingUpdated(applyUpdateToEvent(event, input.patch), context.trackPending ?? false);
     setUpdated(state, changes, updateKey, updated);
   }
@@ -206,13 +207,10 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
       const nextRecurrenceId = shiftExceptionRecurrenceId
         ? shiftRecurrenceId(event.recurrenceId, event.start, input.delta)
         : event.recurrenceId;
-      const updated = asPendingUpdated(
-        {
-          ...event,
-          recurrenceId: nextRecurrenceId,
-        },
-        context.trackPending ?? false
-      );
+      const updated: CalendarEventView = {
+        ...event,
+        recurrenceId: nextRecurrenceId,
+      };
       setUpdated(state, changes, updateKey, updated);
       continue;
     }
@@ -250,13 +248,10 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
     const event = state.get(updateKey);
     if (!event) continue;
     if (input.scope === "series" && isCalendarEventException(event)) {
-      const updatedException = asPendingUpdated(
-        {
-          ...event,
-          recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
-        },
-        context.trackPending ?? false
-      );
+      const updatedException: CalendarEventView = {
+        ...event,
+        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
+      };
       setUpdated(state, changes, updateKey, updatedException);
       continue;
     }
