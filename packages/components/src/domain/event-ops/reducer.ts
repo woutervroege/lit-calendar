@@ -226,7 +226,14 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
   for (const updateKey of keys) {
     const event = state.get(updateKey);
     if (!event) continue;
-    if (input.scope === "series" && isCalendarEventException(event)) continue;
+    if (input.scope === "series" && isCalendarEventException(event)) {
+      const updatedException: CalendarEventView = {
+        ...event,
+        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
+      };
+      setUpdated(state, changes, updateKey, updatedException);
+      continue;
+    }
     const nextStart = input.scope === "series" ? shiftDateValue(event.start, seriesDelta) : input.toStart;
     const bounded = ensureMinimumDuration(nextStart, event.end, input.options?.minDuration);
     const nextExclusionDates =

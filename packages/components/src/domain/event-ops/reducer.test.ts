@@ -154,6 +154,50 @@ describe("EventsAPI", () => {
     expect(exception?.end.toString()).toBe("2025-01-15T11:15:00");
   });
 
+  it("resizing series start shifts detached exception recurrence anchor", () => {
+    const state: CalendarEventViewMap = new Map([
+      [
+        "daily",
+        {
+          eventId: "daily@example.test",
+          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
+          summary: "Daily",
+          color: "#10B981",
+          recurrenceRule: { freq: "DAILY", interval: 1, count: 4 },
+          exclusionDates: new Set(["20250115T090000"]),
+        },
+      ],
+      [
+        "daily::20250115T090000",
+        {
+          eventId: "daily@example.test",
+          recurrenceId: "20250115T090000",
+          start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
+          summary: "Daily (moved)",
+          color: "#10B981",
+          isException: true,
+        },
+      ],
+    ]);
+    const api = new EventsAPI(state);
+
+    api.resizeStart({
+      target: { key: "daily" },
+      scope: "series",
+      toStart: Temporal.PlainDateTime.from("2025-01-13T08:30:00"),
+    });
+
+    const next = api.getState();
+    const exception = next.get("daily::20250115T090000");
+    expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
+    expect(exception?.end.toString()).toBe("2025-01-15T11:15:00");
+    expect(exception?.recurrenceId).toBe("20250115T083000");
+    expect(next.get("daily")?.exclusionDates?.has("20250115T083000")).toBe(true);
+    expect(next.get("daily")?.exclusionDates?.has("20250115T090000")).toBe(false);
+  });
+
   it("moving a detached exception keeps original recurrence anchor and suppresses master occurrence", () => {
     const state: CalendarEventViewMap = new Map([
       [
