@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { EventsAPI, parseRecurrenceId, shiftDateValue } from "@lit-calendar/events-api";
+import { EventsAPI, parseRecurrenceId, shiftDateValue, type ApplyResult } from "@lit-calendar/events-api";
 import { action } from "storybook/actions";
 import {
   fromCreateRequest,
@@ -138,8 +138,59 @@ function movedToDifferentDay(
   );
 }
 
-function applyApiResult(el: StoryCalendarElement, api: EventsAPI, onPendingChanged?: () => void) {
-  el.events = api.getState();
+function toUnsyncedState(result: ApplyResult): Map<string, CalendarEvent> {
+  const nextState = new Map(result.nextState as Map<string, CalendarEvent>);
+
+  for (const change of result.changes) {
+    if (change.type === "created") {
+      const created = nextState.get(change.key);
+      if (!created) continue;
+      nextState.set(change.key, {
+        ...created,
+        pendingOp: "created",
+      });
+      continue;
+    }
+
+    if (change.type === "updated") {
+      const updated = nextState.get(change.key);
+      if (!updated) continue;
+      nextState.set(change.key, {
+        ...updated,
+        pendingOp: updated.pendingOp === "created" ? "created" : "updated",
+      });
+      continue;
+    }
+
+    // Keep deleted entries visible for `getPendingEvents()` in unsynced stories.
+    if (change.before.pendingOp === "created") {
+      nextState.delete(change.key);
+      continue;
+    }
+    nextState.set(change.key, {
+      ...change.before,
+      pendingOp: "deleted",
+    });
+  }
+
+  return nextState;
+}
+
+function applyApiResult(
+  el: StoryCalendarElement,
+  api: EventsAPI,
+  onPendingChanged: (() => void) | undefined,
+  mode: "sync" | "unsynced",
+  result?: ApplyResult
+) {
+  const applied =
+    result ??
+    ({
+      nextState: api.getState(),
+      changes: [],
+      effects: [],
+    } as ApplyResult);
+  el.events = mode === "unsynced" ? toUnsyncedState(applied) : (applied.nextState as Map<string, CalendarEvent>);
   onPendingChanged?.();
 }
 
@@ -175,7 +226,7 @@ export function attachRequestEventHandlers(
         eventId: `event-created-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       },
     });
-    applyApiResult(el, api, options.onPendingChanged);
+    applyApiResult(el, api, options.onPendingChanged, mode, created);
 
     if (mode === "unsynced") return;
 
@@ -187,19 +238,19 @@ export function attachRequestEventHandlers(
       event.preventDefault();
       logCreateCancelled(detail);
       const rollbackApi = buildApi(el);
-      rollbackApi.remove({ target: { key: createdKey.key }, scope: "single" });
-      applyApiResult(el, rollbackApi, options.onPendingChanged);
+      const rollbackResult = rollbackApi.remove({ target: { key: createdKey.key }, scope: "single" });
+      applyApiResult(el, rollbackApi, options.onPendingChanged, mode, rollbackResult);
       return;
     }
 
     window.setTimeout(() => {
       const commitApi = buildApi(el);
-      commitApi.update({
+      const commitResult = commitApi.update({
         target: { key: createdKey.key },
         scope: "single",
         patch: { summary: committedSummary },
       });
-      applyApiResult(el, commitApi, options.onPendingChanged);
+      applyApiResult(el, commitApi, options.onPendingChanged, mode, commitResult);
     }, 300);
   });
 
@@ -239,7 +290,7 @@ export function attachRequestEventHandlers(
 
     if (isRecurringInstanceMove && recurrenceId) {
       const previousEvents = cloneEventMap(el.events);
-      api.addException({
+      const addExceptionResult = api.addException({
         target: { key: eventKey },
         recurrenceId,
         event: {
@@ -251,7 +302,7 @@ export function attachRequestEventHandlers(
           calendarId: detail.envelope.calendarId,
         },
       });
-      applyApiResult(el, api, options.onPendingChanged);
+      applyApiResult(el, api, options.onPendingChanged, mode, addExceptionResult);
 
       const exceptionRequestDetail: EventExceptionRequestDetail = {
         envelope: {
@@ -299,7 +350,7 @@ export function attachRequestEventHandlers(
         },
       });
       if (isRecurring && recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-        api.addException({
+        const addExceptionResult = api.addException({
           target: { key: eventKey },
           recurrenceId,
           event: {
@@ -311,31 +362,32 @@ export function attachRequestEventHandlers(
             calendarId: detail.envelope.calendarId,
           },
         });
-        applyApiResult(el, api, options.onPendingChanged);
+        applyApiResult(el, api, options.onPendingChanged, mode, addExceptionResult);
         return;
       }
 
+      let operationResult: ApplyResult | undefined;
       if (updateKind === "move") {
         const delta = toPlainDateTime(occurrenceStart).until(toPlainDateTime(nextStart));
-        api.move({
+        operationResult = api.move({
           target: { key: eventKey },
           scope: "single",
           delta,
         });
       } else if (updateKind === "resize-start") {
-        api.resizeStart({
+        operationResult = api.resizeStart({
           target: { key: eventKey },
           scope: "single",
           toStart: nextStart,
         });
       } else if (updateKind === "resize-end") {
-        api.resizeEnd({
+        operationResult = api.resizeEnd({
           target: { key: eventKey },
           scope: "single",
           toEnd: nextEnd,
         });
       } else {
-        api.update({
+        operationResult = api.update({
           ...baseUpdateInput,
           target: { key: eventKey },
           scope: "single",
@@ -349,7 +401,7 @@ export function attachRequestEventHandlers(
           },
         });
       }
-      applyApiResult(el, api, options.onPendingChanged);
+      applyApiResult(el, api, options.onPendingChanged, mode, operationResult);
       return;
     }
 
@@ -357,8 +409,9 @@ export function attachRequestEventHandlers(
       "Apply changes to the whole series?\n\nOK = series\nCancel = only this instance"
     );
     if (!commitSeries) {
+      let operationResult: ApplyResult | undefined;
       if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-        api.addException({
+        operationResult = api.addException({
           target: { key: eventKey },
           recurrenceId,
           event: {
@@ -371,7 +424,7 @@ export function attachRequestEventHandlers(
           },
         });
       } else {
-        api.update({
+        operationResult = api.update({
           target: { key: eventKey },
           scope: "single",
           patch: {
@@ -385,7 +438,7 @@ export function attachRequestEventHandlers(
         });
       }
       logUpdateCommittedInstance(detail);
-      applyApiResult(el, api, options.onPendingChanged);
+      applyApiResult(el, api, options.onPendingChanged, mode, operationResult);
       return;
     }
 
@@ -398,14 +451,15 @@ export function attachRequestEventHandlers(
       },
     });
 
+    let operationResult: ApplyResult | undefined;
     if (updateKind === "move") {
       const delta = toPlainDateTime(occurrenceStart).until(toPlainDateTime(nextStart));
       const moveInput = moveFromUpdateRequest(detail, delta);
-      api.move({ ...moveInput, target: { key: eventKey }, scope: "series" });
+      operationResult = api.move({ ...moveInput, target: { key: eventKey }, scope: "series" });
     } else if (updateKind === "resize-start") {
       const resizeInput = resizeStartFromUpdateRequest(detail);
       const startDelta = toPlainDateTime(occurrenceStart).until(toPlainDateTime(nextStart));
-      api.resizeStart({
+      operationResult = api.resizeStart({
         ...(resizeInput ?? { target: { key: eventKey }, scope: "series", toStart: nextStart }),
         target: { key: eventKey },
         scope: "series",
@@ -414,14 +468,14 @@ export function attachRequestEventHandlers(
     } else if (updateKind === "resize-end") {
       const resizeInput = resizeEndFromUpdateRequest(detail);
       const endDelta = toPlainDateTime(occurrenceEnd).until(toPlainDateTime(nextEnd));
-      api.resizeEnd({
+      operationResult = api.resizeEnd({
         ...(resizeInput ?? { target: { key: eventKey }, scope: "series", toEnd: nextEnd }),
         target: { key: eventKey },
         scope: "series",
         toEnd: shiftDateValue(current.end, endDelta),
       });
     } else {
-      api.update({
+      operationResult = api.update({
         ...baseUpdateInput,
         target: { key: eventKey },
         scope: "series",
@@ -435,7 +489,7 @@ export function attachRequestEventHandlers(
         },
       });
     }
-    applyApiResult(el, api, options.onPendingChanged);
+    applyApiResult(el, api, options.onPendingChanged, mode, operationResult);
   });
 
   el.addEventListener("event-deleted", (event: Event) => {
@@ -462,18 +516,19 @@ export function attachRequestEventHandlers(
         return;
       }
       logDeleteCommittedInstance(detail);
+      let operationResult: ApplyResult | undefined;
       if (isCalendarEventException(current)) {
-        api.removeException({
+        operationResult = api.removeException({
           target: { key: eventKey },
           recurrenceId,
           options: { asExclusion: true },
         });
       } else if (isRecurring && recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-        api.addExclusion({ target: { key: eventKey }, recurrenceId });
+        operationResult = api.addExclusion({ target: { key: eventKey }, recurrenceId });
       } else {
-        api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "single" });
+        operationResult = api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "single" });
       }
-      applyApiResult(el, api, options.onPendingChanged);
+      applyApiResult(el, api, options.onPendingChanged, mode, operationResult);
       return;
     }
 
@@ -487,8 +542,8 @@ export function attachRequestEventHandlers(
           recurrenceId: undefined,
         },
       });
-      api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "series" });
-      applyApiResult(el, api, options.onPendingChanged);
+      const removeResult = api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "series" });
+      applyApiResult(el, api, options.onPendingChanged, mode, removeResult);
       return;
     }
 
@@ -498,22 +553,23 @@ export function attachRequestEventHandlers(
         recurrenceId,
       },
     });
+    let operationResult: ApplyResult | undefined;
     if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
       api.addExclusion({ target: { key: eventKey }, recurrenceId });
-      api.removeException({
+      operationResult = api.removeException({
         target: { key: `${eventKey}::${recurrenceId}` },
         options: { asExclusion: true },
       });
     } else if (isCalendarEventException(current)) {
-      api.removeException({
+      operationResult = api.removeException({
         target: { key: eventKey },
         recurrenceId,
         options: { asExclusion: true },
       });
     } else {
-      api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "single" });
+      operationResult = api.remove({ ...baseDeleteInput, target: { key: eventKey }, scope: "single" });
     }
-    applyApiResult(el, api, options.onPendingChanged);
+    applyApiResult(el, api, options.onPendingChanged, mode, operationResult);
   });
 }
 

@@ -201,4 +201,57 @@ describe("EventsAPI", () => {
     expect(expanded.has("weekly::20250120T090000")).toBe(true);
     expect(Array.from(expanded.keys())).toEqual(["weekly::20250120T090000"]);
   });
+
+  it("tracks update and delete as pending when enabled", () => {
+    const state: CalendarEventViewMap = new Map([
+      [
+        "single",
+        {
+          eventId: "single@example.test",
+          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
+          summary: "Single",
+          color: "#10B981",
+        },
+      ],
+    ]);
+    const api = new EventsAPI(state, { trackPending: true });
+
+    api.update({
+      target: { key: "single" },
+      scope: "single",
+      patch: { summary: "Single (edited)" },
+    });
+    expect(api.getState().get("single")?.pendingOp).toBe("updated");
+
+    api.remove({
+      target: { key: "single" },
+      scope: "single",
+    });
+    const next = api.getState();
+    expect(next.get("single")?.pendingOp).toBe("deleted");
+  });
+
+  it("drops locally created events when deleted in pending mode", () => {
+    const state: CalendarEventViewMap = new Map([
+      [
+        "draft",
+        {
+          eventId: "draft@example.test",
+          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
+          summary: "Draft",
+          color: "#10B981",
+          pendingOp: "created",
+        },
+      ],
+    ]);
+    const api = new EventsAPI(state, { trackPending: true });
+
+    api.remove({
+      target: { key: "draft" },
+      scope: "single",
+    });
+    expect(api.getState().has("draft")).toBe(false);
+  });
 });

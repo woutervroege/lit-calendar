@@ -120,7 +120,11 @@ export class EventCalendar extends BaseElement {
   });
   #eventsAPIContextValue: EventsAPIContextValue = {
     getState: () => this.events ?? new Map(),
-    getApi: () => new EventsAPI(this.events ?? new Map(), { timezone: this.timezone }),
+    getApi: () =>
+      new EventsAPI(this.events ?? new Map(), {
+        timezone: this.timezone,
+        trackPending: true,
+      }),
     apply: (operation) => this.#applyOperation(operation),
     create: (input) => this.#applyOperation({ type: "create", input }),
     update: (input) => this.#applyOperation({ type: "update", input }),

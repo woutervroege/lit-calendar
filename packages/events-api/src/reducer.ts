@@ -32,6 +32,7 @@ import type {
 type ReduceContext = {
   state: EventsState;
   timezone?: string;
+  trackPending?: boolean;
 };
 
 function cloneEvent(event: CalendarEventView): CalendarEventView {
@@ -91,6 +92,22 @@ function setUpdated(state: EventsState, changes: EventChange[], key: string, upd
   if (!before) return;
   state.set(key, update);
   changeUpdated(changes, key, before, update);
+}
+
+function asPendingUpdated(event: CalendarEventView, trackPending: boolean): CalendarEventView {
+  if (!trackPending) return event;
+  return {
+    ...event,
+    pendingOp: event.pendingOp === "created" ? "created" : "updated",
+  };
+}
+
+function asPendingDeleted(event: CalendarEventView, trackPending: boolean): CalendarEventView {
+  if (!trackPending) return event;
+  return {
+    ...event,
+    pendingOp: "deleted",
+  };
 }
 
 function withExcludedRecurrence(event: CalendarEventView, recurrenceId: string): CalendarEventView {
@@ -162,7 +179,7 @@ function applyUpdate(input: UpdateInput, context: ReduceContext): ApplyResult {
   for (const updateKey of keys) {
     const event = state.get(updateKey);
     if (!event) continue;
-    const updated = applyUpdateToEvent(event, input.patch);
+    const updated = asPendingUpdated(applyUpdateToEvent(event, input.patch), context.trackPending ?? false);
     setUpdated(state, changes, updateKey, updated);
   }
   return { nextState: state, changes, effects };
@@ -189,19 +206,25 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
       const nextRecurrenceId = shiftExceptionRecurrenceId
         ? shiftRecurrenceId(event.recurrenceId, event.start, input.delta)
         : event.recurrenceId;
-      const updated: CalendarEventView = {
-        ...event,
-        recurrenceId: nextRecurrenceId,
-      };
+      const updated = asPendingUpdated(
+        {
+          ...event,
+          recurrenceId: nextRecurrenceId,
+        },
+        context.trackPending ?? false
+      );
       setUpdated(state, changes, updateKey, updated);
       continue;
     }
-    const updated: CalendarEventView = {
-      ...event,
-      start: shiftDateValue(event.start, input.delta),
-      end: shiftDateValue(event.end, input.delta),
-      exclusionDates: shiftExdates ? shiftExclusionDates(event, input.delta) : event.exclusionDates,
-    };
+    const updated = asPendingUpdated(
+      {
+        ...event,
+        start: shiftDateValue(event.start, input.delta),
+        end: shiftDateValue(event.end, input.delta),
+        exclusionDates: shiftExdates ? shiftExclusionDates(event, input.delta) : event.exclusionDates,
+      },
+      context.trackPending ?? false
+    );
     setUpdated(state, changes, updateKey, updated);
   }
   return { nextState: state, changes, effects };
@@ -227,10 +250,13 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
     const event = state.get(updateKey);
     if (!event) continue;
     if (input.scope === "series" && isCalendarEventException(event)) {
-      const updatedException: CalendarEventView = {
-        ...event,
-        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
-      };
+      const updatedException = asPendingUpdated(
+        {
+          ...event,
+          recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
+        },
+        context.trackPending ?? false
+      );
       setUpdated(state, changes, updateKey, updatedException);
       continue;
     }
@@ -240,12 +266,15 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
       input.scope === "series" && event.recurrenceRule && !event.recurrenceId
         ? shiftExclusionDates(event, seriesDelta)
         : event.exclusionDates;
-    const updated: CalendarEventView = {
-      ...event,
-      start: bounded.start,
-      end: bounded.end,
-      exclusionDates: nextExclusionDates,
-    };
+    const updated = asPendingUpdated(
+      {
+        ...event,
+        start: bounded.start,
+        end: bounded.end,
+        exclusionDates: nextExclusionDates,
+      },
+      context.trackPending ?? false
+    );
     setUpdated(state, changes, updateKey, updated);
   }
   return { nextState: state, changes, effects };
@@ -273,11 +302,14 @@ function applyResizeEnd(input: ResizeEndInput, context: ReduceContext): ApplyRes
     if (input.scope === "series" && isCalendarEventException(event)) continue;
     const nextEnd = input.scope === "series" ? shiftDateValue(event.end, seriesDelta) : input.toEnd;
     const bounded = ensureMinimumDuration(event.start, nextEnd, input.options?.minDuration);
-    const updated: CalendarEventView = {
-      ...event,
-      start: bounded.start,
-      end: bounded.end,
-    };
+    const updated = asPendingUpdated(
+      {
+        ...event,
+        start: bounded.start,
+        end: bounded.end,
+      },
+      context.trackPending ?? false
+    );
     setUpdated(state, changes, updateKey, updated);
   }
   return { nextState: state, changes, effects };
@@ -313,6 +345,17 @@ function applyRemove(input: RemoveInput, context: ReduceContext): ApplyResult {
         }
       }
     }
+    if (context.trackPending) {
+      if (current.pendingOp === "created") {
+        state.delete(key);
+        changes.push({ type: "removed", key, before: current });
+      } else {
+        const updated = asPendingDeleted(current, true);
+        setUpdated(state, changes, key, updated);
+      }
+      return { nextState: state, changes, effects };
+    }
+
     state.delete(key);
     changes.push({ type: "removed", key, before: current });
     return { nextState: state, changes, effects };
@@ -320,6 +363,16 @@ function applyRemove(input: RemoveInput, context: ReduceContext): ApplyResult {
   for (const removeKey of keys) {
     const current = state.get(removeKey);
     if (!current) continue;
+    if (context.trackPending) {
+      if (current.pendingOp === "created") {
+        state.delete(removeKey);
+        changes.push({ type: "removed", key: removeKey, before: current });
+      } else {
+        const updated = asPendingDeleted(current, true);
+        setUpdated(state, changes, removeKey, updated);
+      }
+      continue;
+    }
     state.delete(removeKey);
     changes.push({ type: "removed", key: removeKey, before: current });
   }
@@ -337,7 +390,10 @@ function applyAddExclusion(input: AddExclusionInput, context: ReduceContext): Ap
   }
   const event = state.get(key);
   if (!event) return { nextState: state, changes, effects };
-  const updated = withExcludedRecurrence(event, input.recurrenceId);
+  const updated = asPendingUpdated(
+    withExcludedRecurrence(event, input.recurrenceId),
+    context.trackPending ?? false
+  );
   setUpdated(state, changes, key, updated);
   return { nextState: state, changes, effects };
 }
@@ -355,7 +411,10 @@ function applyRemoveExclusion(input: RemoveExclusionInput, context: ReduceContex
   if (!event) return { nextState: state, changes, effects };
   const exclusionDates = new Set(event.exclusionDates ?? []);
   exclusionDates.delete(input.recurrenceId);
-  const updated: CalendarEventView = { ...event, exclusionDates };
+  const updated = asPendingUpdated(
+    { ...event, exclusionDates },
+    context.trackPending ?? false
+  );
   setUpdated(state, changes, key, updated);
   return { nextState: state, changes, effects };
 }
@@ -371,7 +430,10 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
   }
   const master = state.get(key);
   if (!master) return { nextState: state, changes, effects };
-  const updatedMaster = withExcludedRecurrence(master, input.recurrenceId);
+  const updatedMaster = asPendingUpdated(
+    withExcludedRecurrence(master, input.recurrenceId),
+    context.trackPending ?? false
+  );
   setUpdated(state, changes, key, updatedMaster);
 
   const normalized = normalizeTimeRange(input.event);
@@ -387,10 +449,17 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
     recurrenceRule: undefined,
   };
   if (existing) {
-    setUpdated(state, changes, exceptionKey, exception);
+    setUpdated(state, changes, exceptionKey, asPendingUpdated(exception, context.trackPending ?? false));
   } else {
-    state.set(exceptionKey, exception);
-    changes.push({ type: "created", key: exceptionKey, event: exception });
+    const createdException =
+      context.trackPending ?
+        {
+          ...exception,
+          pendingOp: "created" as const,
+        }
+      : exception;
+    state.set(exceptionKey, createdException);
+    changes.push({ type: "created", key: exceptionKey, event: createdException });
   }
   return { nextState: state, changes, effects };
 }
@@ -415,10 +484,23 @@ function applyRemoveException(input: RemoveExceptionInput, context: ReduceContex
     if (masterKey) {
       const master = state.get(masterKey);
       if (master) {
-        const updatedMaster = withExcludedRecurrence(master, recurrenceId);
+        const updatedMaster = asPendingUpdated(
+          withExcludedRecurrence(master, recurrenceId),
+          context.trackPending ?? false
+        );
         setUpdated(state, changes, masterKey, updatedMaster);
       }
     }
+  }
+  if (context.trackPending) {
+    if (exception.pendingOp === "created") {
+      state.delete(key);
+      changes.push({ type: "removed", key, before: exception });
+    } else {
+      const updatedException = asPendingDeleted(exception, true);
+      setUpdated(state, changes, key, updatedException);
+    }
+    return { nextState: state, changes, effects };
   }
   state.delete(key);
   changes.push({ type: "removed", key, before: exception });
@@ -441,10 +523,12 @@ export function applyOperation(operation: EventOperation, context: ReduceContext
 export class EventsAPI {
   #state: EventsState;
   #timezone?: string;
+  #trackPending = false;
 
-  constructor(initialState: EventsState, options: { timezone?: string } = {}) {
+  constructor(initialState: EventsState, options: { timezone?: string; trackPending?: boolean } = {}) {
     this.#state = cloneState(initialState);
     this.#timezone = options.timezone;
+    this.#trackPending = options.trackPending ?? false;
   }
 
   getState(): EventsState {
@@ -503,7 +587,11 @@ export class EventsAPI {
   }
 
   apply(operation: EventOperation): ApplyResult {
-    const result = applyOperation(operation, { state: this.#state, timezone: this.#timezone });
+    const result = applyOperation(operation, {
+      state: this.#state,
+      timezone: this.#timezone,
+      trackPending: this.#trackPending,
+    });
     this.#state = cloneState(result.nextState);
     return {
       ...result,
