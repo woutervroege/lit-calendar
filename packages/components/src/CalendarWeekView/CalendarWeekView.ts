@@ -135,8 +135,7 @@ export class CalendarWeekView extends CalendarViewBase {
   }
 
   get #allDayLayoutItems(): AllDayLayoutItem[] {
-    return this.#eventEntries
-      .filter(([, event]) => this.#isAllDayEvent(event))
+    return this.#renderedAllDayEntries
       .map(([id, event]) => ({
         id,
         start: this.#toPlainDateTime(event.start).toPlainDate(),
@@ -144,8 +143,41 @@ export class CalendarWeekView extends CalendarViewBase {
       }));
   }
 
-  get #eventEntries(): EventEntry[] {
-    return Array.from(this.events?.entries() ?? []);
+  get #renderedAllDayEntries(): EventEntry[] {
+    const range = this.#renderedViewportRange;
+    if (!range) return [];
+    return Array.from(this.getRenderedEvents(range).entries()).filter(([, event]) =>
+      this.#isAllDayEvent(event)
+    );
+  }
+
+  get #renderedViewportRange():
+    | {
+        start: Temporal.PlainDateTime;
+        end: Temporal.PlainDateTime;
+      }
+    | undefined {
+    const viewDays = this.#viewDays;
+    if (!viewDays.length) return undefined;
+
+    const start = viewDays[0].toPlainDateTime({
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    const lastRenderedDay = viewDays[viewDays.length - 1];
+    const end = lastRenderedDay.add({ days: 1 }).toPlainDateTime({
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    return { start, end };
   }
 
   #isAllDayEvent(event: EventInput): boolean {
