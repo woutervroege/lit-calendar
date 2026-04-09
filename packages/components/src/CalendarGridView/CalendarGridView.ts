@@ -1140,9 +1140,9 @@ export class CalendarGridView extends CalendarViewBase {
         color: target.color,
       },
     };
-    const eventOpsUpdate = this.applyUpdateRequestToEventOps(detail);
-    if (eventOpsUpdate.handled) {
-      if (!eventOpsUpdate.accepted) {
+    const eventsAPIUpdate = this.applyUpdateRequestToEventsAPI(detail);
+    if (eventsAPIUpdate.handled) {
+      if (!eventsAPIUpdate.accepted) {
         this.#restoreRenderedEventRange(target, current, recurrenceId);
         return;
       }
@@ -1253,7 +1253,7 @@ export class CalendarGridView extends CalendarViewBase {
         isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
     };
-    if (this.applyDeleteRequestToEventOps(detail)) {
+    if (this.applyDeleteRequestToEventsAPI(detail)) {
       return;
     }
 
@@ -1979,7 +1979,7 @@ export class CalendarGridView extends CalendarViewBase {
         color: input.color,
       },
     };
-    if (this.applyCreateRequestToEventOps(detail)) {
+    if (this.applyCreateRequestToEventsAPI(detail)) {
       return;
     }
     console.info("event-create-requested", detail);

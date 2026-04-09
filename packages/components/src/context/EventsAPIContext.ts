@@ -16,7 +16,7 @@ import type {
   UpdateInput,
 } from "../domain/event-ops/index.js";
 
-export type EventOpsContextValue = {
+export type EventsAPIContextValue = {
   getState: () => EventsState;
   apply: (operation: EventOperation) => ApplyResult;
   getApi: () => EventsAPI;
@@ -32,4 +32,4 @@ export type EventOpsContextValue = {
   removeException: (input: RemoveExceptionInput) => ApplyResult;
 };
 
-export const eventOpsContext = createContext<EventOpsContextValue>(Symbol("event-ops-context"));
+export const eventsAPIContext = createContext<EventsAPIContextValue>(Symbol("events-api-context"));

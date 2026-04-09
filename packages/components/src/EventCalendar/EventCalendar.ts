@@ -26,7 +26,7 @@ import { renderListIcon } from "../icons/ListIcon.js";
 import { getLocaleDirection, resolveLocale } from "../utils/Locale.js";
 import { EventsAPI } from "../domain/event-ops/index.js";
 import type { EventOperation } from "../domain/event-ops/index.js";
-import { eventOpsContext, type EventOpsContextValue } from "../context/EventOpsContext.js";
+import { eventsAPIContext, type EventsAPIContextValue } from "../context/EventsAPIContext.js";
 import componentStyle from "./EventCalendar.css?inline";
 
 type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
@@ -116,10 +116,10 @@ export class EventCalendar extends BaseElement {
   defaultEventSummary = "New event";
   defaultEventColor = "#0ea5e9";
   defaultCalendarId?: string;
-  #eventOpsProvider = new ContextProvider(this, {
-    context: eventOpsContext,
+  #eventsAPIProvider = new ContextProvider(this, {
+    context: eventsAPIContext,
   });
-  #eventOpsContextValue: EventOpsContextValue = {
+  #eventsAPIContextValue: EventsAPIContextValue = {
     getState: () => this.events ?? new Map(),
     getApi: () => new EventsAPI(this.events ?? new Map(), { timezone: this.timezone }),
     apply: (operation) => this.#applyOperation(operation),
@@ -481,7 +481,7 @@ export class EventCalendar extends BaseElement {
   }
 
   #applyOperation(operation: EventOperation) {
-    const api = this.#eventOpsContextValue.getApi();
+    const api = this.#eventsAPIContextValue.getApi();
     const result = api.apply(operation);
     this.events = result.nextState;
     return result;
@@ -529,7 +529,7 @@ export class EventCalendar extends BaseElement {
 
   override updated(changedProperties: Map<PropertyKey, unknown>): void {
     super.updated(changedProperties);
-    this.#eventOpsProvider.setValue(this.#eventOpsContextValue, true);
+    this.#eventsAPIProvider.setValue(this.#eventsAPIContextValue, true);
     const viewGroup = this.#calendarViewGroup;
     if (!viewGroup) return;
     const nextRangeLabel = viewGroup.rangeLabel;

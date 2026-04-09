@@ -11,7 +11,7 @@ import {
   shiftDateValue,
 } from "../domain/event-ops/index.js";
 import type { EventOperation } from "../domain/event-ops/index.js";
-import { eventOpsContext, type EventOpsContextValue } from "../context/EventOpsContext.js";
+import { eventsAPIContext, type EventsAPIContextValue } from "../context/EventsAPIContext.js";
 import type {
   CalendarEventDateValue,
   CalendarEventPendingByCalendarId,
@@ -42,12 +42,12 @@ export abstract class CalendarViewBase extends BaseElement {
   #lang?: string;
   #timezone?: string;
   #currentTime?: string;
-  #eventOps?: EventOpsContextValue;
-  #eventOpsConsumer = new ContextConsumer(this, {
-    context: eventOpsContext,
+  #eventsAPI?: EventsAPIContextValue;
+  #eventsAPIConsumer = new ContextConsumer(this, {
+    context: eventsAPIContext,
     subscribe: true,
-    callback: (value: EventOpsContextValue | undefined) => {
-      this.#eventOps = value;
+    callback: (value: EventsAPIContextValue | undefined) => {
+      this.#eventsAPI = value;
       this.requestUpdate();
     },
   });
@@ -107,18 +107,18 @@ export abstract class CalendarViewBase extends BaseElement {
 
   connectedCallback() {
     super.connectedCallback();
-    void this.#eventOpsConsumer;
+    void this.#eventsAPIConsumer;
   }
 
-  protected applyCreateRequestToEventOps(detail: EventCreateRequestDetail): boolean {
-    if (!this.#eventOps) return false;
-    this.#applyEventOperation({ type: "create", input: fromCreateRequest(detail) });
+  protected applyCreateRequestToEventsAPI(detail: EventCreateRequestDetail): boolean {
+    if (!this.#eventsAPI) return false;
+    this.#applyEventsAPIOperation({ type: "create", input: fromCreateRequest(detail) });
     return true;
   }
 
-  protected applyUpdateRequestToEventOps(detail: EventUpdateRequestDetail): { handled: boolean; accepted: boolean } {
-    if (!this.#eventOps || !detail.envelope.eventId) return { handled: false, accepted: true };
-    const events = this.#eventOps.getState() ?? new Map();
+  protected applyUpdateRequestToEventsAPI(detail: EventUpdateRequestDetail): { handled: boolean; accepted: boolean } {
+    if (!this.#eventsAPI || !detail.envelope.eventId) return { handled: false, accepted: true };
+    const events = this.#eventsAPI.getState() ?? new Map();
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return { handled: false, accepted: true };
     const current = events.get(eventKey);
@@ -171,7 +171,7 @@ export abstract class CalendarViewBase extends BaseElement {
       if (!accepted || !keepException) {
         return { handled: true, accepted: false };
       }
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "add-exception",
         input: {
           target: { key: eventKey },
@@ -195,7 +195,7 @@ export abstract class CalendarViewBase extends BaseElement {
       );
       if (!commitSeries) {
         if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-          this.#applyEventOperation({
+          this.#applyEventsAPIOperation({
             type: "add-exception",
             input: {
               target: { key: eventKey },
@@ -212,7 +212,7 @@ export abstract class CalendarViewBase extends BaseElement {
           });
           return { handled: true, accepted: true };
         }
-        this.#applyEventOperation({
+        this.#applyEventsAPIOperation({
           type: "update",
           input: {
             target: { key: eventKey },
@@ -233,7 +233,7 @@ export abstract class CalendarViewBase extends BaseElement {
       if (updateKind === "move") {
         const delta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
         const moveInput = moveFromUpdateRequest(detail, delta);
-        this.#applyEventOperation({
+        this.#applyEventsAPIOperation({
           type: "move",
           input: {
             ...moveInput,
@@ -246,7 +246,7 @@ export abstract class CalendarViewBase extends BaseElement {
 
       if (updateKind === "resize-start") {
         const startDelta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
-        this.#applyEventOperation({
+        this.#applyEventsAPIOperation({
           type: "resize-start",
           input: {
             target: { key: eventKey },
@@ -259,7 +259,7 @@ export abstract class CalendarViewBase extends BaseElement {
 
       if (updateKind === "resize-end") {
         const endDelta = this.#toPlainDateTime(occurrenceEnd).until(this.#toPlainDateTime(detail.content.end));
-        this.#applyEventOperation({
+        this.#applyEventsAPIOperation({
           type: "resize-end",
           input: {
             target: { key: eventKey },
@@ -270,7 +270,7 @@ export abstract class CalendarViewBase extends BaseElement {
         return { handled: true, accepted: true };
       }
 
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "update",
         input: {
           target: { key: eventKey },
@@ -291,7 +291,7 @@ export abstract class CalendarViewBase extends BaseElement {
     if (updateKind === "move") {
       const delta = this.#toPlainDateTime(occurrenceStart).until(this.#toPlainDateTime(detail.content.start));
       const moveInput = moveFromUpdateRequest(detail, delta);
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "move",
         input: {
           ...moveInput,
@@ -302,7 +302,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     if (updateKind === "resize-start") {
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "resize-start",
         input: {
           target: { key: eventKey },
@@ -314,7 +314,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     if (updateKind === "resize-end") {
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "resize-end",
         input: {
           target: { key: eventKey },
@@ -326,7 +326,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     const updateInput = fromUpdateRequest(detail);
-    this.#applyEventOperation({
+    this.#applyEventsAPIOperation({
       type: "update",
       input: {
         ...updateInput,
@@ -336,9 +336,9 @@ export abstract class CalendarViewBase extends BaseElement {
     return { handled: true, accepted: true };
   }
 
-  protected applyDeleteRequestToEventOps(detail: EventDeleteRequestDetail): boolean {
-    if (!this.#eventOps || !detail.envelope.eventId) return false;
-    const events = this.#eventOps.getState() ?? new Map();
+  protected applyDeleteRequestToEventsAPI(detail: EventDeleteRequestDetail): boolean {
+    if (!this.#eventsAPI || !detail.envelope.eventId) return false;
+    const events = this.#eventsAPI.getState() ?? new Map();
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return false;
     const current = events.get(eventKey);
@@ -356,7 +356,7 @@ export abstract class CalendarViewBase extends BaseElement {
         "Delete the whole series?\n\nOK = series\nCancel = only this instance"
       );
       if (commitSeries) {
-        this.#applyEventOperation({
+        this.#applyEventsAPIOperation({
           type: "remove",
           input: {
             ...fromDeleteRequest(detail),
@@ -369,7 +369,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     if (isCalendarEventException(current)) {
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "remove-exception",
         input: {
           target: { key: eventKey },
@@ -381,7 +381,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     if (isRecurring && recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-      this.#applyEventOperation({
+      this.#applyEventsAPIOperation({
         type: "add-exclusion",
         input: {
           target: { key: eventKey },
@@ -392,7 +392,7 @@ export abstract class CalendarViewBase extends BaseElement {
     }
 
     const removeInput = fromDeleteRequest(detail);
-    this.#applyEventOperation({
+    this.#applyEventsAPIOperation({
       type: "remove",
       input: {
         ...removeInput,
@@ -491,9 +491,9 @@ export abstract class CalendarViewBase extends BaseElement {
     }
   }
 
-  #applyEventOperation(operation: EventOperation) {
-    if (!this.#eventOps) return;
-    const result = this.#eventOps.apply(operation);
+  #applyEventsAPIOperation(operation: EventOperation) {
+    if (!this.#eventsAPI) return;
+    const result = this.#eventsAPI.apply(operation);
     this.events = result.nextState;
   }
 
