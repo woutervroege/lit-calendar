@@ -185,7 +185,7 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
     const event = state.get(updateKey);
     if (!event) continue;
     const isException = isCalendarEventException(event);
-    if (isException && keepExceptionTiming) {
+    if (input.scope === "series" && isException && keepExceptionTiming) {
       const nextRecurrenceId = shiftExceptionRecurrenceId
         ? shiftRecurrenceId(event.recurrenceId, event.start, input.delta)
         : event.recurrenceId;

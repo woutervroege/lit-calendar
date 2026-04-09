@@ -153,5 +153,60 @@ describe("EventsAPI", () => {
     expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
     expect(exception?.end.toString()).toBe("2025-01-15T11:15:00");
   });
+
+  it("moving a detached exception keeps original recurrence anchor and suppresses master occurrence", () => {
+    const state: CalendarEventViewMap = new Map([
+      [
+        "weekly",
+        {
+          eventId: "weekly@example.test",
+          start: Temporal.PlainDateTime.from("2025-01-20T09:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-20T10:00:00"),
+          summary: "Weekly",
+          color: "#0ea5e9",
+          recurrenceRule: {
+            freq: "WEEKLY",
+            interval: 1,
+            byDay: [{ day: "MO" }],
+            count: 4,
+          },
+          exclusionDates: new Set(),
+        },
+      ],
+      [
+        "weekly::20250120T090000",
+        {
+          eventId: "weekly@example.test",
+          recurrenceId: "20250120T090000",
+          start: Temporal.PlainDateTime.from("2025-01-20T13:00:00"),
+          end: Temporal.PlainDateTime.from("2025-01-20T14:00:00"),
+          summary: "Weekly (moved)",
+          color: "#0ea5e9",
+          isException: true,
+        },
+      ],
+    ]);
+    const api = new EventsAPI(state);
+
+    api.move({
+      target: { key: "weekly::20250120T090000" },
+      scope: "single",
+      delta: Temporal.Duration.from({ hours: 1 }),
+    });
+
+    const next = api.getState();
+    const movedException = next.get("weekly::20250120T090000");
+    expect(movedException?.start.toString()).toBe("2025-01-20T14:00:00");
+    expect(movedException?.end.toString()).toBe("2025-01-20T15:00:00");
+    expect(movedException?.recurrenceId).toBe("20250120T090000");
+
+    const expanded = api.expand({
+      start: Temporal.PlainDateTime.from("2025-01-20T00:00:00"),
+      end: Temporal.PlainDateTime.from("2025-01-21T00:00:00"),
+    });
+
+    expect(expanded.has("weekly::20250120T090000")).toBe(true);
+    expect(Array.from(expanded.keys())).toEqual(["weekly::20250120T090000"]);
+  });
 });
 
