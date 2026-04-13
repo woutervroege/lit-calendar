@@ -182,7 +182,7 @@ function applyApiResult(
   const applied =
     result ??
     ({
-      nextState: api.getState(),
+      nextState: api.events,
       changes: [],
       effects: [],
     } as ApplyResult);

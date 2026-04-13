@@ -45,7 +45,7 @@ describe("EventsAPI", () => {
       delta: Temporal.Duration.from({ hours: 1 }),
     });
 
-    const next = api.getState();
+    const next = api.events;
     expect(next.get("daily")?.data.start.toString()).toBe("2025-01-13T10:00:00");
     expect(next.get("daily")?.data.exclusionDates?.has("20250114T100000")).toBe(true);
     expect(next.get("daily::20250115T090000")?.data.start.toString()).toBe("2025-01-15T11:00:00");
@@ -89,7 +89,7 @@ describe("EventsAPI", () => {
       options: { asExclusion: true },
     });
 
-    const next = api.getState();
+    const next = api.events;
     expect(next.has("daily::20250114T090000")).toBe(false);
     expect(next.get("daily")?.data.exclusionDates?.has("20250114T090000")).toBe(true);
   });
@@ -111,7 +111,7 @@ describe("EventsAPI", () => {
       toStart: Temporal.PlainDateTime.from("2025-01-13T08:30:00"),
     });
 
-    const next = api.getState();
+    const next = api.events;
     expect(next.get("daily")?.data.exclusionDates?.has("20250114T083000")).toBe(true);
     expect(next.get("daily")?.data.exclusionDates?.has("20250114T090000")).toBe(false);
   });
@@ -142,7 +142,7 @@ describe("EventsAPI", () => {
       toStart: Temporal.PlainDateTime.from("2025-01-13T08:30:00"),
     });
 
-    const next = api.getState();
+    const next = api.events;
     const exception = next.get("daily::20250115T090000");
     expect(exception?.data.start.toString()).toBe("2025-01-15T11:00:00");
     expect((exception ? resolveEventEnd(exception.data).toString() : undefined)).toBe("2025-01-15T11:15:00");
@@ -187,7 +187,7 @@ describe("EventsAPI", () => {
       toStart: Temporal.PlainDateTime.from("2025-01-13T08:30:00"),
     });
 
-    const next = api.getState();
+    const next = api.events;
     const exception = next.get("daily::20250115T090000");
     expect(exception?.data.start.toString()).toBe("2025-01-15T11:00:00");
     expect((exception ? resolveEventEnd(exception.data).toString() : undefined)).toBe("2025-01-15T11:15:00");
@@ -205,7 +205,7 @@ describe("EventsAPI", () => {
       delta: Temporal.Duration.from({ hours: 1 }),
     });
 
-    const next = api.getState();
+    const next = api.events;
     const movedException = next.get("weekly::20250120T090000");
     expect(movedException?.data.start.toString()).toBe("2025-01-20T14:00:00");
     expect((movedException ? resolveEventEnd(movedException.data).toString() : undefined)).toBe(
@@ -244,13 +244,13 @@ describe("EventsAPI", () => {
       scope: "single",
       patch: { summary: "Single (edited)" },
     });
-    expect(api.getState().get("single")?.pendingOp).toBe("updated");
+    expect(api.events.get("single")?.pendingOp).toBe("updated");
 
     api.remove({
       target: { key: "single" },
       scope: "single",
     });
-    const next = api.getState();
+    const next = api.events;
     expect(next.get("single")?.pendingOp).toBe("deleted");
   });
 
@@ -276,7 +276,7 @@ describe("EventsAPI", () => {
       target: { key: "draft" },
       scope: "single",
     });
-    expect(api.getState().has("draft")).toBe(false);
+    expect(api.events.has("draft")).toBe(false);
   });
 
   it("series update skips detached exceptions", () => {
@@ -289,7 +289,7 @@ describe("EventsAPI", () => {
       patch: { summary: "Weekly (series updated)" },
     });
 
-    const next = api.getState();
+    const next = api.events;
     expect(next.get("weekly")?.data.summary).toBe("Weekly (series updated)");
     expect(next.get("weekly")?.pendingOp).toBe("updated");
     expect(next.get("weekly::20250120T090000")?.data.summary).toBe("Weekly (moved)");
@@ -305,7 +305,7 @@ describe("EventsAPI", () => {
       delta: Temporal.Duration.from({ hours: 1 }),
     });
 
-    const next = api.getState();
+    const next = api.events;
     expect(next.get("weekly")?.pendingOp).toBe("updated");
     expect(next.get("weekly::20250120T090000")?.recurrenceId).toBe("20250120T100000");
     expect(next.get("weekly::20250120T090000")?.pendingOp).toBeUndefined();

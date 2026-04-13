@@ -263,7 +263,7 @@ function renderPlayground() {
   let api = new EventsAPI(toEventsApiMap(createInitialState()), { timezone: "Europe/Amsterdam" });
 
   const sync = (lastResult?: unknown) => {
-    const state = fromEventsApiMap(api.getState());
+    const state = fromEventsApiMap(api.events);
     calendar.events = state;
     stateOutput.value = summarizeState(state);
     resultOutput.value = lastResult ? asText(lastResult) : "(no operations yet)";

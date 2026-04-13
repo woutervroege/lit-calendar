@@ -7,7 +7,6 @@ import type {
   CreateInput,
   EventOperation,
   EventTarget,
-  EventsState,
   MoveInput,
   RemoveExceptionInput,
   RemoveExclusionInput,
@@ -21,17 +20,17 @@ import { applyOperation } from "./apply/index.js";
 import { cloneEvent, cloneState, resolveKey } from "./helpers.js";
 
 export class EventsAPI {
-  #state: EventsState;
+  #state: CalendarEventsMap;
   #timezone?: string;
   #trackPending = false;
 
-  constructor(initialState: EventsState, options: { timezone?: string; trackPending?: boolean } = {}) {
-    this.#state = cloneState(initialState);
+  constructor(events: CalendarEventsMap, options: { timezone?: string; trackPending?: boolean } = {}) {
+    this.#state = cloneState(events);
     this.#timezone = options.timezone;
     this.#trackPending = options.trackPending ?? false;
   }
 
-  getState(): EventsState {
+  get events(): CalendarEventsMap {
     return cloneState(this.#state);
   }
 

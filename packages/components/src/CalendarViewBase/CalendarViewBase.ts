@@ -118,7 +118,7 @@ export abstract class CalendarViewBase extends BaseElement {
     accepted: boolean;
   } {
     if (!this.#eventsAPI || !detail.envelope.eventId) return { handled: false, accepted: true };
-    const events = fromEventsApiMap(this.#eventsAPI.getState() ?? new Map());
+    const events = fromEventsApiMap(this.#eventsAPI.getEvents() ?? new Map());
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return { handled: false, accepted: true };
     const current = events.get(eventKey);
@@ -350,7 +350,7 @@ export abstract class CalendarViewBase extends BaseElement {
 
   protected applyDeleteRequestToEventsAPI(detail: EventDeleteRequestDetail): boolean {
     if (!this.#eventsAPI || !detail.envelope.eventId) return false;
-    const events = fromEventsApiMap(this.#eventsAPI.getState() ?? new Map());
+    const events = fromEventsApiMap(this.#eventsAPI.getEvents() ?? new Map());
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return false;
     const current = events.get(eventKey);
