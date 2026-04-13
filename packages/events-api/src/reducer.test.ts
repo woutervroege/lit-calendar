@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventsMap } from "./state-types.js";
+import { resolveEventEnd } from "./recurrence.js";
 import { EventsAPI } from "./reducer.js";
 import { createDailySeriesState, createWeeklySeriesWithExceptionState } from "./testing/mockEvents.js";
 
@@ -136,7 +137,7 @@ describe("EventsAPI", () => {
     const next = api.getState();
     const exception = next.get("daily::20250115T090000");
     expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
-    expect(exception?.end.toString()).toBe("2025-01-15T11:15:00");
+    expect((exception ? resolveEventEnd(exception).toString() : undefined)).toBe("2025-01-15T11:15:00");
   });
 
   it("resizing series start shifts detached exception recurrence anchor", () => {
@@ -179,7 +180,7 @@ describe("EventsAPI", () => {
     const next = api.getState();
     const exception = next.get("daily::20250115T090000");
     expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
-    expect(exception?.end.toString()).toBe("2025-01-15T11:15:00");
+    expect((exception ? resolveEventEnd(exception).toString() : undefined)).toBe("2025-01-15T11:15:00");
     expect(exception?.recurrenceId).toBe("20250115T083000");
     expect(next.get("daily")?.exclusionDates?.has("20250115T083000")).toBe(true);
     expect(next.get("daily")?.exclusionDates?.has("20250115T090000")).toBe(false);
@@ -197,7 +198,9 @@ describe("EventsAPI", () => {
     const next = api.getState();
     const movedException = next.get("weekly::20250120T090000");
     expect(movedException?.start.toString()).toBe("2025-01-20T14:00:00");
-    expect(movedException?.end.toString()).toBe("2025-01-20T15:00:00");
+    expect((movedException ? resolveEventEnd(movedException).toString() : undefined)).toBe(
+      "2025-01-20T15:00:00"
+    );
     expect(movedException?.recurrenceId).toBe("20250120T090000");
 
     const expanded = api.expand({

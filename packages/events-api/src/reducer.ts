@@ -67,6 +67,28 @@ function resolveEventEndValue(
   return shiftDateValue(event.start, event.duration);
 }
 
+function withEndTimeSpan(
+  event: Omit<CalendarEventRecord, "end" | "duration"> & Partial<CalendarEventTimeSpan>,
+  end: CalendarEventDateValue
+): CalendarEventRecord {
+  const { duration: _duration, ...rest } = event;
+  return {
+    ...rest,
+    end,
+  };
+}
+
+function withDurationTimeSpan(
+  event: Omit<CalendarEventRecord, "end" | "duration"> & Partial<CalendarEventTimeSpan>,
+  duration: Temporal.Duration
+): CalendarEventRecord {
+  const { end: _end, ...rest } = event;
+  return {
+    ...rest,
+    duration,
+  };
+}
+
 function resolveKey(state: EventsState, target: EventTarget): string | undefined {
   if ("key" in target) return state.has(target.key) ? target.key : undefined;
   for (const [key, event] of state.entries()) {
@@ -147,22 +169,19 @@ function ensureMinimumDuration(
 }
 
 function applyUpdateToEvent(event: CalendarEventRecord, patch: UpdateInput["patch"]): CalendarEventRecord {
-  const next = cloneEvent(event);
+  let next = cloneEvent(event);
   if (patch.summary !== undefined) next.summary = patch.summary;
   if (patch.color !== undefined) next.color = patch.color;
   if (patch.location !== undefined) next.location = patch.location;
   if (patch.calendarId !== undefined) next.calendarId = patch.calendarId;
   if (patch.start !== undefined) next.start = patch.start;
   if ("end" in patch && patch.end !== undefined) {
-    next.end = patch.end;
-    delete next.duration;
+    next = withEndTimeSpan(next, patch.end);
   }
   if ("duration" in patch && patch.duration !== undefined && patch.start !== undefined) {
-    next.duration = patch.duration;
-    delete next.end;
+    next = withDurationTimeSpan(next, patch.duration);
   } else if ("duration" in patch && patch.duration !== undefined) {
-    next.duration = patch.duration;
-    delete next.end;
+    next = withDurationTimeSpan(next, patch.duration);
   }
   return next;
 }
@@ -176,12 +195,24 @@ function applyCreate(input: CreateInput, context: ReduceContext): ApplyResult {
     input.key ??
     input.event.eventId ??
     `event-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const event: CalendarEventRecord = {
-    key,
-    ...input.event,
-    start: normalized.start,
-    ...("end" in input.event ? { end: normalized.end } : { duration: input.event.duration }),
-  };
+  const event: CalendarEventRecord =
+    "end" in input.event ?
+      (() => {
+        const { duration: _duration, ...base } = {
+          key,
+          ...input.event,
+          start: normalized.start,
+        };
+        return { ...base, end: normalized.end } as CalendarEventRecord;
+      })()
+    : (() => {
+        const base = {
+          key,
+          ...input.event,
+          start: normalized.start,
+        };
+        return { ...base, duration: input.event.duration } as CalendarEventRecord;
+      })();
   state.set(key, event);
   changes.push({ type: "created", key, event });
   return { nextState: state, changes, effects };
@@ -236,14 +267,17 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
       continue;
     }
     const updated = asPendingUpdated(
-      {
-        ...event,
-        start: shiftDateValue(event.start, input.delta),
-        ...("end" in event && event.end !== undefined
-          ? { end: shiftDateValue(event.end, input.delta), duration: undefined }
-          : {}),
-        exclusionDates: shiftExdates ? shiftExclusionDates(event, input.delta) : event.exclusionDates,
-      },
+      (() => {
+        const { end: eventEnd, duration: eventDuration, ...eventRest } = event;
+        const shiftedBase = {
+          ...eventRest,
+          start: shiftDateValue(event.start, input.delta),
+          exclusionDates: shiftExdates ? shiftExclusionDates(event, input.delta) : event.exclusionDates,
+        };
+        return eventEnd !== undefined
+          ? withEndTimeSpan(shiftedBase, shiftDateValue(eventEnd, input.delta))
+          : withDurationTimeSpan(shiftedBase, eventDuration as Temporal.Duration);
+      })(),
       context.trackPending ?? false
     );
     setUpdated(state, changes, updateKey, updated);
@@ -285,13 +319,14 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
         ? shiftExclusionDates(event, seriesDelta)
         : event.exclusionDates;
     const updated = asPendingUpdated(
-      {
-        ...event,
-        start: bounded.start,
-        end: bounded.end,
-        duration: undefined,
-        exclusionDates: nextExclusionDates,
-      },
+      withEndTimeSpan(
+        {
+          ...event,
+          start: bounded.start,
+          exclusionDates: nextExclusionDates,
+        },
+        bounded.end
+      ),
       context.trackPending ?? false
     );
     setUpdated(state, changes, updateKey, updated);
@@ -323,12 +358,13 @@ function applyResizeEnd(input: ResizeEndInput, context: ReduceContext): ApplyRes
       input.scope === "series" ? shiftDateValue(resolveEventEndValue(event), seriesDelta) : input.toEnd;
     const bounded = ensureMinimumDuration(event.start, nextEnd, input.options?.minDuration);
     const updated = asPendingUpdated(
-      {
-        ...event,
-        start: bounded.start,
-        end: bounded.end,
-        duration: undefined,
-      },
+      withEndTimeSpan(
+        {
+          ...event,
+          start: bounded.start,
+        },
+        bounded.end
+      ),
       context.trackPending ?? false
     );
     setUpdated(state, changes, updateKey, updated);
@@ -460,16 +496,32 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
   const normalized = normalizeTimeRange(input.event);
   const exceptionKey = input.event.key ?? `${key}::${input.recurrenceId}`;
   const existing = state.get(exceptionKey);
-  const exception: CalendarEventRecord = {
-    ...master,
-    ...input.event,
-    key: exceptionKey,
-    start: normalized.start,
-    ...("end" in input.event ? { end: normalized.end } : { duration: input.event.duration }),
-    recurrenceId: input.recurrenceId,
-    isException: true,
-    recurrenceRule: undefined,
-  };
+  const exception: CalendarEventRecord =
+    "end" in input.event ?
+      (() => {
+        const { duration: _duration, ...base } = {
+          ...master,
+          ...input.event,
+          key: exceptionKey,
+          start: normalized.start,
+          recurrenceId: input.recurrenceId,
+          isException: true,
+          recurrenceRule: undefined,
+        };
+        return { ...base, end: normalized.end } as CalendarEventRecord;
+      })()
+    : (() => {
+        const base = {
+          ...master,
+          ...input.event,
+          key: exceptionKey,
+          start: normalized.start,
+          recurrenceId: input.recurrenceId,
+          isException: true,
+          recurrenceRule: undefined,
+        };
+        return { ...base, duration: input.event.duration } as CalendarEventRecord;
+      })();
   if (existing) {
     setUpdated(state, changes, exceptionKey, asPendingUpdated(exception, context.trackPending ?? false));
   } else {
