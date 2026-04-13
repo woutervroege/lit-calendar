@@ -68,10 +68,7 @@ export type RemoveExclusionInput = {
 export type AddExceptionInput = {
   target: EventTarget;
   recurrenceId: string;
-  event: Partial<Pick<CalendarEvent, "summary" | "color" | "location" | "calendarId">> &
-    TimeRangeInput & {
-      key?: EventKey;
-    };
+  event: Partial<Pick<CalendarEvent, "summary" | "color" | "location" | "calendarId">> & TimeRangeInput;
   options?: {
     conflictPolicy?: "replace" | "merge" | "error";
   };

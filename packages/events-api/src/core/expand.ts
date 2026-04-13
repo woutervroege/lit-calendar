@@ -74,7 +74,6 @@ export function expandEvents(
         const occurrenceKey = `${id}::${recurrenceId}`;
         const renderedOccurrence: CalendarEventRecord = {
           ...event,
-          key: occurrenceKey,
           recurrenceId,
           start: fromPlainDateTime(occurrenceStart, event.start),
           end: fromPlainDateTime(occurrenceEnd, baseEndValue),

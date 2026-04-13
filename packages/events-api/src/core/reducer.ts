@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventDateValue } from "../types/calendar.js";
 import type {
-  CalendarEvent,
   CalendarEventRecord,
   CalendarEventsMap,
   CalendarEventTimeSpan,
@@ -199,7 +198,6 @@ function applyCreate(input: CreateInput, context: ReduceContext): ApplyResult {
     "end" in input.event ?
       (() => {
         const { duration: _duration, ...base } = {
-          key,
           ...input.event,
           start: normalized.start,
         };
@@ -207,7 +205,6 @@ function applyCreate(input: CreateInput, context: ReduceContext): ApplyResult {
       })()
     : (() => {
         const base = {
-          key,
           ...input.event,
           start: normalized.start,
         };
@@ -494,7 +491,7 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
   setUpdated(state, changes, key, updatedMaster);
 
   const normalized = normalizeTimeRange(input.event);
-  const exceptionKey = input.event.key ?? `${key}::${input.recurrenceId}`;
+  const exceptionKey = `${key}::${input.recurrenceId}`;
   const existing = state.get(exceptionKey);
   const exception: CalendarEventRecord =
     "end" in input.event ?
@@ -502,7 +499,6 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
         const { duration: _duration, ...base } = {
           ...master,
           ...input.event,
-          key: exceptionKey,
           start: normalized.start,
           recurrenceId: input.recurrenceId,
           isException: true,
@@ -514,7 +510,6 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
         const base = {
           ...master,
           ...input.event,
-          key: exceptionKey,
           start: normalized.start,
           recurrenceId: input.recurrenceId,
           isException: true,
@@ -532,7 +527,7 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
           pendingOp: "created" as const,
         }
       : exception;
-    state.set(exceptionKey, { ...createdException, key: exceptionKey });
+    state.set(exceptionKey, createdException);
     changes.push({ type: "created", key: exceptionKey, event: createdException });
   }
   return { nextState: state, changes, effects };

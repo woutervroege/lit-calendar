@@ -28,7 +28,6 @@ describe("expandEvents", () => {
       [
         "daily",
         {
-          key: "daily",
           eventId: "daily@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
@@ -41,7 +40,6 @@ describe("expandEvents", () => {
       [
         "daily::20250114T090000",
         {
-          key: "daily::20250114T090000",
           eventId: "daily@example.test",
           recurrenceId: "20250114T090000",
           start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
@@ -68,7 +66,6 @@ describe("expandEvents", () => {
       [
         "monthly-last-friday",
         {
-          key: "monthly-last-friday",
           eventId: "monthly-last-friday@example.test",
           start: Temporal.PlainDateTime.from("2025-01-06T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-06T10:00:00"),

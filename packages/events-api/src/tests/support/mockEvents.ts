@@ -6,7 +6,6 @@ export function createDailySeriesState(): CalendarEventsMap {
     [
       "daily",
       {
-        key: "daily",
         eventId: "daily@example.test",
         start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
         end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
@@ -23,7 +22,6 @@ export function createWeeklySeriesWithExceptionState(): CalendarEventsMap {
     [
       "weekly",
       {
-        key: "weekly",
         eventId: "weekly@example.test",
         start: Temporal.PlainDateTime.from("2025-01-20T09:00:00"),
         end: Temporal.PlainDateTime.from("2025-01-20T10:00:00"),
@@ -41,7 +39,6 @@ export function createWeeklySeriesWithExceptionState(): CalendarEventsMap {
     [
       "weekly::20250120T090000",
       {
-        key: "weekly::20250120T090000",
         eventId: "weekly@example.test",
         recurrenceId: "20250120T090000",
         start: Temporal.PlainDateTime.from("2025-01-20T13:00:00"),

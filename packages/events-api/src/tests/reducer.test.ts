@@ -11,7 +11,6 @@ describe("EventsAPI", () => {
       [
         "daily",
         {
-          key: "daily",
           eventId: "daily@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
@@ -24,7 +23,6 @@ describe("EventsAPI", () => {
       [
         "daily::20250115T090000",
         {
-          key: "daily::20250115T090000",
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
           start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
@@ -55,7 +53,6 @@ describe("EventsAPI", () => {
       [
         "daily",
         {
-          key: "daily",
           eventId: "daily@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
@@ -67,7 +64,6 @@ describe("EventsAPI", () => {
       [
         "daily::20250114T090000",
         {
-          key: "daily::20250114T090000",
           eventId: "daily@example.test",
           recurrenceId: "20250114T090000",
           start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
@@ -115,7 +111,6 @@ describe("EventsAPI", () => {
       [
         "daily::20250115T090000",
         {
-          key: "daily::20250115T090000",
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
           start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
@@ -145,7 +140,6 @@ describe("EventsAPI", () => {
       [
         "daily",
         {
-          key: "daily",
           eventId: "daily@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
@@ -158,7 +152,6 @@ describe("EventsAPI", () => {
       [
         "daily::20250115T090000",
         {
-          key: "daily::20250115T090000",
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
           start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
@@ -217,7 +210,6 @@ describe("EventsAPI", () => {
       [
         "single",
         {
-          key: "single",
           eventId: "single@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
@@ -248,7 +240,6 @@ describe("EventsAPI", () => {
       [
         "draft",
         {
-          key: "draft",
           eventId: "draft@example.test",
           start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
           end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
