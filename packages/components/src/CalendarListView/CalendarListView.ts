@@ -4,9 +4,13 @@ import { customElement, property } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { CalendarViewBase } from "../CalendarViewBase/CalendarViewBase.js";
 import "../EventCard/EventCard.js";
+import type { CalendarEvent as EventInput } from "@lit-calendar/events-api";
+import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
 import { renderCalendarIcon } from "../icons/CalendarIcon.js";
-import type { CalendarEventView as EventInput } from "../types/CalendarEvent.js";
-import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
+import {
+  isCalendarEventException,
+  isCalendarEventRecurring,
+} from "../types/calendarEventSemantics.js";
 import { clampAgendaDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { resolveLocale } from "../utils/Locale.js";
@@ -110,20 +114,20 @@ export class CalendarListView extends CalendarViewBase {
   #renderItem(item: AgendaItem) {
     const { event } = item;
     const isPast = Temporal.PlainDateTime.compare(item.end, this.#now) <= 0;
-    const colorStyles = getEventColorStyles(event.color);
+    const colorStyles = getEventColorStyles(event.data.color);
     const isRecurring = this.#isRecurringEvent(event);
     const isException = this.#isExceptionEvent(event);
     return html`
       <li
         class="agenda-event-item"
-        @click=${(clickEvent: MouseEvent) => this.#handleEventClick(item, clickEvent)}
+        @click=${() => this.#handleEventClick(item)}
       >
         <event-card
           layout="flow"
           .lang=${this.lang}
-          .summary=${event.summary}
+          .summary=${event.data.summary}
           .time=${this.#formatItemTime(item)}
-          .location=${event.location ?? ""}
+          .location=${event.data.location ?? ""}
           .recurring=${isRecurring}
           .exception=${isException}
           ?past=${isPast}
@@ -136,28 +140,10 @@ export class CalendarListView extends CalendarViewBase {
     `;
   }
 
-  #handleEventClick(item: AgendaItem, sourceEvent: MouseEvent) {
+  #handleEventClick(item: AgendaItem) {
     this.dispatchEvent(
-      new CustomEvent("event-selection", {
-        detail: {
-          envelope: {
-            eventId: item.event.eventId ?? item.id,
-            calendarId: item.event.calendarId,
-            recurrenceId: item.event.recurrenceId,
-            isException: isCalendarEventException(item.event),
-            isRecurring: isCalendarEventRecurring(item.event),
-          },
-          content: {
-            start: item.event.start,
-            end: item.event.end,
-            summary: item.event.summary,
-            color: item.event.color,
-            location: item.event.location,
-          },
-          trigger: sourceEvent.detail === 0 ? "keyboard" : "click",
-          pointerType: sourceEvent.detail === 0 ? "keyboard" : "mouse",
-          sourceEvent,
-        },
+      new CustomEvent("event-selected", {
+        detail: { key: item.id },
       })
     );
   }
@@ -172,8 +158,8 @@ export class CalendarListView extends CalendarViewBase {
     });
 
     for (const [id, event] of renderedEvents.entries()) {
-      const start = this.#toPlainDateTime(event.start);
-      const end = this.#toPlainDateTime(event.end);
+      const start = this.#toPlainDateTime(event.data.start);
+      const end = this.#toPlainDateTime(resolvedDataEnd(event.data));
       if (Temporal.PlainDateTime.compare(end, start) <= 0) continue;
       if (!this.#eventOverlapsRange(start, end, rangeStart, rangeEndExclusive)) continue;
 
@@ -234,7 +220,7 @@ export class CalendarListView extends CalendarViewBase {
     if (startDiff !== 0) return startDiff;
     const endDiff = Temporal.PlainDateTime.compare(a.end, b.end);
     if (endDiff !== 0) return endDiff;
-    return a.event.summary.localeCompare(b.event.summary);
+    return a.event.data.summary.localeCompare(b.event.data.summary);
   }
 
   #formatDayLabel(date: Temporal.PlainDate): string {
@@ -333,18 +319,12 @@ export class CalendarListView extends CalendarViewBase {
     );
   }
 
-  #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.ZonedDateTime) {
-      return this.timezone
-        ? value.withTimeZone(this.timezone).toPlainDateTime()
-        : value.toPlainDateTime();
-    }
-    if (value instanceof Temporal.PlainDateTime) return value;
-    return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+  #toPlainDateTime(value: Temporal.PlainDateTime): Temporal.PlainDateTime {
+    return value;
   }
 
   #isAllDayEvent(event: EventInput): boolean {
-    return event.start instanceof Temporal.PlainDate || event.end instanceof Temporal.PlainDate;
+    return event.data.allDay === true;
   }
 
   #isRecurringEvent(event: EventInput): boolean {

@@ -9,11 +9,12 @@ import {
   langControlLabels,
   langControlOptions,
   sampleEvents,
+  storyEventsFromArg,
   timezoneOptions,
   weekStartControlLabels,
   weekStartControlOptions,
 } from "./support/StoryData.js";
-import type { CalendarEventPendingGroups } from "../src/types/CalendarEvent.js";
+import type { CalendarEventPendingGroups } from "../src/types/calendarEventPending.js";
 import {
   attachRequestEventHandlers,
   attachUnsyncedRequestEventHandlers,
@@ -34,7 +35,7 @@ function summarizePendingGroups(pendingGroups: CalendarEventPendingGroups) {
     Array.from(entries?.entries() ?? []).map(([key, event]) => ({
       key,
       eventId: event.eventId,
-      summary: event.summary,
+      summary: event.data.summary,
       pendingOp: event.pendingOp,
     }));
 
@@ -98,17 +99,15 @@ function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode
     el.removeAttribute("default-source-id");
   }
 
-  const entries = Array.isArray(args.events) ? args.events : sampleEvents;
-  el.events = new Map(entries as Array<[string, CalendarEvent]>);
+  el.events = storyEventsFromArg(args.events, sampleEvents);
 
   if (mode === "unsynced") {
     attachUnsyncedRequestEventHandlers(el, {
-      preserveDateOnlyShape: true,
       onPendingChanged: () => reportPendingEvents(el, "changed"),
     });
     reportPendingEvents(el, "initial");
   } else {
-    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
+    attachRequestEventHandlers(el);
   }
 
   return el;

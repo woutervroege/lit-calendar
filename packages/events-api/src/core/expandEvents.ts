@@ -1,25 +1,21 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue, CalendarEventViewMap } from "./calendar-types.js";
-import { collectDetachedExceptionKeys, toPlainDateTime, toRecurrenceId } from "./recurrence.js";
-import { expandRecurringStarts } from "./rrule-adapter.js";
+import type { CalendarEvent, CalendarEventsMap } from "../types/event.js";
+import {
+  collectDetachedExceptionKeys,
+  resolveEventEnd,
+  toPlainDateTime,
+  toRecurrenceId,
+} from "../utils/recurrence.js";
+import { expandRecurringStarts } from "../utils/rrule-adapter.js";
 
 type ExpandEventsRange = {
-  start: CalendarEventDateValue;
-  end: CalendarEventDateValue;
+  start: Temporal.PlainDateTime;
+  end: Temporal.PlainDateTime;
 };
 
 type ExpandEventsOptions = {
   timezone?: string;
 };
-
-function fromPlainDateTime(
-  value: Temporal.PlainDateTime,
-  template: CalendarEventDateValue
-): CalendarEventDateValue {
-  if (template instanceof Temporal.PlainDate) return value.toPlainDate();
-  if (template instanceof Temporal.ZonedDateTime) return value.toZonedDateTime(template.timeZoneId);
-  return value;
-}
 
 function rangeOverlaps(
   start: Temporal.PlainDateTime,
@@ -35,22 +31,23 @@ function rangeOverlaps(
 }
 
 export function expandEvents(
-  events: CalendarEventViewMap,
+  events: CalendarEventsMap,
   range: ExpandEventsRange,
   options: ExpandEventsOptions = {}
-): CalendarEventViewMap {
-  const rangeStart = toPlainDateTime(range.start, options.timezone);
-  const rangeEnd = toPlainDateTime(range.end, options.timezone);
+): CalendarEventsMap {
+  const rangeStart = toPlainDateTime(range.start);
+  const rangeEnd = toPlainDateTime(range.end);
   if (Temporal.PlainDateTime.compare(rangeEnd, rangeStart) <= 0) return new Map();
 
   const detachedExceptionKeys = collectDetachedExceptionKeys(events);
-  const renderedEvents: CalendarEventViewMap = new Map();
+  const renderedEvents: CalendarEventsMap = new Map();
 
   for (const [id, event] of events) {
     if (event.pendingOp === "deleted") continue;
-    if (event.recurrenceRule && !event.recurrenceId) {
-      const baseStart = toPlainDateTime(event.start, options.timezone);
-      const baseEnd = toPlainDateTime(event.end, options.timezone);
+    if (event.data.recurrenceRule && !event.recurrenceId) {
+      const baseStart = toPlainDateTime(event.data.start);
+      const baseEndValue = resolveEventEnd(event.data);
+      const baseEnd = toPlainDateTime(baseEndValue);
       if (Temporal.PlainDateTime.compare(baseEnd, baseStart) <= 0) continue;
       const baseDuration = baseStart.until(baseEnd);
       const occurrenceStarts = expandRecurringStarts(event, rangeStart, rangeEnd, {
@@ -58,24 +55,30 @@ export function expandEvents(
       });
 
       for (const occurrenceStart of occurrenceStarts) {
-        const recurrenceId = toRecurrenceId(occurrenceStart, event.start);
+        const recurrenceId = toRecurrenceId(occurrenceStart, event.data.allDay ?? false);
         const hasDetachedException =
           Boolean(event.eventId) && detachedExceptionKeys.has(`${event.eventId}::${recurrenceId}`);
         if (hasDetachedException) continue;
         const occurrenceEnd = occurrenceStart.add(baseDuration);
         if (!rangeOverlaps(occurrenceStart, occurrenceEnd, rangeStart, rangeEnd)) continue;
-        renderedEvents.set(`${id}::${recurrenceId}`, {
+        const occurrenceKey = `${id}::${recurrenceId}`;
+        const renderedOccurrence: CalendarEvent = {
           ...event,
           recurrenceId,
-          start: fromPlainDateTime(occurrenceStart, event.start),
-          end: fromPlainDateTime(occurrenceEnd, event.end),
-        });
+          data: {
+            ...event.data,
+            start: occurrenceStart,
+            end: occurrenceEnd,
+            duration: undefined,
+          },
+        };
+        renderedEvents.set(occurrenceKey, renderedOccurrence);
       }
       continue;
     }
 
-    const start = toPlainDateTime(event.start, options.timezone);
-    const end = toPlainDateTime(event.end, options.timezone);
+    const start = toPlainDateTime(event.data.start);
+    const end = toPlainDateTime(resolveEventEnd(event.data));
     if (!rangeOverlaps(start, end, rangeStart, rangeEnd)) continue;
     renderedEvents.set(id, event);
   }

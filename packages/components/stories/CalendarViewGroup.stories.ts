@@ -8,6 +8,7 @@ import {
   langControlLabels,
   langControlOptions,
   sampleEvents,
+  storyEventsFromArg,
   timezoneOptions,
   weekStartControlLabels,
   weekStartControlOptions,
@@ -111,9 +112,8 @@ const meta: Meta = {
       el.setAttribute("visible-hours", String(args.visibleHours));
     }
 
-    const entries = Array.isArray(args.events) ? args.events : sampleEvents;
-    el.events = new Map(entries);
-    attachRequestEventHandlers(el, { preserveDateOnlyShape: true });
+    el.events = storyEventsFromArg(args.events, sampleEvents);
+    attachRequestEventHandlers(el);
 
     return el;
   },

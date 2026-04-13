@@ -11,30 +11,39 @@ import componentStyle from "./CalendarGridView.css?inline";
 import "../AllDayEvent/AllDayEvent.js";
 import "../DayOverflowPopover/DayOverflowPopover.js";
 import {
+  type CalendarEvent,
+  type CalendarEventsMap,
+  parseRecurrenceId,
+} from "@lit-calendar/events-api";
+import {
   type CalendarViewContextValue,
   calendarViewContext,
 } from "../context/CalendarViewContext.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
+import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
 import type { EventBase } from "../EventBase/EventBase.js";
+import {
+  isCalendarEventException,
+  isCalendarEventRecurring,
+} from "../types/calendarEventSemantics.js";
 import { buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { clampGridDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { formatShortTimeRange } from "../utils/TimeFormatting.js";
-import { isCalendarEventException, isCalendarEventRecurring } from "../types/CalendarEvent.js";
-import { parseRecurrenceId } from "@lit-calendar/events-api";
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
   DayOverflowPopoverEvent,
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
-  CalendarEventViewEntry as EventEntry,
-  CalendarEventView as EventInput,
   EventSelectionRequestDetail,
-  CalendarEventViewMap as EventsMap,
   EventUpdateRequestDetail,
 } from "../types/index.js";
+
+type EventInput = CalendarEvent;
+type EventEntry = [string, CalendarEvent];
+type EventsMap = CalendarEventsMap;
 
 type AllDayOverflowLayout = {
   maxVisibleRows: number;
@@ -52,8 +61,9 @@ const SECONDS_IN_DAY = 24 * 60 * 60;
 const DEFAULT_TIMED_CREATE_DURATION_MINUTES = 15;
 
 type EventCreateRequestEmitInput = {
-  start: EventInput["start"];
-  end: EventInput["end"];
+  start: Temporal.PlainDateTime;
+  end: Temporal.PlainDateTime;
+  allDay?: boolean;
   summary: string;
   color: string;
   calendarId?: string;
@@ -643,10 +653,10 @@ export class CalendarGridView extends CalendarViewBase {
           ? html`
               <all-day-event
                 .eventId=${id}
-                start=${this.#toEventDateTimeString(event.start)}
-                end=${this.#toEventDateTimeString(event.end)}
-                .summary=${event.summary}
-                .color=${event.color}
+                start=${this.#toEventDateTimeString(event.data.start, this.#isAllDayEvent(event))}
+                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data), this.#isAllDayEvent(event))}
+                .summary=${event.data.summary}
+                .color=${event.data.color}
                 .isRecurring=${this.#isRecurringEvent(event)}
                 .isException=${this.#isExceptionEvent(event)}
                 ?inert=${this.#shouldDisableAllDayInteractionInCompactMonth()}
@@ -664,10 +674,10 @@ export class CalendarGridView extends CalendarViewBase {
           : html`
               <timed-event
                 .eventId=${id}
-                start=${this.#toEventDateTimeString(event.start)}
-                end=${this.#toEventDateTimeString(event.end)}
-                .summary=${event.summary}
-                .color=${event.color}
+                start=${this.#toEventDateTimeString(event.data.start, false)}
+                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data), false)}
+                .summary=${event.data.summary}
+                .color=${event.data.color}
                 .isRecurring=${this.#isRecurringEvent(event)}
                 .isException=${this.#isExceptionEvent(event)}
                 .viewDays=${this.viewDays}
@@ -740,8 +750,10 @@ export class CalendarGridView extends CalendarViewBase {
   ): number | null {
     const viewDays = this.viewDays;
     if (!viewDays.length) return null;
-    const eventStart = this.#toPlainDateTime(event.start).toPlainDate();
-    const eventEnd = this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate();
+    const eventStart = this.#toPlainDateTime(event.data.start).toPlainDate();
+    const eventEnd = this.#toPlainDateTime(resolvedDataEnd(event.data))
+      .subtract({ nanoseconds: 1 })
+      .toPlainDate();
 
     if (Temporal.PlainDate.compare(eventEnd, viewDays[0]) < 0) return null;
     if (Temporal.PlainDate.compare(eventStart, viewDays[viewDays.length - 1]) > 0) return null;
@@ -861,8 +873,8 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #isMultiDayEvent(event: EventInput): boolean {
-    const start = this.#toPlainDateTime(event.start).toPlainDate();
-    const endInclusive = this.#toPlainDateTime(event.end)
+    const start = this.#toPlainDateTime(event.data.start).toPlainDate();
+    const endInclusive = this.#toPlainDateTime(resolvedDataEnd(event.data))
       .subtract({ nanoseconds: 1 })
       .toPlainDate();
     return Temporal.PlainDate.compare(endInclusive, start) > 0;
@@ -1016,14 +1028,15 @@ export class CalendarGridView extends CalendarViewBase {
     );
     const popoverEvents: DayOverflowPopoverEvent[] = dayEvents.map(([id, event]) => ({
       id,
-      start: this.#toEventDateTimeString(event.start),
-      end: this.#toEventDateTimeString(event.end),
-      summary: event.summary,
-      color: event.color,
+      start: this.#toEventDateTimeString(event.data.start, this.#isAllDayEvent(event)),
+      end: this.#toEventDateTimeString(resolvedDataEnd(event.data), this.#isAllDayEvent(event)),
+      summary: event.data.summary,
+      color: event.data.color,
       hidden: false,
     }));
     const dayLabel = this.#getPopoverDayLabel(day, dayIndex);
-    const isCurrentDay = Temporal.PlainDate.compare(day, this.#resolvedCurrentDateTime.toPlainDate()) === 0;
+    const isCurrentDay =
+      Temporal.PlainDate.compare(day, this.#resolvedCurrentDateTime.toPlainDate()) === 0;
     const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
 
     return html`
@@ -1052,15 +1065,6 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #handleEventSelect = (event: Event) => {
-    const selectDetail =
-      event instanceof CustomEvent &&
-      event.detail &&
-      typeof event.detail === "object" &&
-      "trigger" in event.detail
-        ? (event.detail as
-            | { trigger?: "click" | "keyboard"; pointerType?: string; sourceEvent?: Event }
-            | undefined)
-        : undefined;
     const detailTarget =
       event instanceof CustomEvent &&
       event.detail &&
@@ -1069,29 +1073,11 @@ export class CalendarGridView extends CalendarViewBase {
         ? (event.detail as EventBase)
         : null;
     const target = detailTarget ?? (event.currentTarget as EventBase | null);
-    if (!target?.eventId || !target.start || !target.end) return;
-    const { event: current, recurrenceId } = this.#resolveSourceEvent(target.eventId);
-    const detail: EventSelectionRequestDetail = {
-      envelope: {
-        eventId: current?.eventId ?? target.eventId,
-        calendarId: current?.calendarId,
-        recurrenceId,
-        isException: current ? isCalendarEventException(current) : undefined,
-        isRecurring: current ? isCalendarEventRecurring(current) : undefined,
-      },
-      content: {
-        start: target.start,
-        end: target.end,
-        summary: target.summary,
-        color: target.color,
-      },
-      trigger: selectDetail?.trigger ?? "click",
-      pointerType: selectDetail?.pointerType ?? "mouse",
-      sourceEvent: selectDetail?.sourceEvent ?? event,
-    };
+    const key = target?.eventId;
+    if (!key) return;
     this.dispatchEvent(
-      new CustomEvent("event-selection", {
-        detail,
+      new CustomEvent("event-selected", {
+        detail: { key } satisfies EventSelectionRequestDetail,
       })
     );
   };
@@ -1123,8 +1109,9 @@ export class CalendarGridView extends CalendarViewBase {
     const target = detailTarget ?? (event.target as EventBase | null);
     if (!target?.eventId || !target.start || !target.end) return;
     const { event: current, recurrenceId } = this.#resolveSourceEvent(target.eventId);
-    const nextStart = this.#coerceUpdatedEventDateValue(target.start, current?.start);
-    const nextEnd = this.#coerceUpdatedEventDateValue(target.end, current?.end);
+    const templateAllDay = current?.data.allDay ?? false;
+    const nextStart = this.#coerceUpdatedEventDateValue(target.start, templateAllDay);
+    const nextEnd = this.#coerceUpdatedEventDateValue(target.end, templateAllDay);
     const detail: EventUpdateRequestDetail = {
       envelope: {
         eventId: current?.eventId ?? target.eventId,
@@ -1136,6 +1123,7 @@ export class CalendarGridView extends CalendarViewBase {
       content: {
         start: nextStart,
         end: nextEnd,
+        allDay: current?.data.allDay,
         summary: target.summary,
         color: target.color,
       },
@@ -1152,21 +1140,7 @@ export class CalendarGridView extends CalendarViewBase {
       }
       return;
     }
-    const updateRequested = this.dispatchEvent(
-      new CustomEvent("event-updated", {
-        detail,
-        cancelable: true,
-      })
-    );
-    if (!updateRequested) {
-      this.#restoreRenderedEventRange(target, current, recurrenceId);
-      return;
-    }
-
-    if (updateInputMethod === "keyboard") {
-      this.#pendingKeyboardRefocusEventId = target.eventId;
-      this.#startKeyboardRefocusLoop();
-    }
+    this.#restoreRenderedEventRange(target, current, recurrenceId);
   };
 
   #restoreRenderedEventRange(
@@ -1176,35 +1150,46 @@ export class CalendarGridView extends CalendarViewBase {
   ) {
     if (!current) return;
 
-    if (recurrenceId && current.recurrenceRule && !current.recurrenceId) {
-      const parsedRecurrence = parseRecurrenceId(recurrenceId, current.start);
+    const data = current.data;
+    const dataEnd = resolvedDataEnd(data);
+
+    if (recurrenceId && data.recurrenceRule && !current.recurrenceId) {
+      const parsedRecurrence = parseRecurrenceId(recurrenceId, data.allDay ?? false, data.start);
       if (parsedRecurrence) {
-        const masterStart = this.#toPlainDateTime(current.start);
-        const masterEnd = this.#toPlainDateTime(current.end);
+        const masterStart = this.#toPlainDateTime(data.start);
+        const masterEnd = this.#toPlainDateTime(dataEnd);
         const duration = masterStart.until(masterEnd);
         const occurrenceStart = this.#toPlainDateTime(parsedRecurrence);
         const occurrenceEnd = occurrenceStart.add(duration);
-        const restoredStart = this.#coerceUpdatedEventDateValue(occurrenceStart, current.start);
-        const restoredEnd = this.#coerceUpdatedEventDateValue(occurrenceEnd, current.end);
+        const restoredStart = this.#coerceUpdatedEventDateValue(
+          occurrenceStart,
+          data.allDay ?? false
+        );
+        const restoredEnd = this.#coerceUpdatedEventDateValue(occurrenceEnd, data.allDay ?? false);
         target.start = restoredStart.toString();
         target.end = restoredEnd.toString();
         return;
       }
     }
 
-    target.start = current.start.toString();
-    target.end = current.end.toString();
+    target.start = data.start.toString();
+    target.end = dataEnd.toString();
   }
 
   #restorePendingKeyboardEventFocus() {
     const eventId = this.#pendingKeyboardRefocusEventId;
     if (!eventId) return;
 
-    const renderedEvents = this.renderRoot.querySelectorAll<EventBase>("timed-event, all-day-event");
-    const target = Array.from(renderedEvents).find((renderedEvent) => renderedEvent.eventId === eventId);
+    const renderedEvents = this.renderRoot.querySelectorAll<EventBase>(
+      "timed-event, all-day-event"
+    );
+    const target = Array.from(renderedEvents).find(
+      (renderedEvent) => renderedEvent.eventId === eventId
+    );
     if (!target) return;
 
-    const interactionSurface = target.shadowRoot?.querySelector<HTMLElement>(".interaction-surface");
+    const interactionSurface =
+      target.shadowRoot?.querySelector<HTMLElement>(".interaction-surface");
     if (!interactionSurface) return;
 
     interactionSurface.focus({ preventScroll: true });
@@ -1253,16 +1238,7 @@ export class CalendarGridView extends CalendarViewBase {
         isRecurring: current ? isCalendarEventRecurring(current) : undefined,
       },
     };
-    if (this.applyDeleteRequestToEventsAPI(detail)) {
-      return;
-    }
-
-    this.dispatchEvent(
-      new CustomEvent("event-deleted", {
-        detail,
-        cancelable: true,
-      })
-    );
+    this.applyDeleteRequestToEventsAPI(detail);
   };
 
   #renderDayNumber(day: Temporal.PlainDate, dayIndex: number): TemplateResult {
@@ -1520,8 +1496,9 @@ export class CalendarGridView extends CalendarViewBase {
         const endDateInclusive = endDateTime.toPlainDate();
         const endExclusive = endDateInclusive.add({ days: 1 });
         this.#emitEventCreateRequested({
-          start: startDate,
-          end: endExclusive,
+          start: startDate.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+          end: endExclusive.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+          allDay: true,
           summary: this.defaultEventSummary,
           color: this.defaultEventColor,
           calendarId: this.defaultCalendarId,
@@ -1568,8 +1545,9 @@ export class CalendarGridView extends CalendarViewBase {
       const endDateInclusive = endDateTime.toPlainDate();
       const endExclusive = endDateInclusive.add({ days: 1 });
       this.#emitEventCreateRequested({
-        start: startDate,
-        end: endExclusive,
+        start: startDate.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+        end: endExclusive.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
+        allDay: true,
         summary: this.defaultEventSummary,
         color: this.defaultEventColor,
         calendarId: this.defaultCalendarId,
@@ -1975,20 +1953,12 @@ export class CalendarGridView extends CalendarViewBase {
       content: {
         start: input.start,
         end: input.end,
+        allDay: input.allDay,
         summary: input.summary,
         color: input.color,
       },
     };
-    if (this.applyCreateRequestToEventsAPI(detail)) {
-      return;
-    }
-    console.info("event-created", detail);
-    this.dispatchEvent(
-      new CustomEvent("event-created", {
-        detail,
-        cancelable: true,
-      })
-    );
+    this.applyCreateRequestToEventsAPI(detail);
   }
 
   #eventsForDay(day: Temporal.PlainDate): EventEntry[] {
@@ -1996,8 +1966,8 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #eventOverlapsDay(event: EventInput, day: Temporal.PlainDate): boolean {
-    const start = this.#toPlainDateTime(event.start);
-    const end = this.#toPlainDateTime(event.end);
+    const start = this.#toPlainDateTime(event.data.start);
+    const end = this.#toPlainDateTime(resolvedDataEnd(event.data));
     if (Temporal.PlainDateTime.compare(end, start) <= 0) return false;
 
     const dayStart = day.toPlainDateTime({
@@ -2197,41 +2167,39 @@ export class CalendarGridView extends CalendarViewBase {
 
   #compareEventsForRenderOrder([, a]: EventEntry, [, b]: EventEntry): number {
     if (this.variant === "all-day") {
-      const aStartDate = this.#toPlainDateTime(a.start).toPlainDate();
-      const bStartDate = this.#toPlainDateTime(b.start).toPlainDate();
+      const aStartDate = this.#toPlainDateTime(a.data.start).toPlainDate();
+      const bStartDate = this.#toPlainDateTime(b.data.start).toPlainDate();
       const startDateDiff = Temporal.PlainDate.compare(aStartDate, bStartDate);
       if (startDateDiff !== 0) return startDateDiff;
 
       // Match AllDayEvent.siblings ordering: longer spans should win lower stack rows.
-      const aEndDate = this.#toPlainDateTime(a.end).subtract({ nanoseconds: 1 }).toPlainDate();
-      const bEndDate = this.#toPlainDateTime(b.end).subtract({ nanoseconds: 1 }).toPlainDate();
+      const aEndDate = this.#toPlainDateTime(resolvedDataEnd(a.data))
+        .subtract({ nanoseconds: 1 })
+        .toPlainDate();
+      const bEndDate = this.#toPlainDateTime(resolvedDataEnd(b.data))
+        .subtract({ nanoseconds: 1 })
+        .toPlainDate();
       const endDateDiff = Temporal.PlainDate.compare(aEndDate, bEndDate);
       if (endDateDiff !== 0) return -endDateDiff;
 
-      return a.summary.localeCompare(b.summary);
+      return a.data.summary.localeCompare(b.data.summary);
     }
 
-    const aStart = this.#toPlainDateTime(a.start);
-    const bStart = this.#toPlainDateTime(b.start);
+    const aStart = this.#toPlainDateTime(a.data.start);
+    const bStart = this.#toPlainDateTime(b.data.start);
     const startDiff = Temporal.PlainDateTime.compare(aStart, bStart);
     if (startDiff !== 0) return startDiff;
 
-    const aEnd = this.#toPlainDateTime(a.end);
-    const bEnd = this.#toPlainDateTime(b.end);
+    const aEnd = this.#toPlainDateTime(resolvedDataEnd(a.data));
+    const bEnd = this.#toPlainDateTime(resolvedDataEnd(b.data));
     const endDiff = Temporal.PlainDateTime.compare(aEnd, bEnd);
     if (endDiff !== 0) return endDiff;
 
-    return a.summary.localeCompare(b.summary);
+    return a.data.summary.localeCompare(b.data.summary);
   }
 
-  #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.ZonedDateTime) {
-      return value.withTimeZone(this.timezone).toPlainDateTime();
-    }
-    if (value instanceof Temporal.PlainDateTime) {
-      return value;
-    }
-    return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+  #toPlainDateTime(value: Temporal.PlainDateTime): Temporal.PlainDateTime {
+    return value;
   }
 
   #toPlainDateTimeFromString(value: string): Temporal.PlainDateTime {
@@ -2243,19 +2211,26 @@ export class CalendarGridView extends CalendarViewBase {
 
   #coerceUpdatedEventDateValue(
     updatedValue: Temporal.PlainDateTime,
-    sourceValue: EventInput["start"] | undefined
-  ): EventInput["start"] {
-    if (sourceValue instanceof Temporal.PlainDate) {
-      return updatedValue.toPlainDate();
+    templateAllDay: boolean
+  ): Temporal.PlainDateTime {
+    if (templateAllDay) {
+      return updatedValue.toPlainDate().toPlainDateTime({ hour: 0, minute: 0, second: 0 });
     }
     return updatedValue;
   }
 
-  #toEventDateTimeString(value: EventInput["start"]): string {
+  /** Date-only strings for all-day rows so `EventBase` does not treat midnight as a clock time. */
+  #toEventDateTimeString(value: Temporal.PlainDateTime, allDay: boolean): string {
+    if (allDay) {
+      return value.toPlainDate().toString();
+    }
     return value.toString();
   }
 
-  #resolveSourceEvent(renderedEventId: string): { event: EventInput | undefined; recurrenceId?: string } {
+  #resolveSourceEvent(renderedEventId: string): {
+    event: EventInput | undefined;
+    recurrenceId?: string;
+  } {
     const separatorIndex = renderedEventId.indexOf("::");
     const sourceKey =
       separatorIndex === -1 ? renderedEventId : renderedEventId.slice(0, separatorIndex);
@@ -2269,11 +2244,7 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #isAllDayEvent(event: EventInput): boolean {
-    return this.#isDateOnlyValue(event.start) || this.#isDateOnlyValue(event.end);
-  }
-
-  #isDateOnlyValue(value: EventInput["start"]): boolean {
-    return value instanceof Temporal.PlainDate;
+    return event.data.allDay === true;
   }
 
   #getAllDayOverflowLayout(): AllDayOverflowLayout {
@@ -2302,7 +2273,7 @@ export class CalendarGridView extends CalendarViewBase {
     }
 
     const visibleEvents = this.#sortedEvents;
-    const eventColorsById = new Map(visibleEvents.map(([id, event]) => [id, event.color]));
+    const eventColorsById = new Map(visibleEvents.map(([id, event]) => [id, event.data.color]));
     const layout = buildAllDayLayout({
       viewDays: this.viewDays,
       daysPerRow: cols,
@@ -2469,8 +2440,10 @@ export class CalendarGridView extends CalendarViewBase {
   #toAllDayLayoutItem(id: string, event: EventInput): AllDayLayoutItem {
     return {
       id,
-      start: this.#toPlainDateTime(event.start).toPlainDate(),
-      endInclusive: this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate(),
+      start: this.#toPlainDateTime(event.data.start).toPlainDate(),
+      endInclusive: this.#toPlainDateTime(resolvedDataEnd(event.data))
+        .subtract({ nanoseconds: 1 })
+        .toPlainDate(),
     };
   }
 

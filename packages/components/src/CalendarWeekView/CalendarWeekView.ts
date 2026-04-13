@@ -5,13 +5,15 @@ import { styleMap } from "lit/directives/style-map.js";
 import "../CalendarGridView/CalendarGridView.js";
 import "../CalendarWeekdayHeader/CalendarWeekdayHeader.js";
 import "../CalendarTimeSidebar/CalendarTimeSidebar.js";
+import type { CalendarEvent, CalendarEventsMap } from "@lit-calendar/events-api";
 import { CalendarViewBase, isWeekdayNumber } from "../CalendarViewBase/CalendarViewBase.js";
+import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
 import type { AllDayLayoutItem } from "../types/AllDayLayout.js";
-import type {
-  CalendarEventViewEntry as EventEntry,
-  CalendarEventView as EventInput,
-  CalendarEventViewMap as EventsMap,
-} from "../types/CalendarEvent.js";
+
+type EventEntry = [string, CalendarEvent];
+type EventInput = CalendarEvent;
+type EventsMap = CalendarEventsMap;
+
 import type { WeekdayNumber } from "../types/Weekday.js";
 import { buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { clampDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
@@ -137,8 +139,10 @@ export class CalendarWeekView extends CalendarViewBase {
   get #allDayLayoutItems(): AllDayLayoutItem[] {
     return this.#renderedAllDayEntries.map(([id, event]) => ({
       id,
-      start: this.#toPlainDateTime(event.start).toPlainDate(),
-      endInclusive: this.#toPlainDateTime(event.end).subtract({ nanoseconds: 1 }).toPlainDate(),
+      start: this.#toPlainDateTime(event.data.start).toPlainDate(),
+      endInclusive: this.#toPlainDateTime(resolvedDataEnd(event.data))
+        .subtract({ nanoseconds: 1 })
+        .toPlainDate(),
     }));
   }
 
@@ -180,37 +184,15 @@ export class CalendarWeekView extends CalendarViewBase {
   }
 
   #isAllDayEvent(event: EventInput): boolean {
-    return this.#isDateOnlyValue(event.start) || this.#isDateOnlyValue(event.end);
+    return event.data.allDay === true;
   }
 
   #isTimedEvent(event: EventInput): boolean {
-    if (this.#isAllDayEvent(event)) return false;
-    return (
-      event.start instanceof Temporal.PlainDateTime ||
-      event.start instanceof Temporal.ZonedDateTime ||
-      event.end instanceof Temporal.PlainDateTime ||
-      event.end instanceof Temporal.ZonedDateTime
-    );
+    return !this.#isAllDayEvent(event);
   }
 
-  #isDateOnlyValue(value: EventInput["start"]): boolean {
-    return value instanceof Temporal.PlainDate;
-  }
-
-  #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.ZonedDateTime) {
-      return this.timezone
-        ? value.withTimeZone(this.timezone).toPlainDateTime()
-        : value.toPlainDateTime();
-    }
-    if (value instanceof Temporal.PlainDateTime) {
-      return value;
-    }
-    if (value instanceof Temporal.PlainDate) {
-      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
-    }
-    const exhaustiveCheck: never = value;
-    throw new TypeError(`Unsupported calendar event date value: ${String(exhaustiveCheck)}`);
+  #toPlainDateTime(value: Temporal.PlainDateTime): Temporal.PlainDateTime {
+    return value;
   }
 
   #startOfWeekFor(date: Temporal.PlainDate, weekStart: WeekdayNumber): Temporal.PlainDate {
@@ -340,7 +322,7 @@ export class CalendarWeekView extends CalendarViewBase {
                   "var(--lg-background-color, var(--_lc-surface-bg, light-dark(#fff, #222)))",
               })}
               @event-created=${this.forwardCalendarEvent}
-              @event-selection=${this.forwardCalendarEvent}
+              @event-selected=${this.forwardCalendarEvent}
               @event-updated=${this.forwardCalendarEvent}
               @event-deleted=${this.forwardCalendarEvent}
               @day-selection=${this.forwardCalendarEvent}
@@ -362,7 +344,7 @@ export class CalendarWeekView extends CalendarViewBase {
             current-time=${this.currentTime}
             .snapInterval=${this.snapInterval}
             @event-created=${this.forwardCalendarEvent}
-            @event-selection=${this.forwardCalendarEvent}
+            @event-selected=${this.forwardCalendarEvent}
             @event-updated=${this.forwardCalendarEvent}
             @event-deleted=${this.forwardCalendarEvent}
             @day-selection=${this.forwardCalendarEvent}

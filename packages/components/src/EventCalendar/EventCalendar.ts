@@ -6,27 +6,33 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 import "../Button/Button.js";
 import "../CalendarViewGroup/CalendarViewGroup.js";
 import type { CalendarViewGroup } from "../CalendarViewGroup/CalendarViewGroup.js";
+import type { CalendarPresentationMode, CalendarViewMode } from "../types/CalendarViewGroup.js";
 import type {
   CalendarEventPendingByCalendarId,
   CalendarEventPendingByOperation,
   CalendarEventPendingGroups,
-  CalendarEventPendingOperation,
   CalendarEventPendingOptions,
   CalendarEventPendingResult,
-  CalendarEventView,
-  CalendarEventViewMap as EventsMap,
-} from "../types/CalendarEvent.js";
-import type { CalendarPresentationMode, CalendarViewMode } from "../types/CalendarViewGroup.js";
+} from "../types/calendarEventPending.js";
 import type { TabSwitchOption } from "../types/TabSwitch.js";
 import type { WeekdayNumber } from "../types/Weekday.js";
 import "../TabSwitch/TabSwitch.js";
+import {
+  type CalendarEvent as ApiCalendarEvent,
+  type ApplyResult,
+  type CalendarEventPendingOperation,
+  type CalendarEventsMap,
+  type EventOperation,
+  EventsAPI,
+} from "@lit-calendar/events-api";
 import { type EventsAPIContextValue, eventsAPIContext } from "../context/EventsAPIContext.js";
-import { EventsAPI, type EventOperation } from "@lit-calendar/events-api";
 import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import { renderGridIcon } from "../icons/GridIcon.js";
 import { renderListIcon } from "../icons/ListIcon.js";
 import { getLocaleDirection, resolveLocale } from "../utils/Locale.js";
 import componentStyle from "./EventCalendar.css?inline";
+
+type EventsMap = CalendarEventsMap;
 
 type ViewUnit = Extract<CalendarViewMode, "day" | "week" | "month" | "year">;
 type PresentationUnit = CalendarPresentationMode;
@@ -119,7 +125,7 @@ export class EventCalendar extends BaseElement {
     context: eventsAPIContext,
   });
   #eventsAPIContextValue: EventsAPIContextValue = {
-    getState: () => this.events ?? new Map(),
+    getEvents: () => this.events ?? new Map(),
     getApi: () =>
       new EventsAPI(this.events ?? new Map(), {
         timezone: this.timezone,
@@ -434,7 +440,7 @@ export class EventCalendar extends BaseElement {
           @start-date-changed=${this.#syncFromViewGroup}
           @day-selection=${this.#syncFromViewGroup}
           @event-created=${this.#reemit}
-          @event-selection=${this.#reemit}
+          @event-selected=${this.#reemit}
           @event-updated=${this.#reemit}
           @event-deleted=${this.#reemit}
         ></calendar-grid-view-group>
@@ -484,14 +490,17 @@ export class EventCalendar extends BaseElement {
     this.#rangeLabelParts = target.rangeLabelParts;
   }
 
-  #applyOperation(operation: EventOperation) {
-    const api = this.#eventsAPIContextValue.getApi();
+  #applyOperation(operation: EventOperation): ApplyResult {
+    const api = new EventsAPI(this.events ?? new Map(), {
+      timezone: this.timezone,
+      trackPending: true,
+    });
     const result = api.apply(operation);
     this.events = result.nextState;
     return result;
   }
 
-  #resolvePendingOperation(event: CalendarEventView): CalendarEventPendingOperation | undefined {
+  #resolvePendingOperation(event: ApiCalendarEvent): CalendarEventPendingOperation | undefined {
     if (
       event.pendingOp === "created" ||
       event.pendingOp === "updated" ||
@@ -522,6 +531,7 @@ export class EventCalendar extends BaseElement {
     event.stopPropagation();
     const forwardedEvent = new CustomEvent(event.type, {
       detail: (event as CustomEvent).detail,
+      bubbles: true,
       composed: true,
       cancelable: event.cancelable,
     });

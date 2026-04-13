@@ -17,7 +17,7 @@ import type {
 } from "@lit-calendar/events-api";
 
 export type EventsAPIContextValue = {
-  getState: () => EventsState;
+  getEvents: () => EventsState;
   apply: (operation: EventOperation) => ApplyResult;
   getApi: () => EventsAPI;
   create: (input: CreateInput) => ApplyResult;

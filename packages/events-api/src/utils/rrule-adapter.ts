@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { RRule, RRuleSet, type Options, type Weekday } from "rrule";
-import type { CalendarEventView, CalendarRecurrenceRule } from "./calendar-types.js";
+import type { CalendarRecurrenceRule } from "../types/calendar.js";
+import type { CalendarEvent } from "../types/event.js";
 import { parseRecurrenceId, toPlainDateTime } from "./recurrence.js";
 
 type ExpandRecurringOptions = {
@@ -64,13 +65,13 @@ function toByWeekday(byDay: CalendarRecurrenceRule["byDay"]): Options["byweekday
 function toRRuleOptions(
   recurrenceRule: CalendarRecurrenceRule,
   dtstart: Temporal.PlainDateTime,
-  timezone?: string
+  tzid: string | null
 ): Options {
   const options: Options = {
     freq: FREQ_BY_CODE[recurrenceRule.freq],
     dtstart: toUtcFloatingDate(dtstart),
     interval: recurrenceRule.interval ?? 1,
-    tzid: null,
+    tzid,
     wkst: recurrenceRule.wkst ? WEEKDAY_BY_CODE[recurrenceRule.wkst] : null,
     bysecond: recurrenceRule.bySecond ?? null,
     byminute: recurrenceRule.byMinute ?? null,
@@ -87,28 +88,29 @@ function toRRuleOptions(
     count: "count" in recurrenceRule ? (recurrenceRule.count ?? null) : null,
     until:
       "until" in recurrenceRule && recurrenceRule.until
-        ? toUtcFloatingDate(toPlainDateTime(recurrenceRule.until, timezone))
+        ? toUtcFloatingDate(toPlainDateTime(recurrenceRule.until))
         : null,
   };
   return options;
 }
 
 export function expandRecurringStarts(
-  event: CalendarEventView,
+  event: CalendarEvent,
   rangeStart: Temporal.PlainDateTime,
   rangeEnd: Temporal.PlainDateTime,
   options: ExpandRecurringOptions = {}
 ): Temporal.PlainDateTime[] {
-  if (!event.recurrenceRule) return [];
-  const dtstart = toPlainDateTime(event.start, options.timezone);
+  if (!event.data.recurrenceRule) return [];
+  const dtstart = toPlainDateTime(event.data.start);
+  const tzid = event.data.timeZone ?? options.timezone ?? null;
   const ruleSet = new RRuleSet();
-  ruleSet.rrule(new RRule(toRRuleOptions(event.recurrenceRule, dtstart, options.timezone)));
+  ruleSet.rrule(new RRule(toRRuleOptions(event.data.recurrenceRule, dtstart, tzid)));
 
-  if (event.exclusionDates?.size) {
-    for (const recurrenceId of event.exclusionDates) {
-      const parsed = parseRecurrenceId(recurrenceId, event.start);
+  if (event.data.exclusionDates?.size) {
+    for (const recurrenceId of event.data.exclusionDates) {
+      const parsed = parseRecurrenceId(recurrenceId, event.data.allDay ?? false, event.data.start);
       if (!parsed) continue;
-      const exDate = toPlainDateTime(parsed, options.timezone);
+      const exDate = toPlainDateTime(parsed);
       ruleSet.exdate(toUtcFloatingDate(exDate));
     }
   }

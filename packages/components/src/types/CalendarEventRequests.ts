@@ -1,20 +1,34 @@
-import type { CalendarEventContent, CalendarEventEnvelope } from "./CalendarEvent.js";
+import type { Temporal } from "@js-temporal/polyfill";
+import type { CalendarEventData, CalendarEventEnvelope } from "@lit-calendar/events-api";
+
+/** UI-emitted payloads use an explicit `end` time (not duration-only). */
+export type CalendarEventUIData = Omit<CalendarEventData, "duration" | "end"> & {
+  end: Temporal.PlainDateTime;
+};
 
 export type CalendarEventRequestTrigger = "long-press" | "drag-select";
 
-export type EventCreateRequestDetail = {
-  envelope: Pick<CalendarEventEnvelope, "calendarId">;
-  content: CalendarEventContent;
+/** Map key in `events` (e.g. `sourceKey::recurrenceId` for an occurrence). */
+export type EventKeyDetail = {
+  key: string;
 };
 
+/** Internal: maps UI create gesture to `EventsAPI` create input (not used as DOM `CustomEvent` detail). */
+export type EventCreateRequestDetail = {
+  envelope: Pick<CalendarEventEnvelope, "calendarId">;
+  content: CalendarEventUIData;
+};
+
+/** Internal: maps UI update gesture to API update/move/resize input (not DOM event detail). */
 export type EventUpdateRequestDetail = {
   envelope: Pick<
     CalendarEventEnvelope,
     "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
   >;
-  content: CalendarEventContent;
+  content: CalendarEventUIData;
 };
 
+/** Internal: maps UI delete gesture to API remove input (not DOM event detail). */
 export type EventDeleteRequestDetail = {
   envelope: Pick<CalendarEventEnvelope, "calendarId" | "eventId" | "recurrenceId" | "isRecurring">;
 };
@@ -24,17 +38,9 @@ export type EventExceptionRequestDetail = {
     CalendarEventEnvelope,
     "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
   >;
-  content: CalendarEventContent;
+  content: CalendarEventUIData;
   source: "move";
 };
 
-export type EventSelectionRequestDetail = {
-  envelope: Pick<
-    CalendarEventEnvelope,
-    "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
-  >;
-  content: CalendarEventContent;
-  trigger: "click" | "keyboard";
-  pointerType: string;
-  sourceEvent: Event;
-};
+/** Emitted for `event-selected`; same shape as `event-created` / `event-updated` / `event-deleted` (`EventKeyDetail`). */
+export type EventSelectionRequestDetail = EventKeyDetail;

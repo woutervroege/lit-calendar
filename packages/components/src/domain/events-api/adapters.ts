@@ -29,9 +29,11 @@ export function toEventTarget(input: { eventId?: string; calendarId?: string; re
 export function fromCreateRequest(detail: EventCreateRequestDetail): CreateInput {
   return {
     event: {
-      ...detail.content,
       calendarId: detail.envelope.calendarId,
       pendingOp: "created",
+      data: {
+        ...detail.content,
+      },
     },
   };
 }
@@ -43,6 +45,7 @@ export function fromUpdateRequest(detail: EventUpdateRequestDetail): UpdateInput
     patch: {
       start: detail.content.start,
       end: detail.content.end,
+      allDay: detail.content.allDay,
       summary: detail.content.summary,
       color: detail.content.color,
       location: detail.content.location,

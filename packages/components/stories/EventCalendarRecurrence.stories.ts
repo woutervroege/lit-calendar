@@ -1,12 +1,19 @@
+import { Temporal } from "@js-temporal/polyfill";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "../src/EventCalendar/EventCalendar.js";
-import type { CalendarRecurrenceRule } from "../src/types/CalendarEvent.js";
+import type { CalendarRecurrenceRule } from "@lit-calendar/events-api";
 import {
   AUTO_LOCALE_OPTION,
   AUTO_WEEK_START_OPTION,
   type CalendarEvent,
-  toTemporalDateLike,
 } from "./support/StoryData.js";
+
+function plainDateTimeFromIsoString(value: string): Temporal.PlainDateTime {
+  if (!value.includes("T")) {
+    return Temporal.PlainDate.from(value).toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+  }
+  return Temporal.PlainDateTime.from(value);
+}
 
 type StoryEventCalendarElement = HTMLElement & { events: Map<string, CalendarEvent> };
 
@@ -40,14 +47,14 @@ const SERIES_START = "2025-01-06T09:00:00";
 const SERIES_END = "2025-01-06T10:00:00";
 
 function toRecurrenceRule(rule: RecurrenceRuleInput): CalendarRecurrenceRule {
-  const { until, ...baseRule } = rule;
+  const { until, count, ...baseRule } = rule;
   if (until !== undefined) {
-    return {
-      ...baseRule,
-      until: toTemporalDateLike(until),
-    };
+    return { ...baseRule, until: plainDateTimeFromIsoString(until) } as CalendarRecurrenceRule;
   }
-  return baseRule;
+  if (count !== undefined) {
+    return { ...baseRule, count } as CalendarRecurrenceRule;
+  }
+  return { ...baseRule } as CalendarRecurrenceRule;
 }
 
 function buildSeriesEvents(args: RecurrenceStoryArgs): Array<[string, CalendarEvent]> {
@@ -56,12 +63,14 @@ function buildSeriesEvents(args: RecurrenceStoryArgs): Array<[string, CalendarEv
   const seriesEvent: CalendarEvent = {
     calendarId: SERIES_CALENDAR_ID,
     eventId: SERIES_EVENT_ID,
-    start: toTemporalDateLike(SERIES_START),
-    end: toTemporalDateLike(SERIES_END),
-    summary: SERIES_SUMMARY,
-    color: SERIES_COLOR,
-    recurrenceRule,
-    exclusionDates: args.exclusionDates.length > 0 ? new Set(args.exclusionDates) : undefined,
+    data: {
+      start: Temporal.PlainDateTime.from(SERIES_START),
+      end: Temporal.PlainDateTime.from(SERIES_END),
+      summary: SERIES_SUMMARY,
+      color: SERIES_COLOR,
+      recurrenceRule,
+      exclusionDates: args.exclusionDates.length > 0 ? new Set(args.exclusionDates) : undefined,
+    },
   };
 
   const entries: Array<[string, CalendarEvent]> = [["series-master", seriesEvent]];
@@ -73,10 +82,12 @@ function buildSeriesEvents(args: RecurrenceStoryArgs): Array<[string, CalendarEv
         eventId: SERIES_EVENT_ID,
         recurrenceId: exception.recurrenceId,
         isException: true,
-        start: toTemporalDateLike(exception.start),
-        end: toTemporalDateLike(exception.end),
-        summary: exception.summary ?? `${SERIES_SUMMARY} (moved)`,
-        color: SERIES_COLOR,
+        data: {
+          start: plainDateTimeFromIsoString(exception.start),
+          end: plainDateTimeFromIsoString(exception.end),
+          summary: exception.summary ?? `${SERIES_SUMMARY} (moved)`,
+          color: SERIES_COLOR,
+        },
       },
     ]);
   }

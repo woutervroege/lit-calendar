@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventViewMap } from "./calendar-types.js";
-import { expandEvents } from "./expand.js";
-import { createDailySeriesState } from "./testing/mockEvents.js";
+import type { CalendarEventsMap } from "../types/event.js";
+import { expandEvents } from "../core/expandEvents.js";
+import { createDailySeriesState } from "./support/mockEvents.js";
 
 describe("expandEvents", () => {
   it("expands a daily recurrence and applies exclusion dates", () => {
     const events = createDailySeriesState();
     events.set("daily", {
       ...events.get("daily")!,
-      recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
-      exclusionDates: new Set(["20250114T090000"]),
+      data: {
+        ...events.get("daily")!.data,
+        recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
+        exclusionDates: new Set(["20250114T090000"]),
+      },
     });
 
     const rendered = expandEvents(events, {
@@ -24,17 +27,19 @@ describe("expandEvents", () => {
   });
 
   it("suppresses generated occurrence when detached exception exists", () => {
-    const events: CalendarEventViewMap = new Map([
+    const events: CalendarEventsMap = new Map([
       [
         "daily",
         {
           eventId: "daily@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
-          summary: "Daily",
-          color: "#10B981",
-          recurrenceRule: { freq: "DAILY", interval: 1, count: 2 },
-          exclusionDates: new Set(),
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
+            summary: "Daily",
+            color: "#10B981",
+            recurrenceRule: { freq: "DAILY", interval: 1, count: 2 },
+            exclusionDates: new Set(),
+          },
         },
       ],
       [
@@ -42,10 +47,12 @@ describe("expandEvents", () => {
         {
           eventId: "daily@example.test",
           recurrenceId: "20250114T090000",
-          start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-14T11:15:00"),
-          summary: "Daily (moved)",
-          color: "#10B981",
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-14T11:15:00"),
+            summary: "Daily (moved)",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -58,25 +65,27 @@ describe("expandEvents", () => {
     expect(rendered.has("daily::20250113T090000")).toBe(true);
     expect(rendered.has("daily::20250114T090000")).toBe(true);
     const exception = rendered.get("daily::20250114T090000");
-    expect(exception?.start.toString()).toBe("2025-01-14T11:00:00");
+    expect(exception?.data.start.toString()).toBe("2025-01-14T11:00:00");
   });
 
   it("expands monthly last Friday recurrences using byDay + bySetPos", () => {
-    const events: CalendarEventViewMap = new Map([
+    const events: CalendarEventsMap = new Map([
       [
         "monthly-last-friday",
         {
           eventId: "monthly-last-friday@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-06T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-06T10:00:00"),
-          summary: "Monthly Last Friday",
-          color: "#0ea5e9",
-          recurrenceRule: {
-            freq: "MONTHLY",
-            interval: 1,
-            byDay: [{ day: "FR" }],
-            bySetPos: [-1],
-            count: 3,
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-06T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-06T10:00:00"),
+            summary: "Monthly Last Friday",
+            color: "#0ea5e9",
+            recurrenceRule: {
+              freq: "MONTHLY",
+              interval: 1,
+              byDay: [{ day: "FR" }],
+              bySetPos: [-1],
+              count: 3,
+            },
           },
         },
       ],

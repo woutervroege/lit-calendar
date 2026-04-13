@@ -1,35 +1,38 @@
 export type {
   CalendarEvent,
-  CalendarEventContent,
-  CalendarEventDateValue,
-  CalendarEventEntry,
+  CalendarEventData,
   CalendarEventEnvelope,
-  CalendarEventMap,
-  CalendarEventPendingByCalendarId,
-  CalendarEventPendingByEventId,
+  CalendarEventPendingOperation,
+  CalendarEventTimeSpan,
+  CalendarEventsMap,
   CalendarExclusionDates,
   CalendarRecurrenceFrequency,
   CalendarRecurrenceRule,
   CalendarRecurrenceTermination,
   CalendarRecurrenceWeekday,
   CalendarRecurrenceWeekdayRule,
-  CalendarEventPendingGroupBy,
+} from "@lit-calendar/events-api";
+
+export type { CalendarEventView, CalendarEventViewMap } from "../domain/events-api/eventMapBridge.js";
+
+export type {
+  CalendarEventPendingByCalendarId,
+  CalendarEventPendingByEventId,
   CalendarEventPendingByOperation,
-  CalendarEventPendingGroups,
+  CalendarEventPendingGroupBy,
   CalendarEventPendingGroupKey,
+  CalendarEventPendingGroups,
   CalendarEventPendingOptions,
-  CalendarEventPendingOperation,
   CalendarEventPendingResult,
-  CalendarEventView,
-  CalendarEventViewEntry,
-  CalendarEventViewMap,
-} from "./CalendarEvent.js";
+} from "./calendarEventPending.js";
 
 export type {
   CalendarEventRequestTrigger,
+  CalendarEventUIData,
   EventCreateRequestDetail,
   EventDeleteRequestDetail,
   EventExceptionRequestDetail,
+  EventKeyDetail,
   EventSelectionRequestDetail,
   EventUpdateRequestDetail,
 } from "./CalendarEventRequests.js";
@@ -52,4 +55,8 @@ export type { AllDayLayout, AllDayLayoutItem } from "./AllDayLayout.js";
 
 export type { WeekdayNumber } from "./Weekday.js";
 
-export { isCalendarEventException, isCalendarEventExcluded, isCalendarEventRecurring } from "./CalendarEvent.js";
+export {
+  isCalendarEventException,
+  isCalendarEventExcluded,
+  isCalendarEventRecurring,
+} from "./calendarEventSemantics.js";
