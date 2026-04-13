@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import type {
   CalendarEvent as ApiCalendarEvent,
   CalendarEventsMap,
+  CalendarsMap,
   IANATimeZone,
 } from "@lit-calendar/events-api";
 import { resolveLocale } from "../../src/utils/Locale.js";
@@ -25,7 +26,8 @@ export function storyEventsFromArg(value: StoryEventsArg | undefined, fallback: 
   return new Map(value);
 }
 
-const CALENDAR_IDS = {
+/** Calendar URLs used by {@link sampleEventEntries} and {@link sampleCalendarsMap}. */
+export const storyCalendarIds = {
   work: "/calendars/wouter/work/",
   personal: "/calendars/wouter/personal/",
   travel: "/calendars/wouter/travel/",
@@ -33,11 +35,18 @@ const CALENDAR_IDS = {
 
 const EUROPE_AMSTERDAM = "Europe/Amsterdam" as IANATimeZone;
 
+/** Display metadata for {@link storyCalendarIds}; matches event `calendarId` values in story data. */
+export const sampleCalendarsMap: CalendarsMap = new Map([
+  [storyCalendarIds.work, { displayName: "Work", color: "#63e657" }],
+  [storyCalendarIds.personal, { displayName: "Personal", color: "#9f3cfa" }],
+  [storyCalendarIds.travel, { displayName: "Travel", color: "#4564B5" }],
+]);
+
 export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendarEvent>([
   [
     "event-flight-london-20250104",
     {
-      calendarId: CALENDAR_IDS.travel,
+      calendarId: storyCalendarIds.travel,
       eventId: "flight-london@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-04T08:30:00"),
@@ -51,7 +60,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-hello-world-20250103",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "hello-world@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-03T12:00:00"),
@@ -64,7 +73,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-team-meeting-20250106",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "team-meeting@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-06T10:00:00"),
@@ -78,7 +87,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-amsterdam-zoned-20250104",
     {
-      calendarId: CALENDAR_IDS.travel,
+      calendarId: storyCalendarIds.travel,
       eventId: "amsterdam-zoned@example.test",
       data: {
         timeZone: EUROPE_AMSTERDAM,
@@ -92,7 +101,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-fiesta-20250106",
     {
-      calendarId: CALENDAR_IDS.personal,
+      calendarId: storyCalendarIds.personal,
       eventId: "fiesta@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-06T14:00:00"),
@@ -106,7 +115,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-drinks-20250108-1630",
     {
-      calendarId: CALENDAR_IDS.personal,
+      calendarId: storyCalendarIds.personal,
       eventId: "drinks-weekly@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-08T16:30:00"),
@@ -127,7 +136,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-daily-standup-20250113-0900",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "daily-standup@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
@@ -146,7 +155,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-daily-standup-exception-20250118-1100",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "daily-standup@example.test",
       recurrenceId: "20250118T090000",
       data: {
@@ -160,7 +169,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-all-day-ops-rotation-20250106",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "all-day-ops-rotation@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-06T00:00:00"),
@@ -181,7 +190,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-all-day-ops-rotation-exception-20250120",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "all-day-ops-rotation@example.test",
       recurrenceId: "20250120",
       data: {
@@ -196,7 +205,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-meeting-john-20250110",
     {
-      calendarId: CALENDAR_IDS.personal,
+      calendarId: storyCalendarIds.personal,
       eventId: "meeting-with-john@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-08T00:00:00"),
@@ -210,7 +219,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-company-holiday-20250101",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "company-holiday@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-01T00:00:00"),
@@ -224,7 +233,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-product-planning-20250106",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "product-planning@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-06T00:00:00"),
@@ -238,7 +247,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-design-qa-20250112",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "design-qa@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-12T00:00:00"),
@@ -252,7 +261,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-team-offsite-20250115",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "team-offsite@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-15T00:00:00"),
@@ -266,7 +275,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-release-freeze-20250119",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "release-freeze@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-19T00:00:00"),
@@ -280,7 +289,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-feb5-design-review-20250205",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "feb5-design-review@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-02-05T00:00:00"),
@@ -294,7 +303,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-feb5-eng-sync-20250205",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "feb5-eng-sync@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-02-05T00:00:00"),
@@ -311,7 +320,7 @@ export const timezoneShiftEvents: CalendarEventsMap = new Map<string, ApiCalenda
   [
     "event-amsterdam-noon-zoned",
     {
-      calendarId: CALENDAR_IDS.travel,
+      calendarId: storyCalendarIds.travel,
       eventId: "amsterdam-noon-zoned@example.test",
       data: {
         timeZone: EUROPE_AMSTERDAM,
@@ -325,7 +334,7 @@ export const timezoneShiftEvents: CalendarEventsMap = new Map<string, ApiCalenda
   [
     "event-local-baseline-0900",
     {
-      calendarId: CALENDAR_IDS.work,
+      calendarId: storyCalendarIds.work,
       eventId: "local-baseline@example.test",
       data: {
         start: Temporal.PlainDateTime.from("2025-01-06T09:00:00"),

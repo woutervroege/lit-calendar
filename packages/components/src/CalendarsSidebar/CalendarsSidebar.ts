@@ -4,7 +4,7 @@ import { BaseElement } from "../BaseElement/BaseElement.js";
 import type { Calendar, CalendarsMap } from "@lit-calendar/events-api";
 import componentStyle from "./CalendarsSidebar.css?inline";
 
-function sortedCalendarEntries(map: CalendarsMap): Array<[string, Calendar]> {
+function sortedCalendarEntries(map: CalendarsMap): [string, Calendar][] {
   return [...map.entries()].sort((a, b) =>
     a[1].displayName.localeCompare(b[1].displayName, undefined, { sensitivity: "base" })
   );
@@ -13,10 +13,13 @@ function sortedCalendarEntries(map: CalendarsMap): Array<[string, Calendar]> {
 @customElement("calendars-sidebar")
 export class CalendarsSidebar extends BaseElement {
   calendars?: CalendarsMap;
+  /** When unset, every calendar in `calendars` is treated as selected. */
+  selectedCalendarIds?: string[];
 
   static get properties() {
     return {
       calendars: { type: Object },
+      selectedCalendarIds: { type: Array, attribute: false },
     } as const;
   }
 
@@ -24,27 +27,69 @@ export class CalendarsSidebar extends BaseElement {
     return [...BaseElement.styles, unsafeCSS(componentStyle)];
   }
 
+  #effectiveSelectedSet(map: CalendarsMap): Set<string> {
+    const explicit = this.selectedCalendarIds;
+    if (explicit !== undefined) {
+      return new Set(explicit);
+    }
+    return new Set(map.keys());
+  }
+
+  #toggleCalendarId(id: string): void {
+    const map = this.calendars ?? new Map();
+    const current = this.#effectiveSelectedSet(map);
+    const nextSet = new Set(current);
+    if (nextSet.has(id)) {
+      nextSet.delete(id);
+    } else {
+      nextSet.add(id);
+    }
+    const order = sortedCalendarEntries(map).map(([calendarId]) => calendarId);
+    const nextIds = order.filter((calendarId) => nextSet.has(calendarId));
+    this.selectedCalendarIds = nextIds;
+    this.dispatchEvent(
+      new CustomEvent("selected-calendar-ids-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { selectedCalendarIds: nextIds },
+      })
+    );
+  }
+
   render() {
     const map = this.calendars ?? new Map();
     const entries = sortedCalendarEntries(map);
+    const selected = this.#effectiveSelectedSet(map);
 
     return html`
-      <aside class="calendars-sidebar" aria-label="Calendars">
-        <h2 class="calendars-sidebar-heading">Calendars</h2>
-        <ul class="calendar-list">
+      <aside class="calendars-sidebar">
+        <div
+          class="calendar-list"
+          role="group"
+          aria-label="Calendars"
+        >
           ${entries.map(
             ([id, cal]) => html`
-              <li class="calendar-row" title=${id}>
-                <span
-                  class="calendar-swatch"
-                  style=${`background-color: ${cal.color}`}
-                  aria-hidden="true"
-                ></span>
-                <span class="calendar-name">${cal.displayName}</span>
-              </li>
+              <div class="calendar-row">
+                <button
+                  type="button"
+                  class="calendar-toggle"
+                  role="checkbox"
+                  aria-checked=${selected.has(id) ? "true" : "false"}
+                  title=${id}
+                  @click=${() => this.#toggleCalendarId(id)}
+                >
+                  <span
+                    class="calendar-swatch"
+                    style=${`background-color: ${cal.color}`}
+                    aria-hidden="true"
+                  ></span>
+                  <span class="calendar-name">${cal.displayName}</span>
+                </button>
+              </div>
             `
           )}
-        </ul>
+        </div>
       </aside>
     `;
   }

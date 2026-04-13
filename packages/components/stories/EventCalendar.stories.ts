@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import type { CalendarsMap } from "@lit-calendar/events-api";
 import { action } from "storybook/actions";
 import "../src/EventCalendar/EventCalendar.js";
 import { calendarCssProps } from "./support/CalendarCssProps.js";
@@ -8,6 +9,7 @@ import {
   type CalendarEvent,
   langControlLabels,
   langControlOptions,
+  sampleCalendarsMap,
   sampleEvents,
   storyEventsFromArg,
   timezoneOptions,
@@ -22,6 +24,7 @@ import {
 
 type StoryEventCalendarElement = HTMLElement & {
   events: Map<string, CalendarEvent>;
+  calendars?: CalendarsMap;
   getPendingEvents: (options?: { groupBy?: "pendingOp" | "calendarId" }) => CalendarEventPendingGroups;
 };
 
@@ -53,7 +56,10 @@ function reportPendingEvents(el: StoryEventCalendarElement, reason: string) {
   });
 }
 
-function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode = "sync") {
+function renderCalendar(
+  args: Record<string, unknown> & { calendars?: CalendarsMap },
+  mode: RequestHandlingMode = "sync"
+) {
   const el = document.createElement("event-calendar") as StoryEventCalendarElement;
   el.style.display = "block";
   el.style.width = "100%";
@@ -100,6 +106,8 @@ function renderCalendar(args: Record<string, unknown>, mode: RequestHandlingMode
   }
 
   el.events = storyEventsFromArg(args.events, sampleEvents);
+
+  el.calendars = args.calendars !== undefined ? args.calendars : sampleCalendarsMap;
 
   if (mode === "unsynced") {
     attachUnsyncedRequestEventHandlers(el, {
@@ -157,6 +165,11 @@ const meta: Meta = {
     defaultEventSummary: { control: "text", description: "Default created event summary" },
     defaultEventColor: { control: "color", description: "Default created event color" },
     defaultCalendarId: { control: "text", description: "Default created event source id" },
+    calendars: {
+      control: false,
+      description:
+        "Calendars sidebar data (`CalendarsMap`). Default: sampleCalendarsMap. Pass `new Map()` in a story render to hide it.",
+    },
   },
   args: {
     view: "month",
@@ -232,4 +245,9 @@ export const PendingEventsUnsynced: Story = {
     },
   },
   render: (args) => renderCalendar(args, "unsynced"),
+};
+
+export const WithoutCalendarsSidebar: Story = {
+  name: "Without calendars sidebar",
+  render: (args) => renderCalendar({ ...args, calendars: new Map() }),
 };
