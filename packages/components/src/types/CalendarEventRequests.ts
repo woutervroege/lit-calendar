@@ -34,13 +34,7 @@ export type EventExceptionRequestDetail = {
   source: "move";
 };
 
+/** Map key from `getRenderedEvents()` (e.g. `sourceKey::recurrenceId` for an occurrence). */
 export type EventSelectionRequestDetail = {
-  envelope: Pick<
-    CalendarEventEnvelope,
-    "eventId" | "calendarId" | "recurrenceId" | "isException" | "isRecurring"
-  >;
-  content: CalendarEventUIData;
-  trigger: "click" | "keyboard";
-  pointerType: string;
-  sourceEvent: Event;
+  key: string;
 };

@@ -11,19 +11,26 @@ import componentStyle from "./CalendarGridView.css?inline";
 import "../AllDayEvent/AllDayEvent.js";
 import "../DayOverflowPopover/DayOverflowPopover.js";
 import {
+  type CalendarEvent,
+  type CalendarEventsMap,
+  parseRecurrenceId,
+} from "@lit-calendar/events-api";
+import {
   type CalendarViewContextValue,
   calendarViewContext,
 } from "../context/CalendarViewContext.js";
 import { TimedEventInteractionController } from "../controllers/TimedEventInteractionController.js";
+import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
 import type { EventBase } from "../EventBase/EventBase.js";
+import {
+  isCalendarEventException,
+  isCalendarEventRecurring,
+} from "../types/calendarEventSemantics.js";
 import { buildAllDayLayout } from "../utils/AllDayLayout.js";
 import { clampGridDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { getLocaleDirection, getLocaleWeekInfo, resolveLocale } from "../utils/Locale.js";
 import { formatShortTimeRange } from "../utils/TimeFormatting.js";
-import { isCalendarEventException, isCalendarEventRecurring } from "../types/calendarEventSemantics.js";
-import { parseRecurrenceId, type CalendarEvent, type CalendarEventsMap } from "@lit-calendar/events-api";
-import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
 import "../EventCard/EventCard.js";
 import type {
   AllDayLayoutItem,
@@ -1028,7 +1035,8 @@ export class CalendarGridView extends CalendarViewBase {
       hidden: false,
     }));
     const dayLabel = this.#getPopoverDayLabel(day, dayIndex);
-    const isCurrentDay = Temporal.PlainDate.compare(day, this.#resolvedCurrentDateTime.toPlainDate()) === 0;
+    const isCurrentDay =
+      Temporal.PlainDate.compare(day, this.#resolvedCurrentDateTime.toPlainDate()) === 0;
     const outsideVisibleMonth = this.#isOutsideVisibleMonth(day);
 
     return html`
@@ -1057,15 +1065,6 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #handleEventSelect = (event: Event) => {
-    const selectDetail =
-      event instanceof CustomEvent &&
-      event.detail &&
-      typeof event.detail === "object" &&
-      "trigger" in event.detail
-        ? (event.detail as
-            | { trigger?: "click" | "keyboard"; pointerType?: string; sourceEvent?: Event }
-            | undefined)
-        : undefined;
     const detailTarget =
       event instanceof CustomEvent &&
       event.detail &&
@@ -1074,29 +1073,11 @@ export class CalendarGridView extends CalendarViewBase {
         ? (event.detail as EventBase)
         : null;
     const target = detailTarget ?? (event.currentTarget as EventBase | null);
-    if (!target?.eventId || !target.start || !target.end) return;
-    const { event: current, recurrenceId } = this.#resolveSourceEvent(target.eventId);
-    const detail: EventSelectionRequestDetail = {
-      envelope: {
-        eventId: current?.eventId ?? target.eventId,
-        calendarId: current?.calendarId,
-        recurrenceId,
-        isException: current ? isCalendarEventException(current) : undefined,
-        isRecurring: current ? isCalendarEventRecurring(current) : undefined,
-      },
-      content: {
-        start: target.start,
-        end: target.end,
-        summary: target.summary,
-        color: target.color,
-      },
-      trigger: selectDetail?.trigger ?? "click",
-      pointerType: selectDetail?.pointerType ?? "mouse",
-      sourceEvent: selectDetail?.sourceEvent ?? event,
-    };
+    const key = target?.eventId;
+    if (!key) return;
     this.dispatchEvent(
       new CustomEvent("event-selection", {
-        detail,
+        detail: { key } satisfies EventSelectionRequestDetail,
       })
     );
   };
@@ -1213,11 +1194,16 @@ export class CalendarGridView extends CalendarViewBase {
     const eventId = this.#pendingKeyboardRefocusEventId;
     if (!eventId) return;
 
-    const renderedEvents = this.renderRoot.querySelectorAll<EventBase>("timed-event, all-day-event");
-    const target = Array.from(renderedEvents).find((renderedEvent) => renderedEvent.eventId === eventId);
+    const renderedEvents = this.renderRoot.querySelectorAll<EventBase>(
+      "timed-event, all-day-event"
+    );
+    const target = Array.from(renderedEvents).find(
+      (renderedEvent) => renderedEvent.eventId === eventId
+    );
     if (!target) return;
 
-    const interactionSurface = target.shadowRoot?.querySelector<HTMLElement>(".interaction-surface");
+    const interactionSurface =
+      target.shadowRoot?.querySelector<HTMLElement>(".interaction-surface");
     if (!interactionSurface) return;
 
     interactionSurface.focus({ preventScroll: true });
@@ -2269,7 +2255,10 @@ export class CalendarGridView extends CalendarViewBase {
     return value.toString();
   }
 
-  #resolveSourceEvent(renderedEventId: string): { event: EventInput | undefined; recurrenceId?: string } {
+  #resolveSourceEvent(renderedEventId: string): {
+    event: EventInput | undefined;
+    recurrenceId?: string;
+  } {
     const separatorIndex = renderedEventId.indexOf("::");
     const sourceKey =
       separatorIndex === -1 ? renderedEventId : renderedEventId.slice(0, separatorIndex);

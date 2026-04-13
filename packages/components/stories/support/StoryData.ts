@@ -1,11 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type {
-  CalendarEvent as ApiCalendarEvent,
-  CalendarEventData,
-  CalendarEventEnvelope,
-  CalendarEventsMap,
-  CalendarRecurrenceRule,
-} from "@lit-calendar/events-api";
+import type { CalendarEvent as ApiCalendarEvent, CalendarEventsMap } from "@lit-calendar/events-api";
 import { resolveLocale } from "../../src/utils/Locale.js";
 
 export type CalendarEvent = ApiCalendarEvent;
@@ -27,37 +21,6 @@ export function storyEventsFromArg(value: StoryEventsArg | undefined, fallback: 
   return new Map(value);
 }
 
-/** ISO strings in `data` → `calendarEventFromSeed` produces a canonical `CalendarEvent`. */
-type CalendarEventSeedInput = Pick<
-  CalendarEventEnvelope,
-  "calendarId" | "eventId" | "recurrenceId" | "isException" | "isRecurring"
-> & {
-  data: {
-    start: string;
-    end: string;
-    summary: string;
-    color: string;
-    location?: string;
-    recurrenceRule?: {
-      freq: CalendarRecurrenceRule["freq"];
-      interval?: number;
-      wkst?: CalendarRecurrenceRule["wkst"];
-      bySecond?: number[];
-      byMinute?: number[];
-      byHour?: number[];
-      byDay?: CalendarRecurrenceRule["byDay"];
-      byMonthDay?: number[];
-      byYearDay?: number[];
-      byWeekNo?: number[];
-      byMonth?: number[];
-      bySetPos?: number[];
-      until?: string;
-      count?: number;
-    };
-    exclusionDates?: string[];
-  };
-};
-
 const CALENDAR_IDS = {
   work: "/calendars/wouter/work/",
   personal: "/calendars/wouter/personal/",
@@ -74,52 +37,15 @@ export function toTemporalDateLike(value: string): Temporal.PlainDateTime {
   return Temporal.PlainDateTime.from(value);
 }
 
-function calendarEventFromSeed(seed: CalendarEventSeedInput): ApiCalendarEvent {
-  const { data: raw, ...envelope } = seed;
-  let recurrenceRule: CalendarRecurrenceRule | undefined;
-  if (raw.recurrenceRule) {
-    const { until, count, ...baseRule } = raw.recurrenceRule;
-    if (until !== undefined) {
-      recurrenceRule = {
-        ...baseRule,
-        until: toTemporalDateLike(until),
-      };
-    } else if (count !== undefined) {
-      recurrenceRule = {
-        ...baseRule,
-        count,
-      };
-    } else {
-      recurrenceRule = baseRule;
-    }
-  }
-  const dateOnlySeed = !raw.start.includes("T") && !raw.end.includes("T");
-  const data: CalendarEventData = {
-    start: toTemporalDateLike(raw.start),
-    end: toTemporalDateLike(raw.end),
-    allDay: dateOnlySeed ? true : undefined,
-    summary: raw.summary,
-    color: raw.color,
-    location: raw.location,
-    recurrenceRule,
-    exclusionDates: raw.exclusionDates ? new Set(raw.exclusionDates) : undefined,
-  };
-  return { ...envelope, data };
-}
-
-function buildEventsMapFromSeeds(rows: Array<[string, CalendarEventSeedInput]>): CalendarEventsMap {
-  return new Map(rows.map(([id, seed]) => [id, calendarEventFromSeed(seed)]));
-}
-
-export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
+export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendarEvent>([
   [
     "event-flight-london-20250104",
     {
       calendarId: CALENDAR_IDS.travel,
       eventId: "flight-london@example.test",
       data: {
-        start: "2025-01-04T08:30:00",
-        end: "2025-01-05T09:45:00",
+        start: toTemporalDateLike("2025-01-04T08:30:00"),
+        end: toTemporalDateLike("2025-01-05T09:45:00"),
         summary: "Flight to London",
         color: "#4564B5",
         location: "Schiphol Airport",
@@ -132,8 +58,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "hello-world@example.test",
       data: {
-        start: "2025-01-03T12:00:00",
-        end: "2025-01-07T18:00:00",
+        start: toTemporalDateLike("2025-01-03T12:00:00"),
+        end: toTemporalDateLike("2025-01-07T18:00:00"),
         summary: "Hello World",
         color: "#63e657",
       },
@@ -145,8 +71,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "team-meeting@example.test",
       data: {
-        start: "2025-01-06T10:00:00",
-        end: "2025-01-07T11:15:00",
+        start: toTemporalDateLike("2025-01-06T10:00:00"),
+        end: toTemporalDateLike("2025-01-07T11:15:00"),
         summary: "Team Meeting",
         color: "#ff0000",
         location: "Room Atlas",
@@ -159,8 +85,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.travel,
       eventId: "amsterdam-zoned@example.test",
       data: {
-        start: "2025-01-04T12:00:00+01:00[Europe/Amsterdam]",
-        end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
+        start: toTemporalDateLike("2025-01-04T12:00:00+01:00[Europe/Amsterdam]"),
+        end: toTemporalDateLike("2025-01-06T13:30:00+01:00[Europe/Amsterdam]"),
         summary: "Amsterdam Zoned Event",
         color: "#f59e0b",
       },
@@ -172,8 +98,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.personal,
       eventId: "fiesta@example.test",
       data: {
-        start: "2025-01-06T14:00:00",
-        end: "2025-01-06T15:00:00",
+        start: toTemporalDateLike("2025-01-06T14:00:00"),
+        end: toTemporalDateLike("2025-01-06T15:00:00"),
         summary: "Fiesta",
         color: "#084cb8",
         location: "Cafe Mercado",
@@ -186,8 +112,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.personal,
       eventId: "drinks-weekly@example.test",
       data: {
-        start: "2025-01-08T16:30:00",
-        end: "2025-01-08T17:30:00",
+        start: toTemporalDateLike("2025-01-08T16:30:00"),
+        end: toTemporalDateLike("2025-01-08T17:30:00"),
         summary: "Drinks",
         color: "#9f3cfa",
         location: "Bar Noord",
@@ -195,9 +121,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
           freq: "WEEKLY",
           interval: 1,
           byDay: [{ day: "WE" }],
-          until: "2025-02-28T00:00:00",
+          until: toTemporalDateLike("2025-02-28T00:00:00"),
         },
-        exclusionDates: ["20250122T163000"],
+        exclusionDates: new Set(["20250122T163000"]),
       },
     },
   ],
@@ -207,16 +133,16 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "daily-standup@example.test",
       data: {
-        start: "2025-01-13T09:00:00",
-        end: "2025-01-13T09:15:00",
+        start: toTemporalDateLike("2025-01-13T09:00:00"),
+        end: toTemporalDateLike("2025-01-13T09:15:00"),
         summary: "Daily Standup",
         color: "#10B981",
         recurrenceRule: {
           freq: "DAILY",
           interval: 1,
-          until: "2025-01-31T00:00:00",
+          until: toTemporalDateLike("2025-01-31T00:00:00"),
         },
-        exclusionDates: ["20250120T090000"],
+        exclusionDates: new Set(["20250120T090000"]),
       },
     },
   ],
@@ -227,8 +153,8 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       eventId: "daily-standup@example.test",
       recurrenceId: "20250118T090000",
       data: {
-        start: "2025-01-18T11:00:00",
-        end: "2025-01-18T11:15:00",
+        start: toTemporalDateLike("2025-01-18T11:00:00"),
+        end: toTemporalDateLike("2025-01-18T11:15:00"),
         summary: "Daily Standup (moved)",
         color: "#10B981",
       },
@@ -240,17 +166,18 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "all-day-ops-rotation@example.test",
       data: {
-        start: "2025-01-06",
-        end: "2025-01-07",
+        start: toTemporalDateLike("2025-01-06"),
+        end: toTemporalDateLike("2025-01-07"),
+        allDay: true,
         summary: "Ops Rotation (All day)",
         color: "#0EA5E9",
         recurrenceRule: {
           freq: "WEEKLY",
           interval: 1,
           byDay: [{ day: "MO" }],
-          until: "2025-02-28",
+          until: toTemporalDateLike("2025-02-28"),
         },
-        exclusionDates: ["20250120"],
+        exclusionDates: new Set(["20250120"]),
       },
     },
   ],
@@ -261,8 +188,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       eventId: "all-day-ops-rotation@example.test",
       recurrenceId: "20250120",
       data: {
-        start: "2025-01-21",
-        end: "2025-01-22",
+        start: toTemporalDateLike("2025-01-21"),
+        end: toTemporalDateLike("2025-01-22"),
+        allDay: true,
         summary: "Ops Rotation (moved to Tuesday)",
         color: "#0EA5E9",
       },
@@ -274,8 +202,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.personal,
       eventId: "meeting-with-john@example.test",
       data: {
-        start: "2025-01-08",
-        end: "2025-01-09",
+        start: toTemporalDateLike("2025-01-08"),
+        end: toTemporalDateLike("2025-01-09"),
+        allDay: true,
         summary: "Meeting with John",
         color: "#E05ADD",
       },
@@ -287,8 +216,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "company-holiday@example.test",
       data: {
-        start: "2025-01-01",
-        end: "2025-01-02",
+        start: toTemporalDateLike("2025-01-01"),
+        end: toTemporalDateLike("2025-01-02"),
+        allDay: true,
         summary: "Company Holiday",
         color: "#0EA5E9",
       },
@@ -300,8 +230,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "product-planning@example.test",
       data: {
-        start: "2025-01-06",
-        end: "2025-01-08",
+        start: toTemporalDateLike("2025-01-06"),
+        end: toTemporalDateLike("2025-01-08"),
+        allDay: true,
         summary: "Product Planning Sprint",
         color: "#22C55E",
       },
@@ -313,8 +244,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "design-qa@example.test",
       data: {
-        start: "2025-01-12",
-        end: "2025-01-14",
+        start: toTemporalDateLike("2025-01-12"),
+        end: toTemporalDateLike("2025-01-14"),
+        allDay: true,
         summary: "Design QA Window",
         color: "#F97316",
       },
@@ -326,8 +258,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "team-offsite@example.test",
       data: {
-        start: "2025-01-15",
-        end: "2025-01-18",
+        start: toTemporalDateLike("2025-01-15"),
+        end: toTemporalDateLike("2025-01-18"),
+        allDay: true,
         summary: "Team Offsite",
         color: "#14B8A6",
       },
@@ -339,8 +272,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "release-freeze@example.test",
       data: {
-        start: "2025-01-19",
-        end: "2025-01-21",
+        start: toTemporalDateLike("2025-01-19"),
+        end: toTemporalDateLike("2025-01-21"),
+        allDay: true,
         summary: "Release Freeze",
         color: "#A855F7",
       },
@@ -352,8 +286,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "feb5-design-review@example.test",
       data: {
-        start: "2025-02-05",
-        end: "2025-02-06",
+        start: toTemporalDateLike("2025-02-05"),
+        end: toTemporalDateLike("2025-02-06"),
+        allDay: true,
         summary: "Design Review",
         color: "#6366F1",
       },
@@ -365,8 +300,9 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "feb5-eng-sync@example.test",
       data: {
-        start: "2025-02-05",
-        end: "2025-02-06",
+        start: toTemporalDateLike("2025-02-05"),
+        end: toTemporalDateLike("2025-02-06"),
+        allDay: true,
         summary: "Engineering Sync",
         color: "#0EA5E9",
       },
@@ -374,15 +310,15 @@ export const sampleEventEntries: CalendarEventsMap = buildEventsMapFromSeeds([
   ],
 ]);
 
-export const timezoneShiftEvents: CalendarEventsMap = buildEventsMapFromSeeds([
+export const timezoneShiftEvents: CalendarEventsMap = new Map<string, ApiCalendarEvent>([
   [
     "event-amsterdam-noon-zoned",
     {
       calendarId: CALENDAR_IDS.travel,
       eventId: "amsterdam-noon-zoned@example.test",
       data: {
-        start: "2025-01-06T12:00:00+01:00[Europe/Amsterdam]",
-        end: "2025-01-06T13:30:00+01:00[Europe/Amsterdam]",
+        start: toTemporalDateLike("2025-01-06T12:00:00+01:00[Europe/Amsterdam]"),
+        end: toTemporalDateLike("2025-01-06T13:30:00+01:00[Europe/Amsterdam]"),
         summary: "Amsterdam Noon (zoned)",
         color: "#f59e0b",
       },
@@ -394,8 +330,8 @@ export const timezoneShiftEvents: CalendarEventsMap = buildEventsMapFromSeeds([
       calendarId: CALENDAR_IDS.work,
       eventId: "local-baseline@example.test",
       data: {
-        start: "2025-01-06T09:00:00",
-        end: "2025-01-06T10:00:00",
+        start: toTemporalDateLike("2025-01-06T09:00:00"),
+        end: toTemporalDateLike("2025-01-06T10:00:00"),
         summary: "Local baseline (plain)",
         color: "#4564B5",
       },

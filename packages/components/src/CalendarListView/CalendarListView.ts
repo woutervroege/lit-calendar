@@ -4,10 +4,13 @@ import { customElement, property } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { CalendarViewBase } from "../CalendarViewBase/CalendarViewBase.js";
 import "../EventCard/EventCard.js";
-import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import type { CalendarEvent as EventInput } from "@lit-calendar/events-api";
 import { resolvedDataEnd } from "../domain/events-api/eventMapBridge.js";
-import { isCalendarEventException, isCalendarEventRecurring } from "../types/calendarEventSemantics.js";
+import { renderCalendarIcon } from "../icons/CalendarIcon.js";
+import {
+  isCalendarEventException,
+  isCalendarEventRecurring,
+} from "../types/calendarEventSemantics.js";
 import { clampAgendaDaysPerWeek, daysPerWeekFromInput } from "../utils/DaysPerWeek.js";
 import { getEventColorStyles } from "../utils/EventColor.js";
 import { resolveLocale } from "../utils/Locale.js";
@@ -117,7 +120,7 @@ export class CalendarListView extends CalendarViewBase {
     return html`
       <li
         class="agenda-event-item"
-        @click=${(clickEvent: MouseEvent) => this.#handleEventClick(item, clickEvent)}
+        @click=${() => this.#handleEventClick(item)}
       >
         <event-card
           layout="flow"
@@ -137,28 +140,10 @@ export class CalendarListView extends CalendarViewBase {
     `;
   }
 
-  #handleEventClick(item: AgendaItem, sourceEvent: MouseEvent) {
+  #handleEventClick(item: AgendaItem) {
     this.dispatchEvent(
       new CustomEvent("event-selection", {
-        detail: {
-          envelope: {
-            eventId: item.event.eventId ?? item.id,
-            calendarId: item.event.calendarId,
-            recurrenceId: item.event.recurrenceId,
-            isException: isCalendarEventException(item.event),
-            isRecurring: isCalendarEventRecurring(item.event),
-          },
-          content: {
-            start: item.event.data.start,
-            end: resolvedDataEnd(item.event.data),
-            summary: item.event.data.summary,
-            color: item.event.data.color,
-            location: item.event.data.location,
-          },
-          trigger: sourceEvent.detail === 0 ? "keyboard" : "click",
-          pointerType: sourceEvent.detail === 0 ? "keyboard" : "mouse",
-          sourceEvent,
-        },
+        detail: { key: item.id },
       })
     );
   }

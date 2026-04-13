@@ -205,7 +205,7 @@ export function attachRequestEventHandlers(
   el.addEventListener("event-selection", (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as EventSelectionRequestDetail | null;
-    if (!detail?.envelope.eventId) return;
+    if (!detail?.key) return;
     logSelectionRequested(detail);
   });
 
