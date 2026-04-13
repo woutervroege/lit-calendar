@@ -80,34 +80,25 @@ function resolveEventMapKey(
 }
 
 function preserveDateOnlyShape(
-  nextValue: CalendarEvent["start"] | null | undefined,
-  currentValue: CalendarEvent["start"]
-): CalendarEvent["start"] {
-  if (!nextValue) return currentValue;
-  if (currentValue instanceof Temporal.PlainDate) {
-    if ("toPlainDate" in nextValue) {
-      return nextValue.toPlainDate();
-    }
-    return nextValue;
-  }
-  return nextValue;
+  nextValue: Temporal.PlainDateTime,
+  currentAllDay: boolean
+): Temporal.PlainDateTime {
+  if (!currentAllDay) return nextValue;
+  return nextValue.toPlainDate().toPlainDateTime({ hour: 0, minute: 0, second: 0 });
 }
 
 function toNextEventValue(
-  nextValue: CalendarEvent["start"] | undefined,
-  currentValue: CalendarEvent["start"],
+  nextValue: Temporal.PlainDateTime | undefined,
+  currentValue: Temporal.PlainDateTime,
+  currentAllDay: boolean,
   preserveDateOnly: boolean
-): CalendarEvent["start"] {
+): Temporal.PlainDateTime {
   if (!nextValue) return currentValue;
-  return preserveDateOnly ? preserveDateOnlyShape(nextValue, currentValue) : nextValue;
+  return preserveDateOnly ? preserveDateOnlyShape(nextValue, currentAllDay) : nextValue;
 }
 
-function toPlainDateTime(value: CalendarEvent["start"]): Temporal.PlainDateTime {
-  if (value instanceof Temporal.PlainDate) {
-    return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
-  }
-  if (value instanceof Temporal.PlainDateTime) return value;
-  return value.toPlainDateTime();
+function toPlainDateTime(value: Temporal.PlainDateTime): Temporal.PlainDateTime {
+  return value;
 }
 
 function getUpdateKind(
@@ -274,12 +265,18 @@ export function attachRequestEventHandlers(
     const api = buildApi(el);
     const isRecurring = detail.envelope.isRecurring ?? isCalendarEventRecurring(current);
     const shouldPromptForSeries = isRecurring && !isCalendarEventException(current);
-    const nextStart = toNextEventValue(detail.content.start, current.start, preserveDateOnly);
-    const nextEnd = toNextEventValue(detail.content.end, current.end, preserveDateOnly);
+    const currentAllDay = current.allDay ?? false;
+    const nextStart = toNextEventValue(
+      detail.content.start,
+      current.start,
+      currentAllDay,
+      preserveDateOnly
+    );
+    const nextEnd = toNextEventValue(detail.content.end, current.end, currentAllDay, preserveDateOnly);
     const recurrenceId = detail.envelope.recurrenceId;
     const occurrenceStart =
       current.recurrenceRule && !current.recurrenceId && recurrenceId
-        ? (parseRecurrenceId(recurrenceId, current.start) ?? current.start)
+        ? (parseRecurrenceId(recurrenceId, current.allDay ?? false, current.start) ?? current.start)
         : current.start;
     const baseDuration = toPlainDateTime(current.start).until(toPlainDateTime(current.end));
     const occurrenceEnd = shiftDateValue(occurrenceStart, baseDuration);

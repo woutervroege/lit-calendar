@@ -19,6 +19,8 @@ export function toEventsApiMap(events: CalendarEventViewMap): CalendarEventsMap 
         data: {
           start: event.start,
           end: event.end,
+          allDay: event.allDay,
+          timeZone: event.timeZone,
           summary: event.summary,
           color: event.color,
           location: event.location,
@@ -42,6 +44,8 @@ export function eventViewFromApiEvent(event: CalendarEvent): CalendarEventView {
     pendingOp: event.pendingOp,
     start: d.start,
     end,
+    allDay: d.allDay,
+    timeZone: d.timeZone,
     summary: d.summary,
     color: d.color,
     location: d.location,

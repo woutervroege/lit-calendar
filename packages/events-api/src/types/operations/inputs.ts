@@ -1,7 +1,6 @@
 import type { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventData } from "../event/index.js";
 import type { CalendarEventEnvelope } from "../event/index.js";
-import type { CalendarEventDateValue } from "../calendar/index.js";
 import type { EventKey, EventTarget, Scope } from "./primitives.js";
 import type { TimeRangeInput } from "./TimeRangeInput.js";
 
@@ -9,11 +8,11 @@ type CalendarEventDataWithoutTimeSpan = Omit<CalendarEventData, "start" | "end" 
 
 export type CreateEventData =
   | (CalendarEventDataWithoutTimeSpan & {
-      start: CalendarEventDateValue;
-      end: CalendarEventDateValue;
+      start: Temporal.PlainDateTime;
+      end: Temporal.PlainDateTime;
     })
   | (CalendarEventDataWithoutTimeSpan & {
-      start: CalendarEventDateValue;
+      start: Temporal.PlainDateTime;
       duration: Temporal.Duration;
     });
 
@@ -25,7 +24,7 @@ export type CreateInput = {
 export type UpdateInput = {
   target: EventTarget;
   scope: Scope;
-  patch: Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
+  patch: Partial<Pick<CalendarEventData, "summary" | "color" | "location" | "allDay" | "timeZone">> &
     Partial<Pick<CalendarEventEnvelope, "calendarId">> &
     Partial<TimeRangeInput>;
 };
@@ -44,7 +43,7 @@ export type MoveInput = {
 export type ResizeStartInput = {
   target: EventTarget;
   scope: Scope;
-  toStart: CalendarEventDateValue;
+  toStart: Temporal.PlainDateTime;
   options?: {
     minDuration?: Temporal.Duration;
     preserveDateOnly?: boolean;
@@ -54,7 +53,7 @@ export type ResizeStartInput = {
 export type ResizeEndInput = {
   target: EventTarget;
   scope: Scope;
-  toEnd: CalendarEventDateValue;
+  toEnd: Temporal.PlainDateTime;
   options?: {
     minDuration?: Temporal.Duration;
     preserveDateOnly?: boolean;
@@ -82,12 +81,12 @@ export type RemoveExclusionInput = {
 export type AddExceptionEventInput =
   | (Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
       Partial<Pick<CalendarEventEnvelope, "calendarId">> & {
-        start: CalendarEventDateValue;
-        end: CalendarEventDateValue;
+        start: Temporal.PlainDateTime;
+        end: Temporal.PlainDateTime;
       })
   | (Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
       Partial<Pick<CalendarEventEnvelope, "calendarId">> & {
-        start: CalendarEventDateValue;
+        start: Temporal.PlainDateTime;
         duration: Temporal.Duration;
       });
 

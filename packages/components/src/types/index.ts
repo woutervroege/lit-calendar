@@ -1,7 +1,6 @@
 export type {
   CalendarEvent,
   CalendarEventContent,
-  CalendarEventDateValue,
   CalendarEventEntry,
   CalendarEventEnvelope,
   CalendarEventMap,

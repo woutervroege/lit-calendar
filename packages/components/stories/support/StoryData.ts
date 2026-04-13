@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type {
-  CalendarEventDateValue,
   CalendarEventEntry,
   CalendarEventView,
   CalendarEventViewEntry,
@@ -13,8 +12,8 @@ type SourceCalendarEvent = CalendarEventEntry[1];
 export type CalendarEvent = CalendarEventView;
 export type CalendarEventSampleEntry = CalendarEventViewEntry;
 export type CalendarTemporalEvent = Omit<CalendarEvent, "start" | "end"> & {
-  start: CalendarEventDateValue;
-  end: CalendarEventDateValue;
+  start: Temporal.PlainDateTime;
+  end: Temporal.PlainDateTime;
 };
 export type CalendarTemporalEventEntry = [id: string, event: CalendarTemporalEvent];
 
@@ -349,14 +348,12 @@ export const timezoneShiftCalendarEvents: CalendarEventEntry[] = (
   ] as Array<[id: string, event: CalendarEventSeedInput]>
 ).map(([id, event]) => [id, toCalendarEvent(event)]);
 
-export function toTemporalDateLike(
-  value: string
-): Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime {
+export function toTemporalDateLike(value: string): Temporal.PlainDateTime {
   if (!value.includes("T")) {
-    return Temporal.PlainDate.from(value);
+    return Temporal.PlainDate.from(value).toPlainDateTime({ hour: 0, minute: 0, second: 0 });
   }
   if (value.includes("[") && value.includes("]")) {
-    return Temporal.ZonedDateTime.from(value);
+    return Temporal.ZonedDateTime.from(value).toPlainDateTime();
   }
   return Temporal.PlainDateTime.from(value);
 }
@@ -379,11 +376,14 @@ function toCalendarEvent(event: CalendarEventSeedInput): SourceCalendarEvent {
       recurrenceRule = baseRule;
     }
   }
+  const dateOnlySeed =
+    !event.content.start.includes("T") && !event.content.end.includes("T");
   return {
     envelope: { ...event.envelope },
     content: {
       start: toTemporalDateLike(event.content.start),
       end: toTemporalDateLike(event.content.end),
+      allDay: dateOnlySeed ? true : undefined,
       summary: event.content.summary,
       color: event.content.color,
       location: event.content.location,

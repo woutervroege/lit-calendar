@@ -1,9 +1,5 @@
 import type { Temporal } from "@js-temporal/polyfill";
-
-export type CalendarEventDateValue =
-  | Temporal.PlainDate
-  | Temporal.PlainDateTime
-  | Temporal.ZonedDateTime;
+import type { IANATimeZone } from "@lit-calendar/events-api";
 
 export type CalendarRecurrenceFrequency =
   | "SECONDLY"
@@ -22,7 +18,7 @@ export type CalendarRecurrenceWeekdayRule = {
 };
 
 export type CalendarRecurrenceTermination =
-  | { until: CalendarEventDateValue; count?: never }
+  | { until: Temporal.PlainDateTime; count?: never }
   | { count: number; until?: never }
   | { until?: never; count?: never };
 
@@ -60,8 +56,10 @@ export type CalendarEventEnvelope = {
 };
 
 export type CalendarEventContent = {
-  start: CalendarEventDateValue;
-  end: CalendarEventDateValue;
+  start: Temporal.PlainDateTime;
+  end: Temporal.PlainDateTime;
+  allDay?: boolean;
+  timeZone?: IANATimeZone;
   summary: string;
   color: string;
   location?: string;

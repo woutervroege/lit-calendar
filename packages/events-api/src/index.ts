@@ -1,7 +1,6 @@
 export { expandEvents } from "./core/expandEvents.js";
 export { applyOperation, EventsAPI } from "./core/reducer.js";
 export type {
-  CalendarEventDateValue,
   CalendarRecurrenceFrequency,
   CalendarRecurrenceRule,
   CalendarRecurrenceWeekday,

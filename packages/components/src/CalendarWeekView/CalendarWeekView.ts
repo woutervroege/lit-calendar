@@ -180,37 +180,15 @@ export class CalendarWeekView extends CalendarViewBase {
   }
 
   #isAllDayEvent(event: EventInput): boolean {
-    return this.#isDateOnlyValue(event.start) || this.#isDateOnlyValue(event.end);
+    return event.allDay === true;
   }
 
   #isTimedEvent(event: EventInput): boolean {
-    if (this.#isAllDayEvent(event)) return false;
-    return (
-      event.start instanceof Temporal.PlainDateTime ||
-      event.start instanceof Temporal.ZonedDateTime ||
-      event.end instanceof Temporal.PlainDateTime ||
-      event.end instanceof Temporal.ZonedDateTime
-    );
-  }
-
-  #isDateOnlyValue(value: EventInput["start"]): boolean {
-    return value instanceof Temporal.PlainDate;
+    return !this.#isAllDayEvent(event);
   }
 
   #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.ZonedDateTime) {
-      return this.timezone
-        ? value.withTimeZone(this.timezone).toPlainDateTime()
-        : value.toPlainDateTime();
-    }
-    if (value instanceof Temporal.PlainDateTime) {
-      return value;
-    }
-    if (value instanceof Temporal.PlainDate) {
-      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
-    }
-    const exhaustiveCheck: never = value;
-    throw new TypeError(`Unsupported calendar event date value: ${String(exhaustiveCheck)}`);
+    return value;
   }
 
   #startOfWeekFor(date: Temporal.PlainDate, weekStart: WeekdayNumber): Temporal.PlainDate {

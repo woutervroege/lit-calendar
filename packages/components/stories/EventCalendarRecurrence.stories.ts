@@ -40,14 +40,14 @@ const SERIES_START = "2025-01-06T09:00:00";
 const SERIES_END = "2025-01-06T10:00:00";
 
 function toRecurrenceRule(rule: RecurrenceRuleInput): CalendarRecurrenceRule {
-  const { until, ...baseRule } = rule;
+  const { until, count, ...baseRule } = rule;
   if (until !== undefined) {
-    return {
-      ...baseRule,
-      until: toTemporalDateLike(until),
-    };
+    return { ...baseRule, until: toTemporalDateLike(until) } as CalendarRecurrenceRule;
   }
-  return baseRule;
+  if (count !== undefined) {
+    return { ...baseRule, count } as CalendarRecurrenceRule;
+  }
+  return { ...baseRule } as CalendarRecurrenceRule;
 }
 
 function buildSeriesEvents(args: RecurrenceStoryArgs): Array<[string, CalendarEvent]> {

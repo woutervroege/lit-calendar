@@ -1,31 +1,23 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "../types/calendar.js";
 import type { CalendarEventData } from "../types/event.js";
 import type { CalendarEvent, CalendarEventsMap, CalendarEventTimeSpan } from "../types/event.js";
 
-export function toPlainDateTime(value: CalendarEventDateValue, timezone?: string): Temporal.PlainDateTime {
-  if (value instanceof Temporal.ZonedDateTime) {
-    return timezone ? value.withTimeZone(timezone).toPlainDateTime() : value.toPlainDateTime();
-  }
-  if (value instanceof Temporal.PlainDateTime) return value;
-  return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+export function toPlainDateTime(value: Temporal.PlainDateTime): Temporal.PlainDateTime {
+  return value;
 }
 
-export function toRecurrenceId(
-  value: CalendarEventDateValue | Temporal.PlainDateTime,
-  template: CalendarEventDateValue
-): string {
-  const plainDateTime = value instanceof Temporal.PlainDateTime ? value : toPlainDateTime(value);
+export function toRecurrenceId(value: Temporal.PlainDateTime, allDay: boolean): string {
   const pad = (segment: number) => String(segment).padStart(2, "0");
-  const date = `${plainDateTime.year}${pad(plainDateTime.month)}${pad(plainDateTime.day)}`;
-  if (template instanceof Temporal.PlainDate) return date;
-  return `${date}T${pad(plainDateTime.hour)}${pad(plainDateTime.minute)}${pad(plainDateTime.second)}`;
+  const date = `${value.year}${pad(value.month)}${pad(value.day)}`;
+  if (allDay) return date;
+  return `${date}T${pad(value.hour)}${pad(value.minute)}${pad(value.second)}`;
 }
 
 export function parseRecurrenceId(
   recurrenceId: string,
-  template: CalendarEventDateValue
-): CalendarEventDateValue | null {
+  allDay: boolean,
+  templateStart: Temporal.PlainDateTime
+): Temporal.PlainDateTime | null {
   const dateMatch = /^(\d{4})(\d{2})(\d{2})$/.exec(recurrenceId);
   if (dateMatch) {
     const [, year, month, day] = dateMatch;
@@ -34,24 +26,21 @@ export function parseRecurrenceId(
       month: Number(month),
       day: Number(day),
     });
-    if (template instanceof Temporal.PlainDate) return plainDate;
-    const baseTime =
-      template instanceof Temporal.ZonedDateTime ? template.toPlainDateTime() : template;
-    const plainDateTime = plainDate.toPlainDateTime({
-      hour: baseTime.hour,
-      minute: baseTime.minute,
-      second: baseTime.second,
-    });
-    if (template instanceof Temporal.ZonedDateTime) {
-      return plainDateTime.toZonedDateTime(template.timeZoneId);
+    if (allDay) {
+      return plainDate.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
     }
-    return plainDateTime;
+    return plainDate.toPlainDateTime({
+      hour: templateStart.hour,
+      minute: templateStart.minute,
+      second: templateStart.second,
+      millisecond: templateStart.millisecond,
+    });
   }
 
   const dateTimeMatch = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/.exec(recurrenceId);
   if (!dateTimeMatch) return null;
   const [, year, month, day, hour, minute, second] = dateTimeMatch;
-  const plainDateTime = Temporal.PlainDateTime.from({
+  return Temporal.PlainDateTime.from({
     year: Number(year),
     month: Number(month),
     day: Number(day),
@@ -59,11 +48,6 @@ export function parseRecurrenceId(
     minute: Number(minute),
     second: Number(second),
   });
-  if (template instanceof Temporal.PlainDate) return plainDateTime.toPlainDate();
-  if (template instanceof Temporal.ZonedDateTime) {
-    return plainDateTime.toZonedDateTime(template.timeZoneId);
-  }
-  return plainDateTime;
 }
 
 export function isDetachedException(event: CalendarEvent): boolean {
@@ -88,18 +72,16 @@ export function collectDetachedExceptionKeys(events: CalendarEventsMap): Set<str
 }
 
 export function shiftDateValue(
-  value: CalendarEventDateValue,
+  value: Temporal.PlainDateTime,
   shift: Temporal.Duration | null
-): CalendarEventDateValue {
+): Temporal.PlainDateTime {
   if (!shift) return value;
-  if (value instanceof Temporal.PlainDate) return value.add(shift);
-  if (value instanceof Temporal.PlainDateTime) return value.add(shift);
   return value.add(shift);
 }
 
 export function resolveEventEnd(
   data: Pick<CalendarEventData, "start"> & CalendarEventTimeSpan
-): CalendarEventDateValue {
+): Temporal.PlainDateTime {
   if ("end" in data && data.end !== undefined) return data.end;
   return shiftDateValue(data.start, data.duration);
 }
@@ -108,28 +90,29 @@ export function shiftExclusionDates(
   event: CalendarEvent,
   shift: Temporal.Duration | null
 ): Set<string> | undefined {
-  const { exclusionDates, start } = event.data;
+  const { exclusionDates, start, allDay = false } = event.data;
   if (!exclusionDates?.size) return exclusionDates;
   if (!shift) return exclusionDates;
   const shifted = new Set<string>();
   for (const recurrenceId of exclusionDates) {
-    const parsed = parseRecurrenceId(recurrenceId, start);
+    const parsed = parseRecurrenceId(recurrenceId, allDay, start);
     if (!parsed) {
       shifted.add(recurrenceId);
       continue;
     }
-    shifted.add(toRecurrenceId(shiftDateValue(parsed, shift), start));
+    shifted.add(toRecurrenceId(shiftDateValue(parsed, shift), allDay));
   }
   return shifted;
 }
 
 export function shiftRecurrenceId(
   recurrenceId: string | undefined,
-  template: CalendarEventDateValue,
+  allDay: boolean,
+  templateStart: Temporal.PlainDateTime,
   shift: Temporal.Duration | null
 ): string | undefined {
   if (!recurrenceId || !shift) return recurrenceId;
-  const parsed = parseRecurrenceId(recurrenceId, template);
+  const parsed = parseRecurrenceId(recurrenceId, allDay, templateStart);
   if (!parsed) return recurrenceId;
-  return toRecurrenceId(shiftDateValue(parsed, shift), template);
+  return toRecurrenceId(shiftDateValue(parsed, shift), allDay);
 }

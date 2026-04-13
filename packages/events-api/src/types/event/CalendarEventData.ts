@@ -1,9 +1,12 @@
-import type { CalendarEventDateValue } from "../calendar/index.js";
+import type { Temporal } from "@js-temporal/polyfill";
+import type { IANATimeZone } from "../calendar/index.js";
 import type { CalendarExclusionDates, CalendarRecurrenceRule } from "../recurrence/index.js";
 import type { CalendarEventTimeSpan } from "./CalendarEventTimeSpan.js";
 
 export type CalendarEventData = {
-  start: CalendarEventDateValue;
+  start: Temporal.PlainDateTime;
+  allDay?: boolean;
+  timeZone?: IANATimeZone;
   summary: string;
   color: string;
   location?: string;

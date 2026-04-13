@@ -334,17 +334,11 @@ export class CalendarListView extends CalendarViewBase {
   }
 
   #toPlainDateTime(value: EventInput["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.ZonedDateTime) {
-      return this.timezone
-        ? value.withTimeZone(this.timezone).toPlainDateTime()
-        : value.toPlainDateTime();
-    }
-    if (value instanceof Temporal.PlainDateTime) return value;
-    return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
+    return value;
   }
 
   #isAllDayEvent(event: EventInput): boolean {
-    return event.start instanceof Temporal.PlainDate || event.end instanceof Temporal.PlainDate;
+    return event.allDay === true;
   }
 
   #isRecurringEvent(event: EventInput): boolean {

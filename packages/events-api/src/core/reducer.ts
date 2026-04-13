@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "../types/calendar.js";
 import type {
   CalendarEvent,
   CalendarEventData,
@@ -55,15 +54,14 @@ function cloneState(state: EventsState): EventsState {
   return new Map(Array.from(state.entries()).map(([key, event]) => [key, cloneEvent(event)]));
 }
 
-function normalizeTimeRange(input: TimeRangeInput): { start: CalendarEventDateValue; end: CalendarEventDateValue } {
-  if ("end" in input) return { start: input.start, end: input.end };
-  return {
-    start: input.start,
-    end: shiftDateValue(input.start, input.duration),
-  };
+function normalizeTimeRange(input: TimeRangeInput): { start: Temporal.PlainDateTime; end: Temporal.PlainDateTime } {
+  if ("duration" in input && input.duration !== undefined) {
+    return { start: input.start, end: shiftDateValue(input.start, input.duration) };
+  }
+  return { start: input.start, end: input.end };
 }
 
-function withEndTimeSpan(event: CalendarEvent, end: CalendarEventDateValue): CalendarEvent {
+function withEndTimeSpan(event: CalendarEvent, end: Temporal.PlainDateTime): CalendarEvent {
   const { end: _e, duration: _d, ...dataRest } = event.data;
   return { ...event, data: { ...dataRest, end } };
 }
@@ -140,10 +138,10 @@ function withExcludedRecurrence(event: CalendarEvent, recurrenceId: string): Cal
 }
 
 function ensureMinimumDuration(
-  start: CalendarEventDateValue,
-  end: CalendarEventDateValue,
+  start: Temporal.PlainDateTime,
+  end: Temporal.PlainDateTime,
   minDuration: Temporal.Duration | undefined
-): { start: CalendarEventDateValue; end: CalendarEventDateValue } {
+): { start: Temporal.PlainDateTime; end: Temporal.PlainDateTime } {
   if (!minDuration) return { start, end };
   const startDT = toPlainDateTime(start);
   const endDT = toPlainDateTime(end);
@@ -159,6 +157,8 @@ function applyUpdateToEvent(event: CalendarEvent, patch: UpdateInput["patch"]): 
   if (patch.summary !== undefined) nextData.summary = patch.summary;
   if (patch.color !== undefined) nextData.color = patch.color;
   if (patch.location !== undefined) nextData.location = patch.location;
+  if (patch.allDay !== undefined) nextData.allDay = patch.allDay;
+  if (patch.timeZone !== undefined) nextData.timeZone = patch.timeZone;
   if (patch.calendarId !== undefined) envelope.calendarId = patch.calendarId;
   if (patch.start !== undefined) nextData.start = patch.start;
   let next: CalendarEvent = { ...envelope, data: nextData };
@@ -252,7 +252,12 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
     const isException = isDetachedException(event);
     if (input.scope === "series" && isException && keepExceptionTiming) {
       const nextRecurrenceId = shiftExceptionRecurrenceId
-        ? shiftRecurrenceId(event.recurrenceId, event.data.start, input.delta)
+        ? shiftRecurrenceId(
+            event.recurrenceId,
+            event.data.allDay ?? false,
+            event.data.start,
+            input.delta
+          )
         : event.recurrenceId;
       const updated: CalendarEvent = {
         ...event,
@@ -316,7 +321,12 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
     if (input.scope === "series" && isDetachedException(event)) {
       const updatedException: CalendarEvent = {
         ...event,
-        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.data.start, seriesDelta),
+        recurrenceId: shiftRecurrenceId(
+          event.recurrenceId,
+          event.data.allDay ?? false,
+          event.data.start,
+          seriesDelta
+        ),
       };
       setUpdated(state, changes, updateKey, updatedException);
       continue;
@@ -644,7 +654,7 @@ export class EventsAPI {
     return event ? cloneEvent(event) : undefined;
   }
 
-  expand(range: { start: CalendarEventDateValue; end: CalendarEventDateValue }): CalendarEventsMap {
+  expand(range: { start: Temporal.PlainDateTime; end: Temporal.PlainDateTime }): CalendarEventsMap {
     return expandEvents(this.#state, range, { timezone: this.#timezone });
   }
 

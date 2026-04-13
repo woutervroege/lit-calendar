@@ -45,6 +45,7 @@ export function fromUpdateRequest(detail: EventUpdateRequestDetail): UpdateInput
     patch: {
       start: detail.content.start,
       end: detail.content.end,
+      allDay: detail.content.allDay,
       summary: detail.content.summary,
       color: detail.content.color,
       location: detail.content.location,

@@ -65,13 +65,13 @@ function toByWeekday(byDay: CalendarRecurrenceRule["byDay"]): Options["byweekday
 function toRRuleOptions(
   recurrenceRule: CalendarRecurrenceRule,
   dtstart: Temporal.PlainDateTime,
-  timezone?: string
+  tzid: string | null
 ): Options {
   const options: Options = {
     freq: FREQ_BY_CODE[recurrenceRule.freq],
     dtstart: toUtcFloatingDate(dtstart),
     interval: recurrenceRule.interval ?? 1,
-    tzid: null,
+    tzid,
     wkst: recurrenceRule.wkst ? WEEKDAY_BY_CODE[recurrenceRule.wkst] : null,
     bysecond: recurrenceRule.bySecond ?? null,
     byminute: recurrenceRule.byMinute ?? null,
@@ -88,7 +88,7 @@ function toRRuleOptions(
     count: "count" in recurrenceRule ? (recurrenceRule.count ?? null) : null,
     until:
       "until" in recurrenceRule && recurrenceRule.until
-        ? toUtcFloatingDate(toPlainDateTime(recurrenceRule.until, timezone))
+        ? toUtcFloatingDate(toPlainDateTime(recurrenceRule.until))
         : null,
   };
   return options;
@@ -101,15 +101,16 @@ export function expandRecurringStarts(
   options: ExpandRecurringOptions = {}
 ): Temporal.PlainDateTime[] {
   if (!event.data.recurrenceRule) return [];
-  const dtstart = toPlainDateTime(event.data.start, options.timezone);
+  const dtstart = toPlainDateTime(event.data.start);
+  const tzid = event.data.timeZone ?? options.timezone ?? null;
   const ruleSet = new RRuleSet();
-  ruleSet.rrule(new RRule(toRRuleOptions(event.data.recurrenceRule, dtstart, options.timezone)));
+  ruleSet.rrule(new RRule(toRRuleOptions(event.data.recurrenceRule, dtstart, tzid)));
 
   if (event.data.exclusionDates?.size) {
     for (const recurrenceId of event.data.exclusionDates) {
-      const parsed = parseRecurrenceId(recurrenceId, event.data.start);
+      const parsed = parseRecurrenceId(recurrenceId, event.data.allDay ?? false, event.data.start);
       if (!parsed) continue;
-      const exDate = toPlainDateTime(parsed, options.timezone);
+      const exDate = toPlainDateTime(parsed);
       ruleSet.exdate(toUtcFloatingDate(exDate));
     }
   }

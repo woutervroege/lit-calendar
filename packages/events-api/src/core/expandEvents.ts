@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "../types/calendar.js";
 import type { CalendarEvent, CalendarEventsMap } from "../types/event.js";
 import {
   collectDetachedExceptionKeys,
@@ -10,22 +9,13 @@ import {
 import { expandRecurringStarts } from "../utils/rrule-adapter.js";
 
 type ExpandEventsRange = {
-  start: CalendarEventDateValue;
-  end: CalendarEventDateValue;
+  start: Temporal.PlainDateTime;
+  end: Temporal.PlainDateTime;
 };
 
 type ExpandEventsOptions = {
   timezone?: string;
 };
-
-function fromPlainDateTime(
-  value: Temporal.PlainDateTime,
-  template: CalendarEventDateValue
-): CalendarEventDateValue {
-  if (template instanceof Temporal.PlainDate) return value.toPlainDate();
-  if (template instanceof Temporal.ZonedDateTime) return value.toZonedDateTime(template.timeZoneId);
-  return value;
-}
 
 function rangeOverlaps(
   start: Temporal.PlainDateTime,
@@ -45,8 +35,8 @@ export function expandEvents(
   range: ExpandEventsRange,
   options: ExpandEventsOptions = {}
 ): CalendarEventsMap {
-  const rangeStart = toPlainDateTime(range.start, options.timezone);
-  const rangeEnd = toPlainDateTime(range.end, options.timezone);
+  const rangeStart = toPlainDateTime(range.start);
+  const rangeEnd = toPlainDateTime(range.end);
   if (Temporal.PlainDateTime.compare(rangeEnd, rangeStart) <= 0) return new Map();
 
   const detachedExceptionKeys = collectDetachedExceptionKeys(events);
@@ -55,9 +45,9 @@ export function expandEvents(
   for (const [id, event] of events) {
     if (event.pendingOp === "deleted") continue;
     if (event.data.recurrenceRule && !event.recurrenceId) {
-      const baseStart = toPlainDateTime(event.data.start, options.timezone);
+      const baseStart = toPlainDateTime(event.data.start);
       const baseEndValue = resolveEventEnd(event.data);
-      const baseEnd = toPlainDateTime(baseEndValue, options.timezone);
+      const baseEnd = toPlainDateTime(baseEndValue);
       if (Temporal.PlainDateTime.compare(baseEnd, baseStart) <= 0) continue;
       const baseDuration = baseStart.until(baseEnd);
       const occurrenceStarts = expandRecurringStarts(event, rangeStart, rangeEnd, {
@@ -65,7 +55,7 @@ export function expandEvents(
       });
 
       for (const occurrenceStart of occurrenceStarts) {
-        const recurrenceId = toRecurrenceId(occurrenceStart, event.data.start);
+        const recurrenceId = toRecurrenceId(occurrenceStart, event.data.allDay ?? false);
         const hasDetachedException =
           Boolean(event.eventId) && detachedExceptionKeys.has(`${event.eventId}::${recurrenceId}`);
         if (hasDetachedException) continue;
@@ -77,8 +67,8 @@ export function expandEvents(
           recurrenceId,
           data: {
             ...event.data,
-            start: fromPlainDateTime(occurrenceStart, event.data.start),
-            end: fromPlainDateTime(occurrenceEnd, baseEndValue),
+            start: occurrenceStart,
+            end: occurrenceEnd,
             duration: undefined,
           },
         };
@@ -87,8 +77,8 @@ export function expandEvents(
       continue;
     }
 
-    const start = toPlainDateTime(event.data.start, options.timezone);
-    const end = toPlainDateTime(resolveEventEnd(event.data), options.timezone);
+    const start = toPlainDateTime(event.data.start);
+    const end = toPlainDateTime(resolveEventEnd(event.data));
     if (!rangeOverlaps(start, end, rangeStart, rangeEnd)) continue;
     renderedEvents.set(id, event);
   }

@@ -11,7 +11,6 @@ import {
   moveFromUpdateRequest,
 } from "../domain/events-api/adapters.js";
 import type {
-  CalendarEventDateValue,
   CalendarEventPendingByCalendarId,
   CalendarEventPendingByOperation,
   CalendarEventPendingGroups,
@@ -130,7 +129,7 @@ export abstract class CalendarViewBase extends BaseElement {
     const recurrenceId = detail.envelope.recurrenceId ?? current.recurrenceId;
     const occurrenceStart =
       current.recurrenceRule && !current.recurrenceId && recurrenceId
-        ? (parseRecurrenceId(recurrenceId, current.start) ?? current.start)
+        ? (parseRecurrenceId(recurrenceId, current.allDay ?? false, current.start) ?? current.start)
         : current.start;
     const baseDuration = this.#toPlainDateTime(current.start).until(
       this.#toPlainDateTime(current.end)
@@ -417,8 +416,8 @@ export abstract class CalendarViewBase extends BaseElement {
   }
 
   getRenderedEvents(range: {
-    start: CalendarEventDateValue;
-    end: CalendarEventDateValue;
+    start: Temporal.PlainDateTime;
+    end: Temporal.PlainDateTime;
   }): EventsMap {
     return fromEventsApiMap(
       expandEvents(toEventsApiMap(this.events ?? new Map()), range, { timezone: this.timezone })
@@ -531,11 +530,7 @@ export abstract class CalendarViewBase extends BaseElement {
   }
 
   #toPlainDateTime(value: CalendarEventView["start"]): Temporal.PlainDateTime {
-    if (value instanceof Temporal.PlainDate) {
-      return value.toPlainDateTime({ hour: 0, minute: 0, second: 0 });
-    }
-    if (value instanceof Temporal.PlainDateTime) return value;
-    return value.toPlainDateTime();
+    return value;
   }
 
   #getUpdateKind(
