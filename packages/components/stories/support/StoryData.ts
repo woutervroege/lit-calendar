@@ -33,10 +33,6 @@ const CALENDAR_IDS = {
 
 const EUROPE_AMSTERDAM = "Europe/Amsterdam" as IANATimeZone;
 
-function plainDayStart(isoDate: string): Temporal.PlainDateTime {
-  return Temporal.PlainDate.from(isoDate).toPlainDateTime({ hour: 0, minute: 0, second: 0 });
-}
-
 export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendarEvent>([
   [
     "event-flight-london-20250104",
@@ -167,8 +163,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "all-day-ops-rotation@example.test",
       data: {
-        start: plainDayStart("2025-01-06"),
-        end: plainDayStart("2025-01-07"),
+        start: Temporal.PlainDateTime.from("2025-01-06T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-07T00:00:00"),
         allDay: true,
         summary: "Ops Rotation (All day)",
         color: "#0EA5E9",
@@ -176,7 +172,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
           freq: "WEEKLY",
           interval: 1,
           byDay: [{ day: "MO" }],
-          until: plainDayStart("2025-02-28"),
+          until: Temporal.PlainDateTime.from("2025-02-28T00:00:00"),
         },
         exclusionDates: new Set(["20250120"]),
       },
@@ -189,8 +185,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       eventId: "all-day-ops-rotation@example.test",
       recurrenceId: "20250120",
       data: {
-        start: plainDayStart("2025-01-21"),
-        end: plainDayStart("2025-01-22"),
+        start: Temporal.PlainDateTime.from("2025-01-21T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-22T00:00:00"),
         allDay: true,
         summary: "Ops Rotation (moved to Tuesday)",
         color: "#0EA5E9",
@@ -203,8 +199,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.personal,
       eventId: "meeting-with-john@example.test",
       data: {
-        start: plainDayStart("2025-01-08"),
-        end: plainDayStart("2025-01-09"),
+        start: Temporal.PlainDateTime.from("2025-01-08T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-09T00:00:00"),
         allDay: true,
         summary: "Meeting with John",
         color: "#E05ADD",
@@ -217,8 +213,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "company-holiday@example.test",
       data: {
-        start: plainDayStart("2025-01-01"),
-        end: plainDayStart("2025-01-02"),
+        start: Temporal.PlainDateTime.from("2025-01-01T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-02T00:00:00"),
         allDay: true,
         summary: "Company Holiday",
         color: "#0EA5E9",
@@ -231,8 +227,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "product-planning@example.test",
       data: {
-        start: plainDayStart("2025-01-06"),
-        end: plainDayStart("2025-01-08"),
+        start: Temporal.PlainDateTime.from("2025-01-06T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-08T00:00:00"),
         allDay: true,
         summary: "Product Planning Sprint",
         color: "#22C55E",
@@ -245,8 +241,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "design-qa@example.test",
       data: {
-        start: plainDayStart("2025-01-12"),
-        end: plainDayStart("2025-01-14"),
+        start: Temporal.PlainDateTime.from("2025-01-12T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-14T00:00:00"),
         allDay: true,
         summary: "Design QA Window",
         color: "#F97316",
@@ -259,8 +255,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "team-offsite@example.test",
       data: {
-        start: plainDayStart("2025-01-15"),
-        end: plainDayStart("2025-01-18"),
+        start: Temporal.PlainDateTime.from("2025-01-15T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-18T00:00:00"),
         allDay: true,
         summary: "Team Offsite",
         color: "#14B8A6",
@@ -273,8 +269,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "release-freeze@example.test",
       data: {
-        start: plainDayStart("2025-01-19"),
-        end: plainDayStart("2025-01-21"),
+        start: Temporal.PlainDateTime.from("2025-01-19T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-01-21T00:00:00"),
         allDay: true,
         summary: "Release Freeze",
         color: "#A855F7",
@@ -287,8 +283,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "feb5-design-review@example.test",
       data: {
-        start: plainDayStart("2025-02-05"),
-        end: plainDayStart("2025-02-06"),
+        start: Temporal.PlainDateTime.from("2025-02-05T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-02-06T00:00:00"),
         allDay: true,
         summary: "Design Review",
         color: "#6366F1",
@@ -301,8 +297,8 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
       calendarId: CALENDAR_IDS.work,
       eventId: "feb5-eng-sync@example.test",
       data: {
-        start: plainDayStart("2025-02-05"),
-        end: plainDayStart("2025-02-06"),
+        start: Temporal.PlainDateTime.from("2025-02-05T00:00:00"),
+        end: Temporal.PlainDateTime.from("2025-02-06T00:00:00"),
         allDay: true,
         summary: "Engineering Sync",
         color: "#0EA5E9",

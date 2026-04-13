@@ -653,8 +653,8 @@ export class CalendarGridView extends CalendarViewBase {
           ? html`
               <all-day-event
                 .eventId=${id}
-                start=${this.#toEventDateTimeString(event.data.start)}
-                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data))}
+                start=${this.#toEventDateTimeString(event.data.start, this.#isAllDayEvent(event))}
+                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data), this.#isAllDayEvent(event))}
                 .summary=${event.data.summary}
                 .color=${event.data.color}
                 .isRecurring=${this.#isRecurringEvent(event)}
@@ -674,8 +674,8 @@ export class CalendarGridView extends CalendarViewBase {
           : html`
               <timed-event
                 .eventId=${id}
-                start=${this.#toEventDateTimeString(event.data.start)}
-                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data))}
+                start=${this.#toEventDateTimeString(event.data.start, false)}
+                end=${this.#toEventDateTimeString(resolvedDataEnd(event.data), false)}
                 .summary=${event.data.summary}
                 .color=${event.data.color}
                 .isRecurring=${this.#isRecurringEvent(event)}
@@ -1028,8 +1028,8 @@ export class CalendarGridView extends CalendarViewBase {
     );
     const popoverEvents: DayOverflowPopoverEvent[] = dayEvents.map(([id, event]) => ({
       id,
-      start: this.#toEventDateTimeString(event.data.start),
-      end: this.#toEventDateTimeString(resolvedDataEnd(event.data)),
+      start: this.#toEventDateTimeString(event.data.start, this.#isAllDayEvent(event)),
+      end: this.#toEventDateTimeString(resolvedDataEnd(event.data), this.#isAllDayEvent(event)),
       summary: event.data.summary,
       color: event.data.color,
       hidden: false,
@@ -2251,7 +2251,11 @@ export class CalendarGridView extends CalendarViewBase {
     return updatedValue;
   }
 
-  #toEventDateTimeString(value: Temporal.PlainDateTime): string {
+  /** Date-only strings for all-day rows so `EventBase` does not treat midnight as a clock time. */
+  #toEventDateTimeString(value: Temporal.PlainDateTime, allDay: boolean): string {
+    if (allDay) {
+      return value.toPlainDate().toString();
+    }
     return value.toString();
   }
 
