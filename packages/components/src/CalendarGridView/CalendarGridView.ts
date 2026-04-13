@@ -88,7 +88,6 @@ export class CalendarGridView extends CalendarViewBase {
   labelsHidden = false;
   rtl = false;
   defaultEventSummary = "New event";
-  defaultEventColor = "#0ea5e9";
   #dragHoverDayIndex: number | null = null;
   #dragHoverTime: Temporal.PlainTime | null = null;
   #dragHoverMaxHeightPx: number | null = null;
@@ -1501,7 +1500,7 @@ export class CalendarGridView extends CalendarViewBase {
           end: endExclusive.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
           allDay: true,
           summary: this.defaultEventSummary,
-          calendarId: this.defaultCalendarId,
+          calendarId: this.calendarIdForNewEvent(),
         });
         this.#cancelPendingCreatePointer(event, section);
         return;
@@ -1510,7 +1509,7 @@ export class CalendarGridView extends CalendarViewBase {
         start: startDateTime,
         end: endDateTime,
         summary: this.defaultEventSummary,
-        calendarId: this.defaultCalendarId,
+        calendarId: this.calendarIdForNewEvent(),
       });
       this.#cancelPendingCreatePointer(event, section);
       return;
@@ -1548,7 +1547,7 @@ export class CalendarGridView extends CalendarViewBase {
         end: endExclusive.toPlainDateTime({ hour: 0, minute: 0, second: 0 }),
         allDay: true,
         summary: this.defaultEventSummary,
-        calendarId: this.defaultCalendarId,
+        calendarId: this.calendarIdForNewEvent(),
       });
       this.#cancelPendingCreatePointer(event, section);
       return;
@@ -1558,7 +1557,7 @@ export class CalendarGridView extends CalendarViewBase {
       start: startDateTime,
       end: endDateTime,
       summary: this.defaultEventSummary,
-      calendarId: this.defaultCalendarId,
+      calendarId: this.calendarIdForNewEvent(),
     });
     this.#cancelPendingCreatePointer(event, section);
   };
@@ -1795,7 +1794,7 @@ export class CalendarGridView extends CalendarViewBase {
       });
     if (!segmentDayIndices.length) return [];
 
-    const colorStyles = getEventColorStyles(this.resolveNewEventColor(this.defaultCalendarId));
+    const colorStyles = getEventColorStyles(this.resolveNewEventColor(this.calendarIdForNewEvent()));
     if (this.variant === "timed") {
       const timeLabel = this.#formatCreatePreviewTimeRange(startDateTime, endDateTime);
 

@@ -12,7 +12,7 @@ type CalendarColorSource = ReadonlyMap<string, Pick<Calendar, "color">>;
 
 /**
  * Resolves the effective display color: explicit event color, then calendar color, then
- * {@link fallbackColor} (e.g. host `default-event-color`), then {@link DEFAULT_CALENDAR_EVENT_COLOR}.
+ * optional {@link fallbackColor}, then {@link DEFAULT_CALENDAR_EVENT_COLOR}.
  */
 export function resolveCalendarEventColor(
   calendarId: string | undefined,

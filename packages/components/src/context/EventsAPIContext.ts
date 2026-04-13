@@ -29,6 +29,11 @@ export type EventsAPIContextValue = {
    * {@link EventsAPIContextValue.getCalendars} are visible (same as `event-calendar` `selectedCalendarIds`).
    */
   getSelectedCalendarIds: () => string[] | undefined;
+  /**
+   * Calendar id used when creating a new event (e.g. `event-calendar` sidebar selection), or `undefined`
+   * when none applies.
+   */
+  getCalendarIdForNewEvent: () => string | undefined;
   apply: (operation: EventOperation) => ApplyResult;
   getApi: () => EventsAPI;
   create: (input: CreateInput) => ApplyResult;

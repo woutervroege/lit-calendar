@@ -61,7 +61,6 @@ export abstract class CalendarViewBase extends BaseElement {
 
   declare events?: EventsMap;
   defaultEventSummary = "New event";
-  defaultEventColor = "#0ea5e9";
   defaultCalendarId?: string;
 
   static get properties() {
@@ -78,7 +77,6 @@ export abstract class CalendarViewBase extends BaseElement {
       timezone: { type: String },
       currentTime: { type: String, attribute: "current-time" },
       defaultEventSummary: { type: String, attribute: "default-event-summary" },
-      defaultEventColor: { type: String, attribute: "default-event-color" },
       defaultCalendarId: { type: String, attribute: "default-source-id" },
     } as const;
   }
@@ -127,24 +125,22 @@ export abstract class CalendarViewBase extends BaseElement {
 
   /**
    * Color shown for an event: `data.color` when set, otherwise the parent calendar (from context),
-   * then {@link defaultEventColor}, then the package default.
+   * then the shared fallback (`DEFAULT_CALENDAR_EVENT_COLOR` in `@lit-calendar/events-api`).
    */
   protected resolveEventDisplayColor(event: ApiCalendarEvent): string {
     return resolveCalendarEventColor(
       event.calendarId,
       event.data.color,
-      this.#eventsAPI?.getCalendars(),
-      this.defaultEventColor
+      this.#eventsAPI?.getCalendars()
     );
   }
 
   /** Color for a newly created event before any explicit user color is chosen. */
   protected resolveNewEventColor(calendarId: string | undefined): string {
     return resolveCalendarEventColor(
-      calendarId ?? this.defaultCalendarId,
+      calendarId ?? this.calendarIdForNewEvent(),
       undefined,
-      this.#eventsAPI?.getCalendars(),
-      this.defaultEventColor
+      this.#eventsAPI?.getCalendars()
     );
   }
 
@@ -155,9 +151,25 @@ export abstract class CalendarViewBase extends BaseElement {
     return this.#eventsAPI?.getCalendars()?.get(id)?.accountId;
   }
 
-  /** Account for a new event when {@link defaultCalendarId} is set and calendars come from context. */
+  /**
+   * Calendar id for create gestures: from {@link EventsAPIContextValue.getCalendarIdForNewEvent} when the
+   * host provides it (e.g. `event-calendar`), otherwise {@link defaultCalendarId}.
+   */
+  protected calendarIdForNewEvent(): string | undefined {
+    const fromContext = this.#eventsAPI?.getCalendarIdForNewEvent();
+    if (fromContext !== undefined && fromContext !== null) {
+      const trimmed = String(fromContext).trim();
+      if (trimmed !== "") return trimmed;
+    }
+    const raw = this.defaultCalendarId;
+    if (raw === undefined || raw === null) return undefined;
+    const trimmed = String(raw).trim();
+    return trimmed === "" ? undefined : trimmed;
+  }
+
+  /** Account for a new event when the target calendar is known (see {@link calendarIdForNewEvent}). */
   protected defaultAccountIdForNewEvent(): string | undefined {
-    return this.accountIdForCalendar(this.defaultCalendarId);
+    return this.accountIdForCalendar(this.calendarIdForNewEvent());
   }
 
   protected applyCreateRequestToEventsAPI(detail: EventCreateRequestDetail): boolean {

@@ -62,7 +62,6 @@ export class CalendarMonthView extends CalendarViewBase {
           current-time=${this.currentTime}
           .labelsHidden=${false}
           .defaultEventSummary=${this.defaultEventSummary}
-          .defaultEventColor=${this.defaultEventColor}
           .defaultCalendarId=${this.defaultCalendarId}
           @day-selection=${this.forwardCalendarEvent}
           @event-created=${this.forwardCalendarEvent}

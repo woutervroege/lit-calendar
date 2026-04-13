@@ -142,7 +142,6 @@ export class EventCalendar extends BaseElement {
   visibleHours?: number;
   rtl = false;
   defaultEventSummary = "New event";
-  defaultEventColor = "#0ea5e9";
   defaultCalendarId?: string;
   /** When set and non-empty, shows a calendar list beside the grid; on narrow containers it opens as an overlay. */
   declare calendars?: CalendarsMap;
@@ -167,6 +166,7 @@ export class EventCalendar extends BaseElement {
       return accounts;
     },
     getSelectedCalendarIds: () => this.selectedCalendarIds,
+    getCalendarIdForNewEvent: () => this.#effectiveCalendarIdForNewEvent(),
     getApi: () =>
       new EventsAPI(this.events ?? new Map(), {
         timezone: this.timezone,
@@ -221,7 +221,6 @@ export class EventCalendar extends BaseElement {
       visibleHours: { type: Number, attribute: "visible-hours" },
       rtl: { type: Boolean, reflect: true },
       defaultEventSummary: { type: String, attribute: "default-event-summary" },
-      defaultEventColor: { type: String, attribute: "default-event-color" },
       defaultCalendarId: { type: String, attribute: "default-source-id" },
       calendars: { type: Object, attribute: false },
       selectedCalendarIds: { type: Array, attribute: false },
@@ -326,6 +325,23 @@ export class EventCalendar extends BaseElement {
     return trimmed === "" ? undefined : trimmed;
   }
 
+  /**
+   * Resolved calendar for new events: explicit default when valid, otherwise first visible calendar
+   * in sidebar order (matches {@link #mergeDefaultCalendarWhenCalendarsMapChanges}).
+   */
+  #effectiveCalendarIdForNewEvent(): string | undefined {
+    const map = this.calendars;
+    const normalized = this.#normalizedDefaultCalendarId();
+    if (!map || map.size === 0) {
+      return normalized;
+    }
+    const keys = new Set(map.keys());
+    if (normalized !== undefined && keys.has(normalized)) {
+      return normalized;
+    }
+    return this.#firstDefaultCalendarCandidate(map);
+  }
+
   #firstDefaultCalendarCandidate(map: CalendarsMap): string | undefined {
     const ordered = calendarIdsInSidebarOrder(map);
     if (ordered.length === 0) return undefined;
@@ -346,14 +362,7 @@ export class EventCalendar extends BaseElement {
       return;
     }
 
-    const keys = new Set(map.keys());
-    let next = this.#normalizedDefaultCalendarId();
-    if (next !== undefined && !keys.has(next)) {
-      next = undefined;
-    }
-    if (next === undefined) {
-      next = this.#firstDefaultCalendarCandidate(map);
-    }
+    const next = this.#effectiveCalendarIdForNewEvent();
 
     if (next !== this.defaultCalendarId) {
       this.defaultCalendarId = next;
@@ -690,8 +699,6 @@ export class EventCalendar extends BaseElement {
             .visibleHours=${this.visibleHours}
             .rtl=${isHeaderRtl}
             .defaultEventSummary=${this.defaultEventSummary}
-            .defaultEventColor=${this.defaultEventColor}
-            .defaultCalendarId=${this.defaultCalendarId}
             @view-changed=${this.#syncFromViewGroup}
             @start-date-changed=${this.#syncFromViewGroup}
             @day-selection=${this.#syncFromViewGroup}

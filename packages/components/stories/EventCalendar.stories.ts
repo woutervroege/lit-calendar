@@ -102,9 +102,6 @@ function renderCalendar(
   if (args.defaultEventSummary) {
     el.setAttribute("default-event-summary", String(args.defaultEventSummary));
   }
-  if (args.defaultEventColor) {
-    el.setAttribute("default-event-color", String(args.defaultEventColor));
-  }
   if (args.defaultCalendarId) {
     el.setAttribute("default-source-id", String(args.defaultCalendarId));
   } else {
@@ -169,7 +166,6 @@ const meta: Meta = {
       options: VISIBLE_HOUR_OPTIONS,
     },
     defaultEventSummary: { control: "text", description: "Default created event summary" },
-    defaultEventColor: { control: "color", description: "Default created event color" },
     defaultCalendarId: { control: "text", description: "Default created event source id" },
     calendars: {
       control: false,
@@ -189,7 +185,6 @@ const meta: Meta = {
     snapInterval: 15,
     visibleHours: 12,
     defaultEventSummary: "New event",
-    defaultEventColor: "#0ea5e9",
     defaultCalendarId: "",
     events: sampleEvents,
   },
