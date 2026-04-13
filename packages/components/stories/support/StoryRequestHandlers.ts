@@ -10,6 +10,11 @@ import {
   resizeStartFromUpdateRequest,
 } from "../../src/domain/events-api/adapters.js";
 import {
+  eventViewFromApiEvent,
+  fromEventsApiMap,
+  toEventsApiMap,
+} from "../../src/domain/events-api/eventMapBridge.js";
+import {
   isCalendarEventException,
   isCalendarEventRecurring,
 } from "../../src/types/CalendarEvent.js";
@@ -139,7 +144,7 @@ function movedToDifferentDay(
 }
 
 function toUnsyncedState(result: ApplyResult): Map<string, CalendarEvent> {
-  const nextState = new Map(result.nextState as Map<string, CalendarEvent>);
+  const nextState = fromEventsApiMap(result.nextState);
 
   for (const change of result.changes) {
     if (change.type === "created") {
@@ -168,7 +173,7 @@ function toUnsyncedState(result: ApplyResult): Map<string, CalendarEvent> {
       continue;
     }
     nextState.set(change.key, {
-      ...change.before,
+      ...eventViewFromApiEvent(change.before),
       pendingOp: "deleted",
     });
   }
@@ -190,12 +195,13 @@ function applyApiResult(
       changes: [],
       effects: [],
     } as ApplyResult);
-  el.events = mode === "unsynced" ? toUnsyncedState(applied) : (applied.nextState as Map<string, CalendarEvent>);
+  el.events =
+    mode === "unsynced" ? toUnsyncedState(applied) : fromEventsApiMap(applied.nextState);
   onPendingChanged?.();
 }
 
 function buildApi(el: StoryCalendarElement): EventsAPI {
-  return new EventsAPI(el.events);
+  return new EventsAPI(toEventsApiMap(el.events));
 }
 
 export function attachRequestEventHandlers(

@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { ContextConsumer } from "@lit/context";
 import { expandEvents, parseRecurrenceId, shiftDateValue, type EventOperation } from "@lit-calendar/events-api";
+import { fromEventsApiMap, toEventsApiMap } from "../domain/events-api/eventMapBridge.js";
 import { BaseElement } from "../BaseElement/BaseElement.js";
 import { type EventsAPIContextValue, eventsAPIContext } from "../context/EventsAPIContext.js";
 import {
@@ -118,7 +119,7 @@ export abstract class CalendarViewBase extends BaseElement {
     accepted: boolean;
   } {
     if (!this.#eventsAPI || !detail.envelope.eventId) return { handled: false, accepted: true };
-    const events = this.#eventsAPI.getState() ?? new Map();
+    const events = fromEventsApiMap(this.#eventsAPI.getState() ?? new Map());
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return { handled: false, accepted: true };
     const current = events.get(eventKey);
@@ -350,7 +351,7 @@ export abstract class CalendarViewBase extends BaseElement {
 
   protected applyDeleteRequestToEventsAPI(detail: EventDeleteRequestDetail): boolean {
     if (!this.#eventsAPI || !detail.envelope.eventId) return false;
-    const events = this.#eventsAPI.getState() ?? new Map();
+    const events = fromEventsApiMap(this.#eventsAPI.getState() ?? new Map());
     const eventKey = this.#resolveEventMapKey(events, detail.envelope);
     if (!eventKey) return false;
     const current = events.get(eventKey);
@@ -419,7 +420,9 @@ export abstract class CalendarViewBase extends BaseElement {
     start: CalendarEventDateValue;
     end: CalendarEventDateValue;
   }): EventsMap {
-    return expandEvents(this.events ?? new Map(), range, { timezone: this.timezone });
+    return fromEventsApiMap(
+      expandEvents(toEventsApiMap(this.events ?? new Map()), range, { timezone: this.timezone })
+    );
   }
 
   get pendingByCalendarId(): CalendarEventPendingByCalendarId {
@@ -506,7 +509,7 @@ export abstract class CalendarViewBase extends BaseElement {
   #applyEventsAPIOperation(operation: EventOperation) {
     if (!this.#eventsAPI) return;
     const result = this.#eventsAPI.apply(operation);
-    this.events = result.nextState;
+    this.events = fromEventsApiMap(result.nextState);
   }
 
   #resolveEventMapKey(

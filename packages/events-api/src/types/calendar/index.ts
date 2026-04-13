@@ -1,6 +1,6 @@
-export type { CalendarDuration } from "./duration.js";
-export type { CalendarRecurrenceId } from "./recurrence-id.js";
-export type { CalendarEventDateValue } from "./event-date-value.js";
+export type { CalendarDuration } from "./CalendarDuration.js";
+export type { CalendarRecurrenceId } from "./CalendarRecurrenceId.js";
+export type { CalendarEventDateValue } from "./CalendarEventDateValue.js";
 export type { IANATimeZone } from "./timezone.js";
 export { isIANATimeZone, toIANATimeZone, UTC_TIMEZONE } from "./timezone.js";
 export type {

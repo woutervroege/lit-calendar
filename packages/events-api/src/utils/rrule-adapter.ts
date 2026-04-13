@@ -100,14 +100,14 @@ export function expandRecurringStarts(
   rangeEnd: Temporal.PlainDateTime,
   options: ExpandRecurringOptions = {}
 ): Temporal.PlainDateTime[] {
-  if (!event.recurrenceRule) return [];
-  const dtstart = toPlainDateTime(event.start, options.timezone);
+  if (!event.data.recurrenceRule) return [];
+  const dtstart = toPlainDateTime(event.data.start, options.timezone);
   const ruleSet = new RRuleSet();
-  ruleSet.rrule(new RRule(toRRuleOptions(event.recurrenceRule, dtstart, options.timezone)));
+  ruleSet.rrule(new RRule(toRRuleOptions(event.data.recurrenceRule, dtstart, options.timezone)));
 
-  if (event.exclusionDates?.size) {
-    for (const recurrenceId of event.exclusionDates) {
-      const parsed = parseRecurrenceId(recurrenceId, event.start);
+  if (event.data.exclusionDates?.size) {
+    for (const recurrenceId of event.data.exclusionDates) {
+      const parsed = parseRecurrenceId(recurrenceId, event.data.start);
       if (!parsed) continue;
       const exDate = toPlainDateTime(parsed, options.timezone);
       ruleSet.exdate(toUtcFloatingDate(exDate));

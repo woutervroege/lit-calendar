@@ -29,9 +29,11 @@ export function toEventTarget(input: { eventId?: string; calendarId?: string; re
 export function fromCreateRequest(detail: EventCreateRequestDetail): CreateInput {
   return {
     event: {
-      ...detail.content,
       calendarId: detail.envelope.calendarId,
       pendingOp: "created",
+      data: {
+        ...detail.content,
+      },
     },
   };
 }

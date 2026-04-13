@@ -1,27 +1,25 @@
+export { expandEvents } from "./core/expandEvents.js";
+export { applyOperation, EventsAPI } from "./core/reducer.js";
 export type {
   CalendarDuration,
   CalendarEventDateValue,
-  IANATimeZone,
-  CalendarRecurrenceId,
   CalendarRecurrenceFrequency,
+  CalendarRecurrenceId,
   CalendarRecurrenceRule,
   CalendarRecurrenceRuleJson,
   CalendarRecurrenceWeekday,
   CalendarRecurrenceWeekdayRule,
+  IANATimeZone,
 } from "./types/calendar.js";
-
 export { isIANATimeZone, toIANATimeZone, UTC_TIMEZONE } from "./types/calendar.js";
-
 export type {
+  CalendarEvent,
   CalendarEventData,
   CalendarEventEnvelope,
-  CalendarEvent,
   CalendarEventPendingOperation,
-  CalendarEventTimeSpan,
-  CalendarEventRecord,
   CalendarEventsMap,
+  CalendarEventTimeSpan,
 } from "./types/event.js";
-
 export type {
   AddExceptionInput,
   AddExclusionInput,
@@ -46,19 +44,16 @@ export type {
   TimeRangeInput,
   UpdateInput,
 } from "./types/operations.js";
-
 export {
   collectDetachedExceptionKeys,
   isDetachedException,
   isExcludedOccurrence,
   parseRecurrenceId,
+  resolveEventEnd,
   shiftDateValue,
   shiftExclusionDates,
   shiftRecurrenceId,
   toPlainDateTime,
   toRecurrenceId,
 } from "./utils/recurrence.js";
-
-export { expandEvents } from "./core/expand.js";
 export { expandRecurringStarts } from "./utils/rrule-adapter.js";
-export { applyOperation, EventsAPI } from "./core/reducer.js";

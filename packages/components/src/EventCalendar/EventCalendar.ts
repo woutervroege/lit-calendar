@@ -21,7 +21,8 @@ import type { TabSwitchOption } from "../types/TabSwitch.js";
 import type { WeekdayNumber } from "../types/Weekday.js";
 import "../TabSwitch/TabSwitch.js";
 import { type EventsAPIContextValue, eventsAPIContext } from "../context/EventsAPIContext.js";
-import { EventsAPI, type EventOperation } from "@lit-calendar/events-api";
+import { EventsAPI, type ApplyResult, type EventOperation } from "@lit-calendar/events-api";
+import { fromEventsApiMap, toEventsApiMap } from "../domain/events-api/eventMapBridge.js";
 import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import { renderGridIcon } from "../icons/GridIcon.js";
 import { renderListIcon } from "../icons/ListIcon.js";
@@ -121,7 +122,7 @@ export class EventCalendar extends BaseElement {
   #eventsAPIContextValue: EventsAPIContextValue = {
     getState: () => this.events ?? new Map(),
     getApi: () =>
-      new EventsAPI(this.events ?? new Map(), {
+      new EventsAPI(toEventsApiMap(this.events ?? new Map()), {
         timezone: this.timezone,
         trackPending: true,
       }),
@@ -484,11 +485,18 @@ export class EventCalendar extends BaseElement {
     this.#rangeLabelParts = target.rangeLabelParts;
   }
 
-  #applyOperation(operation: EventOperation) {
-    const api = this.#eventsAPIContextValue.getApi();
+  #applyOperation(operation: EventOperation): ApplyResult {
+    const api = new EventsAPI(toEventsApiMap(this.events ?? new Map()), {
+      timezone: this.timezone,
+      trackPending: true,
+    });
     const result = api.apply(operation);
-    this.events = result.nextState;
-    return result;
+    const nextStateView = fromEventsApiMap(result.nextState);
+    this.events = nextStateView;
+    return {
+      ...result,
+      nextState: nextStateView,
+    } as unknown as ApplyResult;
   }
 
   #resolvePendingOperation(event: CalendarEventView): CalendarEventPendingOperation | undefined {

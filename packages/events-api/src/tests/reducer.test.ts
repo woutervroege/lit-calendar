@@ -12,12 +12,14 @@ describe("EventsAPI", () => {
         "daily",
         {
           eventId: "daily@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
-          summary: "Daily",
-          color: "#10B981",
-          recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
-          exclusionDates: new Set(["20250114T090000"]),
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
+            summary: "Daily",
+            color: "#10B981",
+            recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
+            exclusionDates: new Set(["20250114T090000"]),
+          },
         },
       ],
       [
@@ -25,11 +27,13 @@ describe("EventsAPI", () => {
         {
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
-          start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
-          summary: "Daily (moved)",
-          color: "#10B981",
           isException: true,
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
+            summary: "Daily (moved)",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -42,9 +46,9 @@ describe("EventsAPI", () => {
     });
 
     const next = api.getState();
-    expect(next.get("daily")?.start.toString()).toBe("2025-01-13T10:00:00");
-    expect(next.get("daily")?.exclusionDates?.has("20250114T100000")).toBe(true);
-    expect(next.get("daily::20250115T090000")?.start.toString()).toBe("2025-01-15T11:00:00");
+    expect(next.get("daily")?.data.start.toString()).toBe("2025-01-13T10:00:00");
+    expect(next.get("daily")?.data.exclusionDates?.has("20250114T100000")).toBe(true);
+    expect(next.get("daily::20250115T090000")?.data.start.toString()).toBe("2025-01-15T11:00:00");
     expect(next.get("daily::20250115T090000")?.recurrenceId).toBe("20250115T100000");
   });
 
@@ -54,11 +58,13 @@ describe("EventsAPI", () => {
         "daily",
         {
           eventId: "daily@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
-          summary: "Daily",
-          color: "#10B981",
-          recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
+            summary: "Daily",
+            color: "#10B981",
+            recurrenceRule: { freq: "DAILY", interval: 1, count: 3 },
+          },
         },
       ],
       [
@@ -66,11 +72,13 @@ describe("EventsAPI", () => {
         {
           eventId: "daily@example.test",
           recurrenceId: "20250114T090000",
-          start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-14T11:15:00"),
-          summary: "Daily (moved)",
-          color: "#10B981",
           isException: true,
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-14T11:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-14T11:15:00"),
+            summary: "Daily (moved)",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -83,14 +91,17 @@ describe("EventsAPI", () => {
 
     const next = api.getState();
     expect(next.has("daily::20250114T090000")).toBe(false);
-    expect(next.get("daily")?.exclusionDates?.has("20250114T090000")).toBe(true);
+    expect(next.get("daily")?.data.exclusionDates?.has("20250114T090000")).toBe(true);
   });
 
   it("resizing series start should shift exclusions with the new occurrence start", () => {
     const state = createDailySeriesState();
     state.set("daily", {
       ...state.get("daily")!,
-      exclusionDates: new Set(["20250114T090000"]),
+      data: {
+        ...state.get("daily")!.data,
+        exclusionDates: new Set(["20250114T090000"]),
+      },
     });
     const api = new EventsAPI(state);
 
@@ -101,8 +112,8 @@ describe("EventsAPI", () => {
     });
 
     const next = api.getState();
-    expect(next.get("daily")?.exclusionDates?.has("20250114T083000")).toBe(true);
-    expect(next.get("daily")?.exclusionDates?.has("20250114T090000")).toBe(false);
+    expect(next.get("daily")?.data.exclusionDates?.has("20250114T083000")).toBe(true);
+    expect(next.get("daily")?.data.exclusionDates?.has("20250114T090000")).toBe(false);
   });
 
   it("resizing series start should not resize detached exceptions", () => {
@@ -113,11 +124,13 @@ describe("EventsAPI", () => {
         {
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
-          start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
-          summary: "Daily (moved)",
-          color: "#10B981",
           isException: true,
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
+            summary: "Daily (moved)",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -131,8 +144,8 @@ describe("EventsAPI", () => {
 
     const next = api.getState();
     const exception = next.get("daily::20250115T090000");
-    expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
-    expect((exception ? resolveEventEnd(exception).toString() : undefined)).toBe("2025-01-15T11:15:00");
+    expect(exception?.data.start.toString()).toBe("2025-01-15T11:00:00");
+    expect((exception ? resolveEventEnd(exception.data).toString() : undefined)).toBe("2025-01-15T11:15:00");
   });
 
   it("resizing series start shifts detached exception recurrence anchor", () => {
@@ -141,12 +154,14 @@ describe("EventsAPI", () => {
         "daily",
         {
           eventId: "daily@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
-          summary: "Daily",
-          color: "#10B981",
-          recurrenceRule: { freq: "DAILY", interval: 1, count: 4 },
-          exclusionDates: new Set(["20250115T090000"]),
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T09:15:00"),
+            summary: "Daily",
+            color: "#10B981",
+            recurrenceRule: { freq: "DAILY", interval: 1, count: 4 },
+            exclusionDates: new Set(["20250115T090000"]),
+          },
         },
       ],
       [
@@ -154,11 +169,13 @@ describe("EventsAPI", () => {
         {
           eventId: "daily@example.test",
           recurrenceId: "20250115T090000",
-          start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
-          summary: "Daily (moved)",
-          color: "#10B981",
           isException: true,
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-15T11:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-15T11:15:00"),
+            summary: "Daily (moved)",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -172,11 +189,11 @@ describe("EventsAPI", () => {
 
     const next = api.getState();
     const exception = next.get("daily::20250115T090000");
-    expect(exception?.start.toString()).toBe("2025-01-15T11:00:00");
-    expect((exception ? resolveEventEnd(exception).toString() : undefined)).toBe("2025-01-15T11:15:00");
+    expect(exception?.data.start.toString()).toBe("2025-01-15T11:00:00");
+    expect((exception ? resolveEventEnd(exception.data).toString() : undefined)).toBe("2025-01-15T11:15:00");
     expect(exception?.recurrenceId).toBe("20250115T083000");
-    expect(next.get("daily")?.exclusionDates?.has("20250115T083000")).toBe(true);
-    expect(next.get("daily")?.exclusionDates?.has("20250115T090000")).toBe(false);
+    expect(next.get("daily")?.data.exclusionDates?.has("20250115T083000")).toBe(true);
+    expect(next.get("daily")?.data.exclusionDates?.has("20250115T090000")).toBe(false);
   });
 
   it("moving a detached exception keeps original recurrence anchor and suppresses master occurrence", () => {
@@ -190,8 +207,8 @@ describe("EventsAPI", () => {
 
     const next = api.getState();
     const movedException = next.get("weekly::20250120T090000");
-    expect(movedException?.start.toString()).toBe("2025-01-20T14:00:00");
-    expect((movedException ? resolveEventEnd(movedException).toString() : undefined)).toBe(
+    expect(movedException?.data.start.toString()).toBe("2025-01-20T14:00:00");
+    expect((movedException ? resolveEventEnd(movedException.data).toString() : undefined)).toBe(
       "2025-01-20T15:00:00"
     );
     expect(movedException?.recurrenceId).toBe("20250120T090000");
@@ -211,10 +228,12 @@ describe("EventsAPI", () => {
         "single",
         {
           eventId: "single@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
-          summary: "Single",
-          color: "#10B981",
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
+            summary: "Single",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -241,11 +260,13 @@ describe("EventsAPI", () => {
         "draft",
         {
           eventId: "draft@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
-          summary: "Draft",
-          color: "#10B981",
           pendingOp: "created",
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-13T09:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-13T10:00:00"),
+            summary: "Draft",
+            color: "#10B981",
+          },
         },
       ],
     ]);
@@ -269,9 +290,9 @@ describe("EventsAPI", () => {
     });
 
     const next = api.getState();
-    expect(next.get("weekly")?.summary).toBe("Weekly (series updated)");
+    expect(next.get("weekly")?.data.summary).toBe("Weekly (series updated)");
     expect(next.get("weekly")?.pendingOp).toBe("updated");
-    expect(next.get("weekly::20250120T090000")?.summary).toBe("Weekly (moved)");
+    expect(next.get("weekly::20250120T090000")?.data.summary).toBe("Weekly (moved)");
     expect(next.get("weekly::20250120T090000")?.pendingOp).toBeUndefined();
   });
 

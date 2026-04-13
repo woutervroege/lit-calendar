@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventDateValue } from "../types/calendar.js";
-import type { CalendarEventRecord, CalendarEventsMap } from "../types/event.js";
+import type { CalendarEvent, CalendarEventsMap } from "../types/event.js";
 import {
   collectDetachedExceptionKeys,
   resolveEventEnd,
@@ -54,9 +54,9 @@ export function expandEvents(
 
   for (const [id, event] of events) {
     if (event.pendingOp === "deleted") continue;
-    if (event.recurrenceRule && !event.recurrenceId) {
-      const baseStart = toPlainDateTime(event.start, options.timezone);
-      const baseEndValue = resolveEventEnd(event);
+    if (event.data.recurrenceRule && !event.recurrenceId) {
+      const baseStart = toPlainDateTime(event.data.start, options.timezone);
+      const baseEndValue = resolveEventEnd(event.data);
       const baseEnd = toPlainDateTime(baseEndValue, options.timezone);
       if (Temporal.PlainDateTime.compare(baseEnd, baseStart) <= 0) continue;
       const baseDuration = baseStart.until(baseEnd);
@@ -65,27 +65,30 @@ export function expandEvents(
       });
 
       for (const occurrenceStart of occurrenceStarts) {
-        const recurrenceId = toRecurrenceId(occurrenceStart, event.start);
+        const recurrenceId = toRecurrenceId(occurrenceStart, event.data.start);
         const hasDetachedException =
           Boolean(event.eventId) && detachedExceptionKeys.has(`${event.eventId}::${recurrenceId}`);
         if (hasDetachedException) continue;
         const occurrenceEnd = occurrenceStart.add(baseDuration);
         if (!rangeOverlaps(occurrenceStart, occurrenceEnd, rangeStart, rangeEnd)) continue;
         const occurrenceKey = `${id}::${recurrenceId}`;
-        const renderedOccurrence: CalendarEventRecord = {
+        const renderedOccurrence: CalendarEvent = {
           ...event,
           recurrenceId,
-          start: fromPlainDateTime(occurrenceStart, event.start),
-          end: fromPlainDateTime(occurrenceEnd, baseEndValue),
-          duration: undefined,
+          data: {
+            ...event.data,
+            start: fromPlainDateTime(occurrenceStart, event.data.start),
+            end: fromPlainDateTime(occurrenceEnd, baseEndValue),
+            duration: undefined,
+          },
         };
         renderedEvents.set(occurrenceKey, renderedOccurrence);
       }
       continue;
     }
 
-    const start = toPlainDateTime(event.start, options.timezone);
-    const end = toPlainDateTime(resolveEventEnd(event), options.timezone);
+    const start = toPlainDateTime(event.data.start, options.timezone);
+    const end = toPlainDateTime(resolveEventEnd(event.data), options.timezone);
     if (!rangeOverlaps(start, end, rangeStart, rangeEnd)) continue;
     renderedEvents.set(id, event);
   }

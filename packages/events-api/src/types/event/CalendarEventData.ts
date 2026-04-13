@@ -3,7 +3,7 @@ import type {
   CalendarExclusionDates,
   CalendarRecurrenceRule,
 } from "../calendar/index.js";
-import type { CalendarEventTimeSpan } from "./time-span.js";
+import type { CalendarEventTimeSpan } from "./CalendarEventTimeSpan.js";
 
 export type CalendarEventData = {
   start: CalendarEventDateValue;

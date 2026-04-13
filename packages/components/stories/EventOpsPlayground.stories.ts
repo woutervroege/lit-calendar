@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { Temporal } from "@js-temporal/polyfill";
 import { EventsAPI } from "@lit-calendar/events-api";
+import { fromEventsApiMap, toEventsApiMap } from "../src/domain/events-api/eventMapBridge.js";
 import "../src/EventCalendar/EventCalendar.js";
 import type { CalendarEventViewMap } from "../src/types/CalendarEvent.js";
 
@@ -129,10 +130,12 @@ const OPERATIONS: PlaygroundOperation[] = [
         event: {
           calendarId: "/calendars/story/ops/",
           eventId: "ops-one-off@example.test",
-          start: Temporal.PlainDateTime.from("2025-01-22T15:00:00"),
-          end: Temporal.PlainDateTime.from("2025-01-22T16:00:00"),
-          summary: "One-off",
-          color: "#14b8a6",
+          data: {
+            start: Temporal.PlainDateTime.from("2025-01-22T15:00:00"),
+            end: Temporal.PlainDateTime.from("2025-01-22T16:00:00"),
+            summary: "One-off",
+            color: "#14b8a6",
+          },
         },
       }),
   },
@@ -257,10 +260,10 @@ function renderPlayground() {
   calendar.setAttribute("timezone", "Europe/Amsterdam");
   calendar.setAttribute("current-time", "2025-01-15T14:30:00");
 
-  let api = new EventsAPI(createInitialState(), { timezone: "Europe/Amsterdam" });
+  let api = new EventsAPI(toEventsApiMap(createInitialState()), { timezone: "Europe/Amsterdam" });
 
   const sync = (lastResult?: unknown) => {
-    const state = api.getState();
+    const state = fromEventsApiMap(api.getState());
     calendar.events = state;
     stateOutput.value = summarizeState(state);
     resultOutput.value = lastResult ? asText(lastResult) : "(no operations yet)";
@@ -279,7 +282,7 @@ function renderPlayground() {
   });
 
   resetButton.addEventListener("click", () => {
-    api = new EventsAPI(createInitialState(), { timezone: "Europe/Amsterdam" });
+    api = new EventsAPI(toEventsApiMap(createInitialState()), { timezone: "Europe/Amsterdam" });
     sync();
   });
 

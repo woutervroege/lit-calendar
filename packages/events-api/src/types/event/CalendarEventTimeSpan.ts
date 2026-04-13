@@ -1,5 +1,5 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "../calendar/event-date-value.js";
+import type { CalendarEventDateValue } from "../calendar/CalendarEventDateValue.js";
 
 export type CalendarEventTimeSpan =
   | {

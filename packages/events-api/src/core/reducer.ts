@@ -1,13 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventDateValue } from "../types/calendar.js";
 import type {
-  CalendarEventRecord,
+  CalendarEvent,
+  CalendarEventData,
   CalendarEventsMap,
-  CalendarEventTimeSpan,
 } from "../types/event.js";
 import { isCalendarEventException } from "../types/event.js";
-import { expandEvents } from "./expand.js";
+import { expandEvents } from "./expandEvents.js";
 import {
+  resolveEventEnd,
   shiftDateValue,
   shiftExclusionDates,
   shiftRecurrenceId,
@@ -40,10 +41,13 @@ type ReduceContext = {
   trackPending?: boolean;
 };
 
-function cloneEvent(event: CalendarEventRecord): CalendarEventRecord {
+function cloneEvent(event: CalendarEvent): CalendarEvent {
   return {
     ...event,
-    exclusionDates: event.exclusionDates ? new Set(event.exclusionDates) : undefined,
+    data: {
+      ...event.data,
+      exclusionDates: event.data.exclusionDates ? new Set(event.data.exclusionDates) : undefined,
+    },
   };
 }
 
@@ -59,33 +63,14 @@ function normalizeTimeRange(input: TimeRangeInput): { start: CalendarEventDateVa
   };
 }
 
-function resolveEventEndValue(
-  event: Pick<CalendarEventRecord, "start"> & CalendarEventTimeSpan
-): CalendarEventDateValue {
-  if ("end" in event && event.end !== undefined) return event.end;
-  return shiftDateValue(event.start, event.duration);
+function withEndTimeSpan(event: CalendarEvent, end: CalendarEventDateValue): CalendarEvent {
+  const { end: _e, duration: _d, ...dataRest } = event.data;
+  return { ...event, data: { ...dataRest, end } };
 }
 
-function withEndTimeSpan(
-  event: Omit<CalendarEventRecord, "end" | "duration"> & Partial<CalendarEventTimeSpan>,
-  end: CalendarEventDateValue
-): CalendarEventRecord {
-  const { duration: _duration, ...rest } = event;
-  return {
-    ...rest,
-    end,
-  };
-}
-
-function withDurationTimeSpan(
-  event: Omit<CalendarEventRecord, "end" | "duration"> & Partial<CalendarEventTimeSpan>,
-  duration: Temporal.Duration
-): CalendarEventRecord {
-  const { end: _end, ...rest } = event;
-  return {
-    ...rest,
-    duration,
-  };
+function withDurationTimeSpan(event: CalendarEvent, duration: Temporal.Duration): CalendarEvent {
+  const { end: _e, duration: _d, ...dataRest } = event.data;
+  return { ...event, data: { ...dataRest, duration } };
 }
 
 function resolveKey(state: EventsState, target: EventTarget): string | undefined {
@@ -117,18 +102,18 @@ function resolveScopeKeys(state: EventsState, key: string, scope: Scope): string
   return keys;
 }
 
-function changeUpdated(changes: EventChange[], key: string, before: CalendarEventRecord, after: CalendarEventRecord) {
+function changeUpdated(changes: EventChange[], key: string, before: CalendarEvent, after: CalendarEvent) {
   changes.push({ type: "updated", key, before, after });
 }
 
-function setUpdated(state: EventsState, changes: EventChange[], key: string, update: CalendarEventRecord) {
+function setUpdated(state: EventsState, changes: EventChange[], key: string, update: CalendarEvent) {
   const before = state.get(key);
   if (!before) return;
   state.set(key, update);
   changeUpdated(changes, key, before, update);
 }
 
-function asPendingUpdated(event: CalendarEventRecord, trackPending: boolean): CalendarEventRecord {
+function asPendingUpdated(event: CalendarEvent, trackPending: boolean): CalendarEvent {
   if (!trackPending) return event;
   return {
     ...event,
@@ -136,7 +121,7 @@ function asPendingUpdated(event: CalendarEventRecord, trackPending: boolean): Ca
   };
 }
 
-function asPendingDeleted(event: CalendarEventRecord, trackPending: boolean): CalendarEventRecord {
+function asPendingDeleted(event: CalendarEvent, trackPending: boolean): CalendarEvent {
   if (!trackPending) return event;
   return {
     ...event,
@@ -144,12 +129,12 @@ function asPendingDeleted(event: CalendarEventRecord, trackPending: boolean): Ca
   };
 }
 
-function withExcludedRecurrence(event: CalendarEventRecord, recurrenceId: string): CalendarEventRecord {
-  const exclusionDates = new Set(event.exclusionDates ?? []);
+function withExcludedRecurrence(event: CalendarEvent, recurrenceId: string): CalendarEvent {
+  const exclusionDates = new Set(event.data.exclusionDates ?? []);
   exclusionDates.add(recurrenceId);
   return {
     ...event,
-    exclusionDates,
+    data: { ...event.data, exclusionDates },
     pendingOp: event.pendingOp === "created" ? "created" : "updated",
   };
 }
@@ -167,13 +152,16 @@ function ensureMinimumDuration(
   return { start, end: shiftDateValue(start, minDuration) };
 }
 
-function applyUpdateToEvent(event: CalendarEventRecord, patch: UpdateInput["patch"]): CalendarEventRecord {
-  let next = cloneEvent(event);
-  if (patch.summary !== undefined) next.summary = patch.summary;
-  if (patch.color !== undefined) next.color = patch.color;
-  if (patch.location !== undefined) next.location = patch.location;
-  if (patch.calendarId !== undefined) next.calendarId = patch.calendarId;
-  if (patch.start !== undefined) next.start = patch.start;
+function applyUpdateToEvent(event: CalendarEvent, patch: UpdateInput["patch"]): CalendarEvent {
+  const { data: prevData, ...envelopeRest } = event;
+  const envelope = { ...envelopeRest };
+  const nextData = { ...prevData };
+  if (patch.summary !== undefined) nextData.summary = patch.summary;
+  if (patch.color !== undefined) nextData.color = patch.color;
+  if (patch.location !== undefined) nextData.location = patch.location;
+  if (patch.calendarId !== undefined) envelope.calendarId = patch.calendarId;
+  if (patch.start !== undefined) nextData.start = patch.start;
+  let next: CalendarEvent = { ...envelope, data: nextData };
   if ("end" in patch && patch.end !== undefined) {
     next = withEndTimeSpan(next, patch.end);
   }
@@ -189,27 +177,37 @@ function applyCreate(input: CreateInput, context: ReduceContext): ApplyResult {
   const state = cloneState(context.state);
   const changes: EventChange[] = [];
   const effects: DomainEffect[] = [];
-  const normalized = normalizeTimeRange(input.event);
+  const { data: rawData, ...envelope } = input.event;
+  const normalized =
+    "end" in rawData ?
+      normalizeTimeRange({ start: rawData.start, end: rawData.end })
+    : normalizeTimeRange({ start: rawData.start, duration: rawData.duration });
+  const { summary, color, location, recurrenceRule, exclusionDates } = rawData;
+  const data: CalendarEventData =
+    "end" in rawData ?
+      {
+        summary,
+        color,
+        location,
+        recurrenceRule,
+        exclusionDates,
+        start: normalized.start,
+        end: normalized.end,
+      }
+    : {
+        summary,
+        color,
+        location,
+        recurrenceRule,
+        exclusionDates,
+        start: normalized.start,
+        duration: rawData.duration,
+      };
   const key =
     input.key ??
-    input.event.eventId ??
+    envelope.eventId ??
     `event-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const event: CalendarEventRecord =
-    "end" in input.event ?
-      (() => {
-        const { duration: _duration, ...base } = {
-          ...input.event,
-          start: normalized.start,
-        };
-        return { ...base, end: normalized.end } as CalendarEventRecord;
-      })()
-    : (() => {
-        const base = {
-          ...input.event,
-          start: normalized.start,
-        };
-        return { ...base, duration: input.event.duration } as CalendarEventRecord;
-      })();
+  const event: CalendarEvent = { ...envelope, data };
   state.set(key, event);
   changes.push({ type: "created", key, event });
   return { nextState: state, changes, effects };
@@ -254,9 +252,9 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
     const isException = isCalendarEventException(event);
     if (input.scope === "series" && isException && keepExceptionTiming) {
       const nextRecurrenceId = shiftExceptionRecurrenceId
-        ? shiftRecurrenceId(event.recurrenceId, event.start, input.delta)
+        ? shiftRecurrenceId(event.recurrenceId, event.data.start, input.delta)
         : event.recurrenceId;
-      const updated: CalendarEventRecord = {
+      const updated: CalendarEvent = {
         ...event,
         recurrenceId: nextRecurrenceId,
       };
@@ -265,15 +263,29 @@ function applyMove(input: MoveInput, context: ReduceContext): ApplyResult {
     }
     const updated = asPendingUpdated(
       (() => {
-        const { end: eventEnd, duration: eventDuration, ...eventRest } = event;
-        const shiftedBase = {
-          ...eventRest,
-          start: shiftDateValue(event.start, input.delta),
-          exclusionDates: shiftExdates ? shiftExclusionDates(event, input.delta) : event.exclusionDates,
+        const { data } = event;
+        const shiftedStart = shiftDateValue(data.start, input.delta);
+        const nextExclusionDates = shiftExdates ? shiftExclusionDates(event, input.delta) : data.exclusionDates;
+        if ("end" in data && data.end !== undefined) {
+          const partial: CalendarEvent = {
+            ...event,
+            data: {
+              ...data,
+              start: shiftedStart,
+              exclusionDates: nextExclusionDates,
+            },
+          };
+          return withEndTimeSpan(partial, shiftDateValue(data.end, input.delta));
+        }
+        const partial: CalendarEvent = {
+          ...event,
+          data: {
+            ...data,
+            start: shiftedStart,
+            exclusionDates: nextExclusionDates,
+          },
         };
-        return eventEnd !== undefined
-          ? withEndTimeSpan(shiftedBase, shiftDateValue(eventEnd, input.delta))
-          : withDurationTimeSpan(shiftedBase, eventDuration as Temporal.Duration);
+        return withDurationTimeSpan(partial, data.duration as Temporal.Duration);
       })(),
       context.trackPending ?? false
     );
@@ -296,31 +308,39 @@ function applyResizeStart(input: ResizeStartInput, context: ReduceContext): Appl
   const keys = resolveScopeKeys(state, key, input.scope);
   const seriesDelta =
     input.scope === "series"
-      ? toPlainDateTime(referenceEvent.start).until(toPlainDateTime(input.toStart))
+      ? toPlainDateTime(referenceEvent.data.start).until(toPlainDateTime(input.toStart))
       : null;
   for (const updateKey of keys) {
     const event = state.get(updateKey);
     if (!event) continue;
     if (input.scope === "series" && isCalendarEventException(event)) {
-      const updatedException: CalendarEventRecord = {
+      const updatedException: CalendarEvent = {
         ...event,
-        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.start, seriesDelta),
+        recurrenceId: shiftRecurrenceId(event.recurrenceId, event.data.start, seriesDelta),
       };
       setUpdated(state, changes, updateKey, updatedException);
       continue;
     }
-    const nextStart = input.scope === "series" ? shiftDateValue(event.start, seriesDelta) : input.toStart;
-    const bounded = ensureMinimumDuration(nextStart, resolveEventEndValue(event), input.options?.minDuration);
+    const nextStart =
+      input.scope === "series" ? shiftDateValue(event.data.start, seriesDelta) : input.toStart;
+    const bounded = ensureMinimumDuration(
+      nextStart,
+      resolveEventEnd(event.data),
+      input.options?.minDuration
+    );
     const nextExclusionDates =
-      input.scope === "series" && event.recurrenceRule && !event.recurrenceId
+      input.scope === "series" && event.data.recurrenceRule && !event.recurrenceId
         ? shiftExclusionDates(event, seriesDelta)
-        : event.exclusionDates;
+        : event.data.exclusionDates;
     const updated = asPendingUpdated(
       withEndTimeSpan(
         {
           ...event,
-          start: bounded.start,
-          exclusionDates: nextExclusionDates,
+          data: {
+            ...event.data,
+            start: bounded.start,
+            exclusionDates: nextExclusionDates,
+          },
         },
         bounded.end
       ),
@@ -345,20 +365,20 @@ function applyResizeEnd(input: ResizeEndInput, context: ReduceContext): ApplyRes
   const keys = resolveScopeKeys(state, key, input.scope);
   const seriesDelta =
     input.scope === "series"
-      ? toPlainDateTime(resolveEventEndValue(referenceEvent)).until(toPlainDateTime(input.toEnd))
+      ? toPlainDateTime(resolveEventEnd(referenceEvent.data)).until(toPlainDateTime(input.toEnd))
       : null;
   for (const updateKey of keys) {
     const event = state.get(updateKey);
     if (!event) continue;
     if (input.scope === "series" && isCalendarEventException(event)) continue;
     const nextEnd =
-      input.scope === "series" ? shiftDateValue(resolveEventEndValue(event), seriesDelta) : input.toEnd;
-    const bounded = ensureMinimumDuration(event.start, nextEnd, input.options?.minDuration);
+      input.scope === "series" ? shiftDateValue(resolveEventEnd(event.data), seriesDelta) : input.toEnd;
+    const bounded = ensureMinimumDuration(event.data.start, nextEnd, input.options?.minDuration);
     const updated = asPendingUpdated(
       withEndTimeSpan(
         {
           ...event,
-          start: bounded.start,
+          data: { ...event.data, start: bounded.start },
         },
         bounded.end
       ),
@@ -389,7 +409,7 @@ function applyRemove(input: RemoveInput, context: ReduceContext): ApplyResult {
     ) {
       const masterKey = resolveScopeKeys(state, key, "series").find((candidate) => {
         const event = state.get(candidate);
-        return Boolean(event?.recurrenceRule && !event?.recurrenceId);
+        return Boolean(event?.data.recurrenceRule && !event?.recurrenceId);
       });
       if (masterKey) {
         const masterEvent = state.get(masterKey);
@@ -463,10 +483,10 @@ function applyRemoveExclusion(input: RemoveExclusionInput, context: ReduceContex
   }
   const event = state.get(key);
   if (!event) return { nextState: state, changes, effects };
-  const exclusionDates = new Set(event.exclusionDates ?? []);
+  const exclusionDates = new Set(event.data.exclusionDates ?? []);
   exclusionDates.delete(input.recurrenceId);
   const updated = asPendingUpdated(
-    { ...event, exclusionDates },
+    { ...event, data: { ...event.data, exclusionDates } },
     context.trackPending ?? false
   );
   setUpdated(state, changes, key, updated);
@@ -490,33 +510,46 @@ function applyAddException(input: AddExceptionInput, context: ReduceContext): Ap
   );
   setUpdated(state, changes, key, updatedMaster);
 
-  const normalized = normalizeTimeRange(input.event);
+  const raw = input.event;
+  const timeInput: TimeRangeInput =
+    "duration" in raw ?
+      { start: raw.start, duration: raw.duration }
+    : { start: raw.start, end: raw.end };
+  const normalized = normalizeTimeRange(timeInput);
   const exceptionKey = `${key}::${input.recurrenceId}`;
   const existing = state.get(exceptionKey);
-  const exception: CalendarEventRecord =
-    "end" in input.event ?
-      (() => {
-        const { duration: _duration, ...base } = {
-          ...master,
-          ...input.event,
-          start: normalized.start,
-          recurrenceId: input.recurrenceId,
-          isException: true,
-          recurrenceRule: undefined,
-        };
-        return { ...base, end: normalized.end } as CalendarEventRecord;
-      })()
-    : (() => {
-        const base = {
-          ...master,
-          ...input.event,
-          start: normalized.start,
-          recurrenceId: input.recurrenceId,
-          isException: true,
-          recurrenceRule: undefined,
-        };
-        return { ...base, duration: input.event.duration } as CalendarEventRecord;
-      })();
+  let exceptionData: CalendarEventData;
+  if ("duration" in raw) {
+    const { end: _e, ...md } = master.data;
+    exceptionData = {
+      ...md,
+      summary: raw.summary ?? master.data.summary,
+      color: raw.color ?? master.data.color,
+      location: raw.location ?? master.data.location,
+      start: normalized.start,
+      duration: raw.duration,
+      recurrenceRule: undefined,
+    };
+  } else {
+    const { duration: _d, ...md } = master.data;
+    exceptionData = {
+      ...md,
+      summary: raw.summary ?? master.data.summary,
+      color: raw.color ?? master.data.color,
+      location: raw.location ?? master.data.location,
+      start: normalized.start,
+      end: normalized.end,
+      recurrenceRule: undefined,
+    };
+  }
+  const { data: _masterData, recurrenceId: _mr, isException: _me, ...masterEnvelope } = master;
+  const exception: CalendarEvent = {
+    ...masterEnvelope,
+    calendarId: raw.calendarId ?? master.calendarId,
+    recurrenceId: input.recurrenceId,
+    isException: true,
+    data: exceptionData,
+  };
   if (existing) {
     setUpdated(state, changes, exceptionKey, asPendingUpdated(exception, context.trackPending ?? false));
   } else {
@@ -548,7 +581,7 @@ function applyRemoveException(input: RemoveExceptionInput, context: ReduceContex
   if (recurrenceId && (input.options?.asExclusion ?? true) && exception.eventId) {
     const masterKey = resolveScopeKeys(state, key, "series").find((candidate) => {
       const event = state.get(candidate);
-      return Boolean(event?.recurrenceRule && !event?.recurrenceId);
+      return Boolean(event?.data.recurrenceRule && !event?.recurrenceId);
     });
     if (masterKey) {
       const master = state.get(masterKey);
@@ -604,7 +637,7 @@ export class EventsAPI {
     return cloneState(this.#state);
   }
 
-  get(target: EventTarget): CalendarEventRecord | undefined {
+  get(target: EventTarget): CalendarEvent | undefined {
     const key = resolveKey(this.#state, target);
     if (!key) return undefined;
     const event = this.#state.get(key);

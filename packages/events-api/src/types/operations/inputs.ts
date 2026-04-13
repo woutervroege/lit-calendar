@@ -1,18 +1,32 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEvent } from "../event/index.js";
+import type { CalendarEventData } from "../event/index.js";
+import type { CalendarEventEnvelope } from "../event/index.js";
 import type { CalendarEventDateValue } from "../calendar/index.js";
 import type { EventKey, EventTarget, Scope } from "./primitives.js";
-import type { TimeRangeInput } from "./time-range-input.js";
+import type { TimeRangeInput } from "./TimeRangeInput.js";
+
+type CalendarEventDataWithoutTimeSpan = Omit<CalendarEventData, "start" | "end" | "duration">;
+
+export type CreateEventData =
+  | (CalendarEventDataWithoutTimeSpan & {
+      start: CalendarEventDateValue;
+      end: CalendarEventDateValue;
+    })
+  | (CalendarEventDataWithoutTimeSpan & {
+      start: CalendarEventDateValue;
+      duration: Temporal.Duration;
+    });
 
 export type CreateInput = {
   key?: EventKey;
-  event: Omit<CalendarEvent, "start" | "end"> & TimeRangeInput;
+  event: CalendarEventEnvelope & { data: CreateEventData };
 };
 
 export type UpdateInput = {
   target: EventTarget;
   scope: Scope;
-  patch: Partial<Pick<CalendarEvent, "summary" | "color" | "location" | "calendarId">> &
+  patch: Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
+    Partial<Pick<CalendarEventEnvelope, "calendarId">> &
     Partial<TimeRangeInput>;
 };
 
@@ -65,10 +79,22 @@ export type RemoveExclusionInput = {
   recurrenceId: string;
 };
 
+export type AddExceptionEventInput =
+  | (Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
+      Partial<Pick<CalendarEventEnvelope, "calendarId">> & {
+        start: CalendarEventDateValue;
+        end: CalendarEventDateValue;
+      })
+  | (Partial<Pick<CalendarEventData, "summary" | "color" | "location">> &
+      Partial<Pick<CalendarEventEnvelope, "calendarId">> & {
+        start: CalendarEventDateValue;
+        duration: Temporal.Duration;
+      });
+
 export type AddExceptionInput = {
   target: EventTarget;
   recurrenceId: string;
-  event: Partial<Pick<CalendarEvent, "summary" | "color" | "location" | "calendarId">> & TimeRangeInput;
+  event: AddExceptionEventInput;
   options?: {
     conflictPolicy?: "replace" | "merge" | "error";
   };

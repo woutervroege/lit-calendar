@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventDateValue } from "../types/calendar.js";
+import type { CalendarEventData } from "../types/event.js";
 import type { CalendarEvent, CalendarEventsMap, CalendarEventTimeSpan } from "../types/event.js";
 
 export function toPlainDateTime(value: CalendarEventDateValue, timezone?: string): Temporal.PlainDateTime {
@@ -69,11 +70,11 @@ export function isDetachedException(event: CalendarEvent): boolean {
   if (event.isException === true) return true;
   if (!event.recurrenceId) return false;
   if (isExcludedOccurrence(event, event.recurrenceId)) return false;
-  return !Boolean(event.recurrenceRule);
+  return !Boolean(event.data.recurrenceRule);
 }
 
 export function isExcludedOccurrence(master: CalendarEvent, recurrenceId: string): boolean {
-  return Boolean(master.exclusionDates?.has(recurrenceId));
+  return Boolean(master.data.exclusionDates?.has(recurrenceId));
 }
 
 export function collectDetachedExceptionKeys(events: CalendarEventsMap): Set<string> {
@@ -97,26 +98,27 @@ export function shiftDateValue(
 }
 
 export function resolveEventEnd(
-  event: Pick<CalendarEvent, "start"> & CalendarEventTimeSpan
+  data: Pick<CalendarEventData, "start"> & CalendarEventTimeSpan
 ): CalendarEventDateValue {
-  if ("end" in event && event.end !== undefined) return event.end;
-  return shiftDateValue(event.start, event.duration);
+  if ("end" in data && data.end !== undefined) return data.end;
+  return shiftDateValue(data.start, data.duration);
 }
 
 export function shiftExclusionDates(
   event: CalendarEvent,
   shift: Temporal.Duration | null
 ): Set<string> | undefined {
-  if (!event.exclusionDates?.size) return event.exclusionDates;
-  if (!shift) return event.exclusionDates;
+  const { exclusionDates, start } = event.data;
+  if (!exclusionDates?.size) return exclusionDates;
+  if (!shift) return exclusionDates;
   const shifted = new Set<string>();
-  for (const recurrenceId of event.exclusionDates) {
-    const parsed = parseRecurrenceId(recurrenceId, event.start);
+  for (const recurrenceId of exclusionDates) {
+    const parsed = parseRecurrenceId(recurrenceId, start);
     if (!parsed) {
       shifted.add(recurrenceId);
       continue;
     }
-    shifted.add(toRecurrenceId(shiftDateValue(parsed, shift), event.start));
+    shifted.add(toRecurrenceId(shiftDateValue(parsed, shift), start));
   }
   return shifted;
 }

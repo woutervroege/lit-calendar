@@ -2,18 +2,17 @@ import { Temporal } from "@js-temporal/polyfill";
 import type {
   CalendarEventDateValue,
   CalendarEventEntry,
-  CalendarEvent as CalendarEventRecord,
   CalendarEventView,
   CalendarEventViewEntry,
   CalendarRecurrenceRule,
 } from "../../src/types/CalendarEvent.js";
 import { resolveLocale } from "../../src/utils/Locale.js";
 
-export type { CalendarEvent as CalendarEventRecord } from "../../src/types/CalendarEvent.js";
+type SourceCalendarEvent = CalendarEventEntry[1];
 
 export type CalendarEvent = CalendarEventView;
 export type CalendarEventSampleEntry = CalendarEventViewEntry;
-export type CalendarTemporalEvent = Omit<CalendarEventView, "start" | "end"> & {
+export type CalendarTemporalEvent = Omit<CalendarEvent, "start" | "end"> & {
   start: CalendarEventDateValue;
   end: CalendarEventDateValue;
 };
@@ -26,7 +25,7 @@ export type WeekStoryEvent = CalendarTemporalEvent;
 export type WeekStoryEventEntry = CalendarTemporalEventEntry;
 
 type CalendarEventSeedInput = {
-  envelope: CalendarEventRecord["envelope"];
+  envelope: SourceCalendarEvent["envelope"];
   content: {
     start: string;
     end: string;
@@ -362,7 +361,7 @@ export function toTemporalDateLike(
   return Temporal.PlainDateTime.from(value);
 }
 
-function toCalendarEvent(event: CalendarEventSeedInput): CalendarEventRecord {
+function toCalendarEvent(event: CalendarEventSeedInput): SourceCalendarEvent {
   let recurrenceRule: CalendarRecurrenceRule | undefined;
   if (event.content.recurrenceRule) {
     const { until, count, ...baseRule } = event.content.recurrenceRule;
@@ -396,7 +395,7 @@ function toCalendarEvent(event: CalendarEventSeedInput): CalendarEventRecord {
   };
 }
 
-function toCalendarEventView(event: CalendarEventRecord): CalendarEvent {
+function toCalendarEventView(event: SourceCalendarEvent): CalendarEvent {
   return {
     ...event.envelope,
     ...event.content,

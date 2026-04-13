@@ -1,5 +1,5 @@
-import type { EventChange } from "./change.js";
-import type { DomainEffect } from "./effect.js";
+import type { EventChange } from "./EventChange.js";
+import type { DomainEffect } from "./DomainEffect.js";
 import type { EventsState } from "./primitives.js";
 
 export type ApplyResult = {

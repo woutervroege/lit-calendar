@@ -1,5 +1,5 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "./event-date-value.js";
+import type { CalendarEventDateValue } from "./CalendarEventDateValue.js";
 
 export type CalendarRecurrenceFrequency =
   | "SECONDLY"

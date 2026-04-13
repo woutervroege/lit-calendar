@@ -1,4 +1,4 @@
-import type { CalendarEventPendingOperation } from "./pending-operation.js";
+import type { CalendarEventPendingOperation } from "./CalendarEventPendingOperation.js";
 
 export type CalendarEventEnvelope = {
   calendarId?: string;

@@ -86,9 +86,11 @@ export type CalendarEventPendingByEventId = Map<string, CalendarEventPendingByOp
 export type CalendarEventPendingByCalendarId = Map<string, CalendarEventPendingByEventId>;
 export type CalendarEventPendingResult = CalendarEventPendingGroups | CalendarEventPendingByCalendarId;
 
+/** UI / story shapes only — not `@lit-calendar/events-api` `CalendarEvent` (envelope top-level + `data`). */
 type CalendarEventLike = CalendarEvent | CalendarEventView;
 
 function resolveEventEnvelope(event: CalendarEventLike): CalendarEventEnvelope {
+  // `CalendarEvent` uses a nested `{ envelope }`; `CalendarEventView` inlines those fields (no `envelope` key).
   return "envelope" in event ? event.envelope : event;
 }
 
