@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
 import type { CalendarEventsMap } from "../types/event.js";
+import { UTC_TIMEZONE } from "../types/event/timezone.js";
 import { resolveEventEnd } from "../utils/recurrence.js";
 import { EventsAPI } from "../core/reducer/index.js";
 import { createDailySeriesState, createWeeklySeriesWithExceptionState } from "./support/mockEvents.js";
@@ -309,5 +310,25 @@ describe("EventsAPI", () => {
     expect(next.get("weekly")?.pendingOp).toBe("updated");
     expect(next.get("weekly::20250120T090000")?.recurrenceId).toBe("20250120T100000");
     expect(next.get("weekly::20250120T090000")?.pendingOp).toBeUndefined();
+  });
+
+  it("create preserves allDay and timeZone on new events", () => {
+    const api = new EventsAPI(new Map());
+
+    api.create({
+      event: {
+        data: {
+          summary: "All-day create",
+          start: Temporal.PlainDateTime.from("2025-03-01T00:00:00"),
+          end: Temporal.PlainDateTime.from("2025-03-02T00:00:00"),
+          allDay: true,
+          timeZone: UTC_TIMEZONE,
+        },
+      },
+    });
+
+    const created = [...api.events.values()][0];
+    expect(created?.data.allDay).toBe(true);
+    expect(created?.data.timeZone).toBe(UTC_TIMEZONE);
   });
 });

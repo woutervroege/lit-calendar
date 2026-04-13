@@ -15,9 +15,6 @@ export function applyCreate(input: CreateInput, context: ReduceContext): ApplyRe
   const { summary, color, location, recurrenceRule, exclusionDates, allDay, timeZone } = rawData;
   const colorFields =
     color !== undefined && color !== "" ? ({ color } satisfies Pick<CalendarEventData, "color">) : {};
-  const optionalAllDay = allDay !== undefined ? ({ allDay } satisfies Pick<CalendarEventData, "allDay">) : {};
-  const optionalTimeZone =
-    timeZone !== undefined ? ({ timeZone } satisfies Pick<CalendarEventData, "timeZone">) : {};
   const data: CalendarEventData =
     "end" in rawData ?
       {
@@ -28,8 +25,6 @@ export function applyCreate(input: CreateInput, context: ReduceContext): ApplyRe
         exclusionDates,
         start: normalized.start,
         end: normalized.end,
-        ...optionalAllDay,
-        ...optionalTimeZone,
       }
     : {
         summary,
@@ -39,9 +34,13 @@ export function applyCreate(input: CreateInput, context: ReduceContext): ApplyRe
         exclusionDates,
         start: normalized.start,
         duration: rawData.duration,
-        ...optionalAllDay,
-        ...optionalTimeZone,
       };
+  if (allDay !== undefined) {
+    data.allDay = allDay;
+  }
+  if (timeZone !== undefined) {
+    data.timeZone = timeZone;
+  }
   const key =
     input.key ??
     envelope.eventId ??
