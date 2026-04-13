@@ -124,6 +124,12 @@ function getCalendarsMenuLabel(lang?: string): string {
   return capitalizeLabel("Calendars", resolvedLang);
 }
 
+/** Landmark name for the scrollable calendar body (keyboard scroll + screen readers). */
+function getCalendarContentRegionLabel(lang?: string): string {
+  const resolvedLang = resolveLocale(lang);
+  return capitalizeLabel("Calendar content", resolvedLang);
+}
+
 @customElement("event-calendar")
 export class EventCalendar extends BaseElement {
   #view: CalendarViewMode = "month";
@@ -151,6 +157,8 @@ export class EventCalendar extends BaseElement {
    */
   visibleCalendarIds?: string[];
   #calendarsOverlayOpen = false;
+  /** While true, exit animation is running; avoids re-entrancy and duplicate listeners. */
+  #calendarsDialogExitInProgress = false;
   #previousCalendarKeySet = new Set<string>();
   #eventsAPIProvider = new ContextProvider(this, {
     context: eventsAPIContext,
@@ -235,21 +243,12 @@ export class EventCalendar extends BaseElement {
     } as const;
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    document.addEventListener("keydown", this.#onDocumentKeydown);
-  }
-
   override disconnectedCallback(): void {
-    document.removeEventListener("keydown", this.#onDocumentKeydown);
+    const dialog = this.#getCalendarsDialog();
+    dialog?.classList.remove("event-calendar-calendars-dialog--closing");
+    dialog?.close();
     super.disconnectedCallback();
   }
-
-  #onDocumentKeydown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
-    if (!this.#calendarsOverlayOpen) return;
-    this.#closeCalendarsOverlay();
-  };
 
   get #hasCalendars(): boolean {
     const map = this.calendars;
@@ -378,15 +377,91 @@ export class EventCalendar extends BaseElement {
     }
   }
 
-  #closeCalendarsOverlay = (): void => {
+  #getCalendarsDialog(): HTMLDialogElement | null {
+    return this.renderRoot.querySelector("#event-calendar-calendars-dialog");
+  }
+
+  #onCalendarsDialogClose = (): void => {
+    this.#calendarsDialogExitInProgress = false;
     if (!this.#calendarsOverlayOpen) return;
     this.#calendarsOverlayOpen = false;
     this.requestUpdate();
   };
 
+  #onCalendarsDialogCancel = (event: Event): void => {
+    event.preventDefault();
+    this.#beginCalendarsDialogExit();
+  };
+
+  /**
+   * Runs slide/fade-out, then `close()`. `<dialog>` leaves the top layer immediately on `close()`,
+   * so exit motion is CSS on `[open]` + a `--closing` class until `transitionend`.
+   */
+  #beginCalendarsDialogExit = (): void => {
+    if (!this.#calendarsOverlayOpen || this.#calendarsDialogExitInProgress) return;
+    const dialog = this.#getCalendarsDialog();
+    if (!dialog?.open) {
+      this.#calendarsOverlayOpen = false;
+      this.requestUpdate();
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      dialog.classList.remove("event-calendar-calendars-dialog--closing");
+      dialog.close();
+      return;
+    }
+
+    const panel = dialog.querySelector(".event-calendar-calendars-panel");
+    if (!(panel instanceof HTMLElement)) {
+      dialog.close();
+      return;
+    }
+
+    this.#calendarsDialogExitInProgress = true;
+
+    let exitFinished = false;
+    const finish = (): void => {
+      if (exitFinished) return;
+      exitFinished = true;
+      panel.removeEventListener("transitionend", onTransitionEnd);
+      window.clearTimeout(fallbackTimer);
+      dialog.classList.remove("event-calendar-calendars-dialog--closing");
+      this.#calendarsDialogExitInProgress = false;
+      dialog.close();
+    };
+
+    const onTransitionEnd = (e: TransitionEvent): void => {
+      if (e.target !== panel || e.propertyName !== "transform") return;
+      finish();
+    };
+
+    const fallbackTimer = window.setTimeout(finish, 280);
+
+    panel.addEventListener("transitionend", onTransitionEnd);
+    dialog.classList.add("event-calendar-calendars-dialog--closing");
+  };
+
+  #closeCalendarsOverlay = (): void => {
+    this.#beginCalendarsDialogExit();
+  };
+
   #toggleCalendarsOverlay = (): void => {
-    this.#calendarsOverlayOpen = !this.#calendarsOverlayOpen;
+    const nextOpen = !this.#calendarsOverlayOpen;
+    if (!nextOpen) {
+      this.#beginCalendarsDialogExit();
+      return;
+    }
+    this.#calendarsOverlayOpen = true;
     this.requestUpdate();
+    void this.updateComplete.then(() => {
+      if (!this.#calendarsOverlayOpen) return;
+      const dialog = this.#getCalendarsDialog();
+      if (dialog && !dialog.open) {
+        dialog.classList.remove("event-calendar-calendars-dialog--closing");
+        dialog.showModal();
+      }
+    });
   };
 
   get view(): CalendarViewMode {
@@ -523,17 +598,35 @@ export class EventCalendar extends BaseElement {
             ? html`
               <div
                 id="event-calendar-calendars-mount"
-                class="event-calendar-calendars ${this.#calendarsOverlayOpen ? "is-open" : ""}"
+                class="event-calendar-calendars event-calendar-calendars--docked"
                 dir=${headerDirection}
+              >
+                <div class="event-calendar-calendars-panel">
+                  <calendars-sidebar
+                    class="event-calendar-calendars-sidebar"
+                    dir=${headerDirection}
+                    .calendars=${this.calendars}
+                    .visibleCalendarIds=${this.visibleCalendarIds}
+                    .selectedCalendarId=${this.selectedCalendarId}
+                    @visibleCalendarIds-changed=${this.#handlevisibleCalendarIdsChanged}
+                    @selectedCalendarId-changed=${this.#handleSelectedCalendarIdChanged}
+                  ></calendars-sidebar>
+                </div>
+              </div>
+              <dialog
+                id="event-calendar-calendars-dialog"
+                class="event-calendar-calendars-dialog"
+                dir=${headerDirection}
+                aria-label=${getCalendarsMenuLabel(this.lang)}
+                @cancel=${this.#onCalendarsDialogCancel}
+                @close=${this.#onCalendarsDialogClose}
               >
                 <div
                   class="event-calendar-calendars-backdrop"
+                  aria-hidden="true"
                   @click=${this.#closeCalendarsOverlay}
                 ></div>
-                <div
-                  id="event-calendar-calendars-panel"
-                  class="event-calendar-calendars-panel"
-                >
+                <div class="event-calendar-calendars-panel">
                   <div class="event-calendar-calendars-panel-header">
                     <lc-button
                       label="Close calendars"
@@ -565,7 +658,7 @@ export class EventCalendar extends BaseElement {
                     @selectedCalendarId-changed=${this.#handleSelectedCalendarIdChanged}
                   ></calendars-sidebar>
                 </div>
-              </div>
+              </dialog>
             `
             : nothing
         }
@@ -585,7 +678,7 @@ export class EventCalendar extends BaseElement {
                       class="event-calendar-calendars-toggle"
                       .label=${getCalendarsMenuLabel(this.lang)}
                       .disclosureExpanded=${this.#calendarsOverlayOpen}
-                      .hasPopup=${"true"}
+                      .hasPopup=${"dialog"}
                       style=${EVENT_CALENDAR_MENU_BUTTON_STYLE}
                       @click=${this.#toggleCalendarsOverlay}
                     >
@@ -697,6 +790,9 @@ export class EventCalendar extends BaseElement {
           <calendar-grid-view-group
             class="event-calendar-content"
             style="--_lc-week-sticky-top: 0px;"
+            role="region"
+            tabindex="0"
+            aria-label=${getCalendarContentRegionLabel(this.lang)}
             .view=${this.view}
             .presentation=${this.presentation}
             .startDate=${this.#startDate}

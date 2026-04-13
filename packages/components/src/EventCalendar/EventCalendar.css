@@ -2,8 +2,8 @@
 @import "../styles/z-index.css";
 
 /*
-  No overflow:hidden on the shell: a child uses position:fixed for the mobile calendars overlay,
-  and overflow:hidden on an ancestor would clip it. Containment lives on .event-calendar-main instead.
+  No overflow:hidden on the shell: the narrow calendars UI uses a native dialog (top layer);
+  overflow:hidden on an ancestor could clip non-dialog UI. Containment lives on .event-calendar-main.
 */
 :host .event-calendar-shell {
   @apply flex h-full min-h-0 flex-col gap-7 [container-type:inline-size];
@@ -71,6 +71,11 @@
   @apply min-h-0 min-w-0 flex-1 overflow-y-auto p-4 pt-0 mb-4;
 }
 
+:host .event-calendar-content:focus-visible {
+  @apply outline-solid outline-2 outline-offset-2;
+  outline-color: light-dark(rgb(15 23 42 / 35%), rgb(255 255 255 / 35%));
+}
+
 /* ——— Calendars list (wide: column; narrow: overlay) ——— */
 
 :host .event-calendar-calendars-toggle {
@@ -81,19 +86,19 @@
   @apply [@container(max-width:54rem)]:inline-block;
 }
 
-:host .event-calendar-calendars {
+/* Wide: docked column (second calendars-sidebar lives in dialog, hidden via container rule). */
+:host .event-calendar-calendars--docked {
   @apply flex shrink-0 min-h-0 flex-col self-stretch overflow-hidden;
   flex: 0 0 auto;
 }
 
-/* Comfortable desktop column; width rules must not apply to the mobile fixed overlay (see max-width query below). */
 @container (min-width: 54.0625rem) {
-  :host .event-calendar-calendars {
+  :host .event-calendar-calendars--docked {
     @apply w-[min(18rem,32cqw)] min-w-[16rem];
     max-width: 20rem;
   }
 
-  :host .event-calendar-calendars-sidebar {
+  :host .event-calendar-calendars--docked .event-calendar-calendars-sidebar {
     --_lc-calendars-sidebar-bg: var(
       --_lc-event-calendar-sidebar-docked-bg,
       light-dark(rgb(15 23 42 / 2%), rgb(248 250 252 / 3%))
@@ -101,8 +106,37 @@
   }
 }
 
-:host .event-calendar-calendars-backdrop {
-  @apply hidden;
+@container (max-width: 54rem) {
+  :host .event-calendar-calendars--docked {
+    display: none;
+  }
+}
+
+:host .event-calendar-calendars--docked .event-calendar-calendars-panel {
+  @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+}
+
+/* Narrow overlay: native dialog + duplicate sidebar (docked copy is display:none above). */
+@container (min-width: 54.0625rem) {
+  :host .event-calendar-calendars-dialog {
+    display: none;
+  }
+}
+
+:host .event-calendar-calendars-dialog {
+  margin: 0;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+:host .event-calendar-calendars-dialog::backdrop {
+  background: transparent;
 }
 
 :host .event-calendar-calendars-panel {
@@ -119,24 +153,17 @@
 }
 
 @container (max-width: 54rem) {
-  :host .event-calendar-calendars {
-    @apply fixed inset-0 max-h-none max-w-none min-h-0 min-w-0;
-    z-index: var(--_lc-z-popover, 120);
+  :host .event-calendar-calendars-dialog {
+    position: fixed;
+    inset: 0;
     width: 100%;
     height: 100%;
     max-width: none;
-    flex: none;
-    align-self: auto;
-    overflow: visible;
-    pointer-events: none;
+    max-height: none;
   }
 
-  :host .event-calendar-calendars.is-open {
-    pointer-events: auto;
-  }
-
-  :host .event-calendar-calendars-backdrop {
-    @apply block absolute inset-0 cursor-default;
+  :host .event-calendar-calendars-dialog .event-calendar-calendars-backdrop {
+    @apply absolute inset-0 cursor-default;
     display: block;
     background-color: light-dark(rgb(15 23 42 / 40%), rgb(0 0 0 / 50%));
     opacity: 0;
@@ -146,17 +173,25 @@
       visibility 0.2s ease;
   }
 
-  :host .event-calendar-calendars.is-open .event-calendar-calendars-backdrop {
+  /*
+    Dialog was display:none until [open], so there is no “before” frame for transition.
+    @starting-style supplies the first painted frame so slide / fade can run.
+  */
+  :host .event-calendar-calendars-dialog[open] .event-calendar-calendars-backdrop {
     opacity: 1;
     visibility: visible;
+
+    @starting-style {
+      opacity: 0;
+      visibility: hidden;
+    }
   }
 
   /*
-    Closed: slide off on the inline-start side (physical left in LTR, physical right in RTL).
-    Always anchor with inset-inline-start: 0; do not use inset-inline-end for RTL — mixing with
-    physical translateX(100%) kept part of the panel on-screen and felt "stuck open".
+    Slide from inline-start (physical left LTR, physical right RTL).
+    [open] matches showModal(); closing removes it so the panel leaves with the dialog.
   */
-  :host .event-calendar-calendars-panel {
+  :host .event-calendar-calendars-dialog .event-calendar-calendars-panel {
     @apply absolute top-0 bottom-0 flex w-[min(20rem,88vw)] max-w-full flex-col shadow-lg;
     background-color: var(--_lc-surface-bg);
     inset-inline-start: 0;
@@ -166,16 +201,63 @@
     --_lc-calendars-sidebar-inline-end: none;
   }
 
-  :host .event-calendar-shell[dir="rtl"] .event-calendar-calendars-panel,
-  :host .event-calendar-calendars[dir="rtl"] .event-calendar-calendars-panel {
+  :host
+    .event-calendar-shell[dir="rtl"]
+    .event-calendar-calendars-dialog
+    .event-calendar-calendars-panel,
+  :host .event-calendar-calendars-dialog[dir="rtl"] .event-calendar-calendars-panel {
     transform: translateX(100%);
   }
 
-  :host .event-calendar-calendars.is-open .event-calendar-calendars-panel {
+  :host .event-calendar-calendars-dialog[open] .event-calendar-calendars-panel {
     transform: translateX(0);
+
+    @starting-style {
+      transform: translateX(-100%);
+    }
   }
 
-  :host .event-calendar-calendars-panel-header {
+  :host
+    .event-calendar-shell[dir="rtl"]
+    .event-calendar-calendars-dialog[open]
+    .event-calendar-calendars-panel,
+  :host .event-calendar-calendars-dialog[dir="rtl"][open] .event-calendar-calendars-panel {
+    transform: translateX(0);
+
+    @starting-style {
+      transform: translateX(100%);
+    }
+  }
+
+  /*
+    Exit: `close()` drops the top layer immediately, so we animate while still [open], then close()
+    from JS on transitionend (see EventCalendar.#beginCalendarsDialogExit).
+  */
+  :host .event-calendar-calendars-dialog--closing[open] .event-calendar-calendars-backdrop {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  :host .event-calendar-calendars-dialog--closing[open] .event-calendar-calendars-panel {
+    transform: translateX(-100%);
+  }
+
+  :host
+    .event-calendar-shell[dir="rtl"]
+    .event-calendar-calendars-dialog--closing[open]
+    .event-calendar-calendars-panel,
+  :host .event-calendar-calendars-dialog--closing[open][dir="rtl"] .event-calendar-calendars-panel {
+    transform: translateX(100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :host .event-calendar-calendars-dialog .event-calendar-calendars-backdrop,
+    :host .event-calendar-calendars-dialog .event-calendar-calendars-panel {
+      transition: none;
+    }
+  }
+
+  :host .event-calendar-calendars-dialog .event-calendar-calendars-panel-header {
     @apply flex shrink-0 items-center justify-start border-b px-4 pt-4 pb-2;
     border-color: light-dark(rgb(226 232 240), rgb(51 65 85));
     display: flex;

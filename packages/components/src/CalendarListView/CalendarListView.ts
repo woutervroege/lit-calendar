@@ -89,11 +89,15 @@ export class CalendarListView extends CalendarViewBase {
             ? html`
               ${days.map(
                 ({ date, items }) => html`
-                  <section class="agenda-day">
-                    <div class="agenda-day-heading" aria-label=${this.#formatLongDateLabel(date)}>
+                  <section class="agenda-day" aria-labelledby=${`agenda-day-${date}`}>
+                    <h2
+                      class="agenda-day-heading"
+                      id=${`agenda-day-${date}`}
+                      aria-label=${this.#formatLongDateLabel(date)}
+                    >
                       <span class="agenda-day-weekday">${this.#formatWeekday(date)}</span>
                       <span class="agenda-day-date">${this.#formatDayLabel(date)}</span>
-                    </div>
+                    </h2>
                     <ul class="agenda-event-list">
                       ${items.map((item) => this.#renderItem(item))}
                     </ul>
