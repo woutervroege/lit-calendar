@@ -8,9 +8,9 @@ export type {
   CalendarRecurrenceRuleJson,
   CalendarRecurrenceWeekday,
   CalendarRecurrenceWeekdayRule,
-} from "./calendar-types.js";
+} from "./types/calendar.js";
 
-export { isIANATimeZone, toIANATimeZone, UTC_TIMEZONE } from "./calendar-types.js";
+export { isIANATimeZone, toIANATimeZone, UTC_TIMEZONE } from "./types/calendar.js";
 
 export type {
   CalendarEventData,
@@ -19,7 +19,7 @@ export type {
   CalendarEventTimeSpan,
   CalendarEventRecord,
   CalendarEventsMap,
-} from "./state-types.js";
+} from "./models/event.js";
 
 export type {
   AddExceptionInput,
@@ -44,7 +44,7 @@ export type {
   Scope,
   TimeRangeInput,
   UpdateInput,
-} from "./types.js";
+} from "./types/operations.js";
 
 export {
   collectDetachedExceptionKeys,
@@ -56,8 +56,8 @@ export {
   shiftRecurrenceId,
   toPlainDateTime,
   toRecurrenceId,
-} from "./recurrence.js";
+} from "./utils/recurrence.js";
 
-export { expandEvents } from "./expand.js";
-export { expandRecurringStarts } from "./rrule-adapter.js";
-export { applyOperation, EventsAPI } from "./reducer.js";
+export { expandEvents } from "./core/expand.js";
+export { expandRecurringStarts } from "./utils/rrule-adapter.js";
+export { applyOperation, EventsAPI } from "./core/reducer.js";

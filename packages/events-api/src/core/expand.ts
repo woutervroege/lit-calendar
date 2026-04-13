@@ -1,8 +1,13 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "./calendar-types.js";
-import type { CalendarEventRecord, CalendarEventsMap } from "./state-types.js";
-import { collectDetachedExceptionKeys, resolveEventEnd, toPlainDateTime, toRecurrenceId } from "./recurrence.js";
-import { expandRecurringStarts } from "./rrule-adapter.js";
+import type { CalendarEventDateValue } from "../types/calendar.js";
+import type { CalendarEventRecord, CalendarEventsMap } from "../models/event.js";
+import {
+  collectDetachedExceptionKeys,
+  resolveEventEnd,
+  toPlainDateTime,
+  toRecurrenceId,
+} from "../utils/recurrence.js";
+import { expandRecurringStarts } from "../utils/rrule-adapter.js";
 
 type ExpandEventsRange = {
   start: CalendarEventDateValue;

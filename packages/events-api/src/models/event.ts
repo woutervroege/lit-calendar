@@ -2,7 +2,7 @@ import type {
   CalendarEventDateValue,
   CalendarExclusionDates,
   CalendarRecurrenceRule,
-} from "./calendar-types.js";
+} from "../types/calendar.js";
 import type { Temporal } from "@js-temporal/polyfill";
 
 export type CalendarEventPendingOperation = "created" | "updated" | "deleted";
@@ -16,15 +16,6 @@ export type CalendarEventEnvelope = {
   pendingOp?: CalendarEventPendingOperation;
 };
 
-export type CalendarEventData = {
-  start: CalendarEventDateValue;
-  summary: string;
-  color: string;
-  location?: string;
-  recurrenceRule?: CalendarRecurrenceRule;
-  exclusionDates?: CalendarExclusionDates;
-} & CalendarEventTimeSpan;
-
 export type CalendarEventTimeSpan =
   | {
       end: CalendarEventDateValue;
@@ -34,6 +25,15 @@ export type CalendarEventTimeSpan =
       duration: Temporal.Duration;
       end?: never;
     };
+
+export type CalendarEventData = {
+  start: CalendarEventDateValue;
+  summary: string;
+  color: string;
+  location?: string;
+  recurrenceRule?: CalendarRecurrenceRule;
+  exclusionDates?: CalendarExclusionDates;
+} & CalendarEventTimeSpan;
 
 export type CalendarEvent = CalendarEventEnvelope & CalendarEventData;
 export type CalendarEventRecord = CalendarEvent & {

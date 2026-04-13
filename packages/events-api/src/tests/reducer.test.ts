@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventsMap } from "./state-types.js";
-import { resolveEventEnd } from "./recurrence.js";
-import { EventsAPI } from "./reducer.js";
-import { createDailySeriesState, createWeeklySeriesWithExceptionState } from "./testing/mockEvents.js";
+import type { CalendarEventsMap } from "../models/event.js";
+import { resolveEventEnd } from "../utils/recurrence.js";
+import { EventsAPI } from "../core/reducer.js";
+import { createDailySeriesState, createWeeklySeriesWithExceptionState } from "../testing/mockEvents.js";
 
 describe("EventsAPI", () => {
   it("moves a series and shifts exclusions while preserving exception timing", () => {

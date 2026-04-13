@@ -1,19 +1,19 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventDateValue } from "./calendar-types.js";
+import type { CalendarEventDateValue } from "../types/calendar.js";
 import type {
   CalendarEvent,
   CalendarEventRecord,
   CalendarEventsMap,
   CalendarEventTimeSpan,
-} from "./state-types.js";
-import { isCalendarEventException } from "./state-types.js";
+} from "../models/event.js";
+import { isCalendarEventException } from "../models/event.js";
 import { expandEvents } from "./expand.js";
 import {
   shiftDateValue,
   shiftExclusionDates,
   shiftRecurrenceId,
   toPlainDateTime,
-} from "./recurrence.js";
+} from "../utils/recurrence.js";
 import type {
   AddExceptionInput,
   AddExclusionInput,
@@ -33,7 +33,7 @@ import type {
   Scope,
   TimeRangeInput,
   UpdateInput,
-} from "./types.js";
+} from "../types/operations.js";
 
 type ReduceContext = {
   state: EventsState;

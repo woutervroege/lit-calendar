@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
-import type { CalendarEventsMap } from "./state-types.js";
-import { expandEvents } from "./expand.js";
-import { createDailySeriesState } from "./testing/mockEvents.js";
+import type { CalendarEventsMap } from "../models/event.js";
+import { expandEvents } from "../core/expand.js";
+import { createDailySeriesState } from "../testing/mockEvents.js";
 
 describe("expandEvents", () => {
   it("expands a daily recurrence and applies exclusion dates", () => {

@@ -90,4 +90,3 @@ export type CalendarRecurrenceRuleJson = {
   byMonth?: number[];
   bySetPos?: number[];
 } & CalendarRecurrenceTerminationJson;
-

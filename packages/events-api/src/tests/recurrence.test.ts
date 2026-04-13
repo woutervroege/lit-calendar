@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "@js-temporal/polyfill";
-import { parseRecurrenceId, shiftRecurrenceId, toRecurrenceId } from "./recurrence.js";
+import { parseRecurrenceId, shiftRecurrenceId, toRecurrenceId } from "../utils/recurrence.js";
 
 describe("recurrence helpers", () => {
   it("formats and parses timed recurrence ids", () => {
