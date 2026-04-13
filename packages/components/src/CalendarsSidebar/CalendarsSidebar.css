@@ -9,6 +9,11 @@
   --_lc-focus-ring-offset-color: light-dark(rgb(255 255 255), rgb(2 6 23));
   /* WCAG 2.2 2.5.8 Target Size (Minimum): 24×24 CSS px; 36px touch target. */
   --_lc-calendars-sidebar-visibility-min-target: 2.25rem;
+  /* Neutral row tint (same ink as foreground); selected/hover steps stay subtle */
+  --_lc-calendars-sidebar-tint-hover-bg: light-dark(rgb(15 23 42 / 3.5%), rgb(248 250 252 / 4.5%));
+  --_lc-calendars-sidebar-tint-selected-border: light-dark(rgb(15 23 42 / 14%), rgb(248 250 252 / 12%));
+  --_lc-calendars-sidebar-tint-selected-bg: light-dark(rgb(15 23 42 / 7%), rgb(248 250 252 / 8%));
+  --_lc-calendars-sidebar-tint-selected-hover-bg: light-dark(rgb(15 23 42 / 8%), rgb(248 250 252 / 9%));
 }
 
 .calendars-sidebar {
@@ -51,6 +56,7 @@
 
 .calendar-row {
   @apply flex items-center gap-0 min-w-0 rounded-md border;
+  /* DOM order: default button then checkbox (tab order); visual order: swatch then label */
   /* No inline-start padding so the visibility control aligns to the row edge; block 0 so no inset top/bottom */
   padding-block: var(--_lc-calendars-sidebar-toggle-padding-block, 0);
   padding-inline: 0 var(--_lc-calendars-sidebar-toggle-padding-inline-end, 0.5rem);
@@ -64,7 +70,7 @@
 .calendar-row:hover {
   background-color: var(
     --_lc-calendars-sidebar-toggle-hover-bg,
-    light-dark(rgb(15 23 42 / 6%), rgb(248 250 252 / 8%))
+    var(--_lc-calendars-sidebar-tint-hover-bg)
   );
 }
 
@@ -77,28 +83,30 @@
 .calendar-row--selected {
   border-color: var(
     --_lc-calendars-sidebar-selected-border,
-    light-dark(rgb(59 130 246 / 45%), rgb(96 165 250 / 55%))
+    var(--_lc-calendars-sidebar-tint-selected-border)
   );
   background-color: var(
     --_lc-calendars-sidebar-selected-bg,
-    light-dark(rgb(59 130 246 / 10%), rgb(96 165 250 / 14%))
+    var(--_lc-calendars-sidebar-tint-selected-bg)
   );
 }
 
 .calendar-row--selected:hover {
   background-color: var(
     --_lc-calendars-sidebar-selected-hover-bg,
-    light-dark(rgb(59 130 246 / 14%), rgb(96 165 250 / 18%))
+    var(--_lc-calendars-sidebar-tint-selected-hover-bg)
   );
 }
 
 .calendar-row--hidden .calendar-name {
-  opacity: var(--_lc-calendars-sidebar-toggle-dim-opacity, 0.45);
+  text-decoration: line-through;
+  text-decoration-thickness: var(--_lc-calendars-sidebar-hidden-strike-thickness, 1px);
 }
 
 .calendar-visibility {
   @apply relative flex shrink-0 items-center justify-center border border-transparent;
   box-sizing: border-box;
+  order: 1;
   min-width: var(--_lc-calendars-sidebar-visibility-min-target, 2.25rem);
   min-height: var(--_lc-calendars-sidebar-visibility-min-target, 2.25rem);
   /* Outer hit target; .calendar-swatch keeps its own smaller radius */
@@ -109,7 +117,6 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
-  transition: opacity 0.12s ease;
 }
 
 .calendar-visibility:has(.calendar-visibility-input:focus-visible) {
@@ -137,11 +144,8 @@
   outline: none;
 }
 
-.calendar-visibility:has(.calendar-visibility-input:not(:checked)) .calendar-swatch {
-  opacity: 0.55;
-}
-
 .calendar-default {
+  order: 2;
   @apply flex min-w-0 flex-1 items-center rounded-md border border-transparent text-left text-sm leading-snug;
   min-height: var(--_lc-calendars-sidebar-visibility-min-target, 2.25rem);
   padding-block: var(--_lc-calendars-sidebar-default-padding-block, 0);
@@ -164,11 +168,22 @@
 
 .calendar-swatch {
   @apply shrink-0;
+  box-sizing: border-box;
   border-radius: var(--_lc-calendars-sidebar-swatch-radius, 3px);
   width: var(--_lc-calendars-sidebar-swatch-size, 14px);
   height: var(--_lc-calendars-sidebar-swatch-size, 14px);
-  border: 1px solid var(--_lc-calendars-sidebar-swatch-border, rgb(0 0 0 / 12%));
   pointer-events: none;
+  --_sw: var(--calendar-swatch-color, currentColor);
+}
+
+.calendar-visibility:has(.calendar-visibility-input:checked) .calendar-swatch {
+  background-color: var(--_sw);
+  border: 1px solid var(--_lc-calendars-sidebar-swatch-border, rgb(0 0 0 / 12%));
+}
+
+.calendar-visibility:has(.calendar-visibility-input:not(:checked)) .calendar-swatch {
+  background-color: transparent;
+  border: var(--_lc-calendars-sidebar-swatch-outline-width, 2px) solid var(--_sw);
 }
 
 .calendar-name {

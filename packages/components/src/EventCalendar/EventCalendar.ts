@@ -33,6 +33,7 @@ import { renderCalendarIcon } from "../icons/CalendarIcon.js";
 import { renderGridIcon } from "../icons/GridIcon.js";
 import { renderHamburgerIcon } from "../icons/HamburgerIcon.js";
 import { renderListIcon } from "../icons/ListIcon.js";
+import { calendarIdsInSidebarOrder } from "../CalendarsSidebar/calendarIdsInSidebarOrder.js";
 import { getLocaleDirection, resolveLocale } from "../utils/Locale.js";
 import componentStyle from "./EventCalendar.css?inline";
 
@@ -318,12 +319,44 @@ export class EventCalendar extends BaseElement {
     }
   }
 
+  #normalizedDefaultCalendarId(): string | undefined {
+    const raw = this.defaultCalendarId;
+    if (raw === undefined || raw === null) return undefined;
+    const trimmed = String(raw).trim();
+    return trimmed === "" ? undefined : trimmed;
+  }
+
+  #firstDefaultCalendarCandidate(map: CalendarsMap): string | undefined {
+    const ordered = calendarIdsInSidebarOrder(map);
+    if (ordered.length === 0) return undefined;
+    const selected = this.selectedCalendarIds;
+    if (selected === undefined) {
+      return ordered[0];
+    }
+    if (selected.length === 0) {
+      return undefined;
+    }
+    const allow = new Set(selected);
+    return ordered.find((id) => allow.has(id));
+  }
+
   #mergeDefaultCalendarWhenCalendarsMapChanges(): void {
     const map = this.calendars;
-    const keys = new Set(map?.keys() ?? []);
-    const def = this.defaultCalendarId;
-    if (def !== undefined && !keys.has(def)) {
-      this.defaultCalendarId = undefined;
+    if (!map || map.size === 0) {
+      return;
+    }
+
+    const keys = new Set(map.keys());
+    let next = this.#normalizedDefaultCalendarId();
+    if (next !== undefined && !keys.has(next)) {
+      next = undefined;
+    }
+    if (next === undefined) {
+      next = this.#firstDefaultCalendarCandidate(map);
+    }
+
+    if (next !== this.defaultCalendarId) {
+      this.defaultCalendarId = next;
     }
   }
 
@@ -767,6 +800,8 @@ export class EventCalendar extends BaseElement {
     super.updated(changedProperties);
     if (changedProperties.has("calendars")) {
       this.#mergeSelectionWhenCalendarsMapChanges();
+    }
+    if (changedProperties.has("calendars") || changedProperties.has("selectedCalendarIds")) {
       this.#mergeDefaultCalendarWhenCalendarsMapChanges();
     }
     this.#eventsAPIProvider.setValue(this.#eventsAPIContextValue, true);
