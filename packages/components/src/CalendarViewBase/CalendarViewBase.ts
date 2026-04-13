@@ -148,6 +148,18 @@ export abstract class CalendarViewBase extends BaseElement {
     );
   }
 
+  /** Resolves {@link Calendar.accountId} for a calendar id using context, when the host provided a map. */
+  protected accountIdForCalendar(calendarId: string | undefined): string | undefined {
+    const id = calendarId?.trim();
+    if (!id) return undefined;
+    return this.#eventsAPI?.getCalendars()?.get(id)?.accountId;
+  }
+
+  /** Account for a new event when {@link defaultCalendarId} is set and calendars come from context. */
+  protected defaultAccountIdForNewEvent(): string | undefined {
+    return this.accountIdForCalendar(this.defaultCalendarId);
+  }
+
   protected applyCreateRequestToEventsAPI(detail: EventCreateRequestDetail): boolean {
     if (!this.#eventsAPI) return false;
     const result = this.#applyEventsAPIOperation({ type: "create", input: fromCreateRequest(detail) });
@@ -200,6 +212,7 @@ export abstract class CalendarViewBase extends BaseElement {
       const exceptionRequestedDetail: EventExceptionRequestDetail = {
         envelope: {
           eventId: detail.envelope.eventId,
+          accountId: detail.envelope.accountId,
           calendarId: detail.envelope.calendarId,
           recurrenceId,
           isException: true,
@@ -233,6 +246,7 @@ export abstract class CalendarViewBase extends BaseElement {
             color: detail.content.color,
             location: detail.content.location,
             calendarId: detail.envelope.calendarId,
+            accountId: detail.envelope.accountId,
           },
         },
       });
@@ -256,6 +270,7 @@ export abstract class CalendarViewBase extends BaseElement {
                 color: detail.content.color,
                 location: detail.content.location,
                 calendarId: detail.envelope.calendarId,
+                accountId: detail.envelope.accountId,
               },
             },
           });
@@ -272,6 +287,7 @@ export abstract class CalendarViewBase extends BaseElement {
               color: detail.content.color,
               location: detail.content.location,
               calendarId: detail.envelope.calendarId,
+              accountId: detail.envelope.accountId,
             },
           },
         });
@@ -332,6 +348,7 @@ export abstract class CalendarViewBase extends BaseElement {
             color: detail.content.color,
             location: detail.content.location,
             calendarId: detail.envelope.calendarId,
+            accountId: detail.envelope.accountId,
           },
         },
       });
@@ -600,7 +617,7 @@ export abstract class CalendarViewBase extends BaseElement {
 
   #resolveEventMapKey(
     events: EventsMap,
-    envelope: { eventId?: string; calendarId?: string; recurrenceId?: string }
+    envelope: { eventId?: string; accountId?: string; calendarId?: string; recurrenceId?: string }
   ): string | undefined {
     if (!envelope.eventId) return undefined;
     if (events.has(envelope.eventId)) return envelope.eventId;
@@ -608,6 +625,7 @@ export abstract class CalendarViewBase extends BaseElement {
     for (const [key, event] of events.entries()) {
       if (event.eventId !== envelope.eventId) continue;
       if (envelope.calendarId !== undefined && event.calendarId !== envelope.calendarId) continue;
+      if (envelope.accountId !== undefined && event.accountId !== envelope.accountId) continue;
       if (envelope.recurrenceId === undefined || event.recurrenceId === envelope.recurrenceId)
         return key;
       if (event.recurrenceId === undefined && fallbackSeriesKey === undefined)

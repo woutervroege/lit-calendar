@@ -1114,6 +1114,7 @@ export class CalendarGridView extends CalendarViewBase {
     const detail: EventUpdateRequestDetail = {
       envelope: {
         eventId: current?.eventId ?? target.eventId,
+        accountId: current?.accountId,
         calendarId: current?.calendarId,
         recurrenceId,
         isException: current ? isCalendarEventException(current) : undefined,
@@ -1231,6 +1232,7 @@ export class CalendarGridView extends CalendarViewBase {
     const eventId = current?.eventId ?? target.eventId;
     const detail: EventDeleteRequestDetail = {
       envelope: {
+        accountId: current?.accountId,
         calendarId,
         eventId,
         recurrenceId,
@@ -1944,6 +1946,7 @@ export class CalendarGridView extends CalendarViewBase {
     const detail: EventCreateRequestDetail = {
       envelope: {
         calendarId: input.calendarId,
+        accountId: this.accountIdForCalendar(input.calendarId),
       },
       content: {
         start: input.start,

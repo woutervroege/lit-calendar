@@ -21,7 +21,24 @@
 }
 
 .calendar-list {
-  @apply flex flex-col gap-1 overflow-y-auto min-h-0 m-0 p-0;
+  @apply flex flex-col gap-4 overflow-y-auto min-h-0 m-0 p-0;
+}
+
+.calendar-account-group {
+  @apply flex flex-col gap-1.5 min-w-0;
+}
+
+.calendar-account-label {
+  margin: 0;
+  @apply text-xs font-semibold uppercase tracking-wide truncate min-w-0;
+  color: var(
+    --_lc-calendars-sidebar-account-label,
+    light-dark(rgb(100 116 139), rgb(148 163 184))
+  );
+}
+
+.calendar-account-calendars {
+  @apply flex flex-col gap-1 min-w-0 m-0 p-0;
 }
 
 .calendar-row {

@@ -143,6 +143,11 @@ export const Year: Story = {
   },
 };
 
+export const Month: Story = {
+  args: {
+    presentation: "grid",
+  },
+};
 export const MonthList: Story = {
   args: {
     presentation: "list",

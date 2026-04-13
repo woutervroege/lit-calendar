@@ -1,5 +1,7 @@
 export type {
   Calendar,
+  CalendarAccountId,
+  CalendarAccounts,
   CalendarEvent,
   CalendarEventData,
   CalendarEventEnvelope,
@@ -13,6 +15,7 @@ export type {
   CalendarRecurrenceTermination,
   CalendarRecurrenceWeekday,
   CalendarRecurrenceWeekdayRule,
+  CalendarUrl,
   CalendarsMap,
 } from "@lit-calendar/events-api";
 

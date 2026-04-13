@@ -74,6 +74,7 @@ export function applyAddException(input: AddExceptionInput, context: ReduceConte
   const exception: CalendarEvent = {
     ...masterEnvelope,
     calendarId: raw.calendarId ?? master.calendarId,
+    accountId: raw.accountId ?? master.accountId,
     recurrenceId: input.recurrenceId,
     isException: true,
     data: exceptionData,

@@ -2,6 +2,8 @@ export { expandEvents } from "./core/expandEvents.js";
 export { applyOperation, EventsAPI } from "./core/reducer/index.js";
 export type {
   Calendar,
+  CalendarAccountId,
+  CalendarAccounts,
   CalendarExclusionDates,
   CalendarRecurrenceFrequency,
   CalendarRecurrenceRule,
@@ -9,6 +11,7 @@ export type {
   CalendarRecurrenceWeekday,
   CalendarRecurrenceWeekdayRule,
   CalendarId,
+  CalendarUrl,
   CalendarsMap,
   IANATimeZone,
 } from "./types/calendar/index.js";

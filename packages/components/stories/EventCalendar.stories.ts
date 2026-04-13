@@ -1,7 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import type { CalendarsMap } from "@lit-calendar/events-api";
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { action } from "storybook/actions";
 import "../src/EventCalendar/EventCalendar.js";
+import type { CalendarEventPendingGroups } from "../src/types/calendarEventPending.js";
 import { calendarCssProps } from "./support/CalendarCssProps.js";
 import {
   AUTO_LOCALE_OPTION,
@@ -16,7 +17,6 @@ import {
   weekStartControlLabels,
   weekStartControlOptions,
 } from "./support/StoryData.js";
-import type { CalendarEventPendingGroups } from "../src/types/calendarEventPending.js";
 import {
   attachRequestEventHandlers,
   attachUnsyncedRequestEventHandlers,
@@ -25,7 +25,9 @@ import {
 type StoryEventCalendarElement = HTMLElement & {
   events: Map<string, CalendarEvent>;
   calendars?: CalendarsMap;
-  getPendingEvents: (options?: { groupBy?: "pendingOp" | "calendarId" }) => CalendarEventPendingGroups;
+  getPendingEvents: (options?: {
+    groupBy?: "pendingOp" | "calendarId";
+  }) => CalendarEventPendingGroups;
 };
 
 type RequestHandlingMode = "sync" | "unsynced";
@@ -88,7 +90,11 @@ function renderCalendar(
     el.setAttribute("current-time", String(args.currentTime));
   }
   el.setAttribute("snap-interval", String(args.snapInterval));
-  if (args.visibleHours === "auto" || args.visibleHours === undefined || args.visibleHours === null) {
+  if (
+    args.visibleHours === "auto" ||
+    args.visibleHours === undefined ||
+    args.visibleHours === null
+  ) {
     el.removeAttribute("visible-hours");
   } else {
     el.setAttribute("visible-hours", String(args.visibleHours));
@@ -221,6 +227,11 @@ export const Year: Story = {
   },
 };
 
+export const Month: Story = {
+  args: {
+    presentation: "grid",
+  },
+};
 export const MonthList: Story = {
   args: {
     presentation: "list",

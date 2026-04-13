@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type {
   CalendarEvent as ApiCalendarEvent,
+  CalendarAccounts,
   CalendarEventsMap,
   CalendarsMap,
   IANATimeZone,
@@ -29,20 +30,59 @@ export function storyEventsFromArg(
   return new Map(value);
 }
 
-/** Calendar URLs used by {@link sampleEventEntries} and {@link sampleCalendarsMap}. */
+/** Example account id for story data (single-account demo). */
+export const storyAccountIds = {
+  john: "caldav john",
+} as const;
+
+/** Opaque calendar ids (map keys); not resource URLs. */
 export const storyCalendarIds = {
-  work: "/calendars/wouter/work/",
-  personal: "/calendars/wouter/personal/",
-  travel: "/calendars/wouter/travel/",
+  work: "cal-john-work",
+  personal: "cal-john-personal",
+  travel: "cal-john-travel",
+} as const;
+
+/** Resource URLs — can collide across accounts; disambiguate with {@link storyAccountIds} + {@link storyCalendarIds}. */
+export const storyCalendarUrls = {
+  work: "/calendars/john/work/",
+  personal: "/calendars/john/personal/",
+  travel: "/calendars/john/travel/",
 } as const;
 
 const EUROPE_AMSTERDAM = "Europe/Amsterdam" as IANATimeZone;
 
-/** Display metadata for {@link storyCalendarIds}; matches event `calendarId` values in story data. */
+/** Distinct accounts present in {@link sampleCalendarsMap}. */
+export const sampleCalendarAccounts: CalendarAccounts = new Set([storyAccountIds.john]);
+
+/** Display metadata; map keys are {@link storyCalendarIds}. */
 export const sampleCalendarsMap: CalendarsMap = new Map([
-  [storyCalendarIds.work, { displayName: "Work", color: "#63e657" }],
-  [storyCalendarIds.personal, { displayName: "Personal", color: "#9f3cfa" }],
-  [storyCalendarIds.travel, { displayName: "Travel", color: "#4564B5" }],
+  [
+    storyCalendarIds.work,
+    {
+      accountId: storyAccountIds.john,
+      url: storyCalendarUrls.work,
+      displayName: "Work",
+      color: "#63e657",
+    },
+  ],
+  [
+    storyCalendarIds.personal,
+    {
+      accountId: storyAccountIds.john,
+      url: storyCalendarUrls.personal,
+      displayName: "Personal",
+      color: "#9f3cfa",
+    },
+  ],
+  [
+    storyCalendarIds.travel,
+    {
+      accountId: storyAccountIds.john,
+      url: storyCalendarUrls.travel,
+      displayName: "Travel",
+      color: "#4564B5",
+    },
+  ],
 ]);
 
 /** Most events omit `data.color` so the UI resolves from {@link sampleCalendarsMap}; a few set `color` as override examples. */
@@ -50,6 +90,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-flight-london-20250104",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.travel,
       eventId: "flight-london@example.test",
       data: {
@@ -63,6 +104,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-hello-world-20250103",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "hello-world@example.test",
       data: {
@@ -75,6 +117,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-team-meeting-20250106",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "team-meeting@example.test",
       data: {
@@ -89,6 +132,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-amsterdam-zoned-20250104",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.travel,
       eventId: "amsterdam-zoned@example.test",
       data: {
@@ -103,6 +147,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-fiesta-20250106",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.personal,
       eventId: "fiesta@example.test",
       data: {
@@ -116,6 +161,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-drinks-20250108-1630",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.personal,
       eventId: "drinks-weekly@example.test",
       data: {
@@ -136,6 +182,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-daily-standup-20250113-0900",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "daily-standup@example.test",
       data: {
@@ -154,6 +201,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-daily-standup-exception-20250118-1100",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "daily-standup@example.test",
       recurrenceId: "20250118T090000",
@@ -167,6 +215,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-all-day-ops-rotation-20250106",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "all-day-ops-rotation@example.test",
       data: {
@@ -187,6 +236,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-all-day-ops-rotation-exception-20250120",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "all-day-ops-rotation@example.test",
       recurrenceId: "20250120",
@@ -201,6 +251,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-meeting-john-20250110",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.personal,
       eventId: "meeting-with-john@example.test",
       data: {
@@ -215,6 +266,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-company-holiday-20250101",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "company-holiday@example.test",
       data: {
@@ -228,6 +280,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-product-planning-20250106",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "product-planning@example.test",
       data: {
@@ -241,6 +294,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-design-qa-20250112",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "design-qa@example.test",
       data: {
@@ -254,6 +308,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-team-offsite-20250115",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "team-offsite@example.test",
       data: {
@@ -267,6 +322,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-release-freeze-20250119",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "release-freeze@example.test",
       data: {
@@ -280,6 +336,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-feb5-design-review-20250205",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "feb5-design-review@example.test",
       data: {
@@ -293,6 +350,7 @@ export const sampleEventEntries: CalendarEventsMap = new Map<string, ApiCalendar
   [
     "event-feb5-eng-sync-20250205",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "feb5-eng-sync@example.test",
       data: {
@@ -309,6 +367,7 @@ export const timezoneShiftEvents: CalendarEventsMap = new Map<string, ApiCalenda
   [
     "event-amsterdam-noon-zoned",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.travel,
       eventId: "amsterdam-noon-zoned@example.test",
       data: {
@@ -322,6 +381,7 @@ export const timezoneShiftEvents: CalendarEventsMap = new Map<string, ApiCalenda
   [
     "event-local-baseline-0900",
     {
+      accountId: storyAccountIds.john,
       calendarId: storyCalendarIds.work,
       eventId: "local-baseline@example.test",
       data: {

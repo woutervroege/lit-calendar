@@ -17,6 +17,7 @@ export function resolvedDataEnd(data: CalendarEventData) {
 /** Maps a UI row to `@lit-calendar/events-api` `CalendarEvent` (envelope fields + `data`). */
 export function eventViewToApiEvent(event: CalendarEventView): CalendarEvent {
   return {
+    accountId: event.accountId,
     calendarId: event.calendarId,
     eventId: event.eventId,
     recurrenceId: event.recurrenceId,
@@ -47,6 +48,7 @@ export function eventViewFromApiEvent(event: CalendarEvent): CalendarEventView {
   const d = event.data;
   const end = resolvedDataEnd(d);
   return {
+    accountId: event.accountId,
     calendarId: event.calendarId,
     eventId: event.eventId,
     recurrenceId: event.recurrenceId,

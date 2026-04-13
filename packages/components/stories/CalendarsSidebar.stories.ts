@@ -1,7 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import type { CalendarsMap } from "@lit-calendar/events-api";
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "../src/CalendarsSidebar/CalendarsSidebar.js";
-import { sampleCalendarsMap, storyCalendarIds } from "./support/StoryData.js";
+import {
+  sampleCalendarsMap,
+  storyAccountIds,
+  storyCalendarIds,
+  storyCalendarUrls,
+} from "./support/StoryData.js";
 
 type CalendarsSidebarElement = HTMLElement & {
   calendars?: CalendarsMap;
@@ -53,7 +58,15 @@ export const SingleCalendar: Story = {
     el.style.minWidth = "220px";
     el.style.minHeight = "200px";
     el.calendars = new Map([
-      [storyCalendarIds.work, { displayName: "Work", color: "#63e657" }],
+      [
+        storyCalendarIds.work,
+        {
+          accountId: storyAccountIds.john,
+          url: storyCalendarUrls.work,
+          displayName: "Work",
+          color: "#63e657",
+        },
+      ],
     ]);
     return el;
   },

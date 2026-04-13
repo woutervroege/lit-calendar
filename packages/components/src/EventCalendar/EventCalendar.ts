@@ -21,6 +21,7 @@ import "../TabSwitch/TabSwitch.js";
 import {
   type CalendarEvent as ApiCalendarEvent,
   type ApplyResult,
+  type CalendarAccounts,
   type CalendarEventPendingOperation,
   type CalendarEventsMap,
   type CalendarsMap,
@@ -157,6 +158,13 @@ export class EventCalendar extends BaseElement {
   #eventsAPIContextValue: EventsAPIContextValue = {
     getEvents: () => this.events ?? new Map(),
     getCalendars: () => this.calendars ?? new Map(),
+    getCalendarAccounts: (): CalendarAccounts => {
+      const accounts = new Set() as CalendarAccounts;
+      for (const cal of (this.calendars ?? new Map()).values()) {
+        accounts.add(cal.accountId);
+      }
+      return accounts;
+    },
     getSelectedCalendarIds: () => this.selectedCalendarIds,
     getApi: () =>
       new EventsAPI(this.events ?? new Map(), {
