@@ -700,12 +700,16 @@ export class TimeLine extends LitElement {
     segmentAbsStart: number,
     segmentAbsEnd: number,
     evStart: number,
-    evEndClamped: number
+    evEndClamped: number,
+    evEndRaw: number,
+    gridMax: number
   ): { showResizeStart: boolean; showResizeEnd: boolean } {
     const eps = 1e-6;
+    const atLogicalStart = Math.abs(segmentAbsStart - evStart) < eps;
+    const atClampedEnd = Math.abs(segmentAbsEnd - evEndClamped) < eps;
     return {
-      showResizeStart: Math.abs(segmentAbsStart - evStart) < eps,
-      showResizeEnd: Math.abs(segmentAbsEnd - evEndClamped) < eps,
+      showResizeStart: atLogicalStart && evStart >= 0,
+      showResizeEnd: atClampedEnd && evEndRaw <= gridMax + eps,
     };
   }
 
@@ -911,7 +915,9 @@ export class TimeLine extends LitElement {
           t,
           segEndAbs,
           ev.start,
-          evEnd
+          evEnd,
+          ev.end,
+          gridMax
         );
         segments.push({
           ev,
