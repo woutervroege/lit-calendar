@@ -1,0 +1,242 @@
+import { html } from "lit";
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import "../src/TimeLine/TimeLine.js";
+import type { TimeLine } from "../src/TimeLine/TimeLine.js";
+import type { TimelineEvent } from "../src/types/TimeLine.js";
+
+const verticalTimedEvents: TimelineEvent[] = [
+  { start: 10, end: 130, label: "Event 1", color: "tomato" },
+  { start: 35, end: 255, label: "Event 2", color: "cornflowerblue" },
+  { start: 260, end: 385, label: "Event 3", color: "mediumseagreen" },
+];
+
+const masonryDemoEvents: TimelineEvent[] = [
+  { start: 0, end: 1385, label: "Atlas (full grid)", color: "tomato" },
+  { start: 12, end: 92, label: "Bravo", color: "coral" },
+  { start: 24, end: 58, label: "Charlie", color: "orange" },
+  { start: 62, end: 96, label: "Delta", color: "darkorange" },
+  { start: 180, end: 820, label: "Echo (crosses row)", color: "gold" },
+  { start: 560, end: 940, label: "Foxtrot (row break)", color: "cornflowerblue" },
+  { start: 708, end: 718, label: "Golf", color: "royalblue" },
+  { start: 700, end: 920, label: "Hotel", color: "dodgerblue" },
+  { start: 980, end: 1320, label: "India (week 2)", color: "mediumseagreen" },
+  { start: 1020, end: 1125, label: "Juliet", color: "seagreen" },
+  { start: 1188, end: 1205, label: "Kilo", color: "plum" },
+  { start: 1280, end: 1395, label: "Lima (tail)", color: "orchid" },
+];
+
+const masonry100StepEvents: TimelineEvent[] = [
+  { start: 0, end: 4200, label: "Atlas (full grid)", color: "tomato" },
+  { start: 0, end: 200, label: "Bravo", color: "coral" },
+  { start: 0, end: 100, label: "Charlie", color: "orange" },
+  { start: 300, end: 500, label: "Delta", color: "darkorange" },
+  { start: 100, end: 900, label: "Echo (crosses row)", color: "gold" },
+  { start: 500, end: 1000, label: "Foxtrot (row break)", color: "cornflowerblue" },
+  { start: 700, end: 800, label: "Golf", color: "royalblue" },
+  { start: 700, end: 1000, label: "Hotel", color: "dodgerblue" },
+  { start: 900, end: 1400, label: "India (week 2)", color: "mediumseagreen" },
+  { start: 1000, end: 1200, label: "Juliet", color: "seagreen" },
+  { start: 1100, end: 1300, label: "Kilo", color: "plum" },
+  { start: 1200, end: 1400, label: "Lima (tail)", color: "orchid" },
+  { start: 1400, end: 1800, label: "Mike (week 3)", color: "#c77dff" },
+  { start: 1600, end: 2000, label: "November", color: "#ff6b6b" },
+  { start: 2100, end: 2600, label: "Oscar", color: "#4ecdc4" },
+  { start: 2200, end: 2400, label: "Papa", color: "#ffe66d" },
+  { start: 2800, end: 3300, label: "Quebec", color: "#95e1d3" },
+  { start: 2900, end: 3500, label: "Romeo", color: "#f38181" },
+  { start: 3500, end: 4000, label: "Sierra", color: "#aa96da" },
+  { start: 3600, end: 3700, label: "Tango", color: "#fcbad3" },
+  { start: 3800, end: 4200, label: "Uniform", color: "#a8d8ea" },
+];
+
+function defaultEventTemplate(ev: TimelineEvent) {
+  const color = String(ev.color ?? "#64748b");
+  const label = String(ev.label ?? "");
+  return html`<div
+    style="background:${color};padding:8px;font:0.8rem system-ui,sans-serif;color:#111;border-radius:4px;box-sizing:border-box;height:100%;overflow:hidden"
+  >
+    ${label}
+  </div>`;
+}
+
+function createTimeLine(): TimeLine {
+  const el = document.createElement("time-line") as TimeLine;
+  el.eventTemplate = defaultEventTemplate;
+  return el;
+}
+
+const meta: Meta = {
+  title: "Calendar/TimeLine",
+  component: "time-line",
+  tags: ["autodocs"],
+  parameters: {
+    layout: "fullscreen",
+  },
+};
+
+export default meta;
+
+type Story = StoryObj;
+
+export const VerticalTimed: Story = {
+  name: "Vertical (timed)",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;min-height:360px;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Vertical (timed)";
+    const el = createTimeLine();
+    el.flow = "vertical";
+    el.step = 5;
+    el.max = 100;
+    el.cells = 7;
+    el.columns = 7;
+    el.events = verticalTimedEvents;
+    el.style.flex = "1";
+    el.style.minHeight = "280px";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalMasonryTwoRows: Story = {
+  name: "Horizontal · masonry · 14 cells",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Horizontal grid (masonry, 2 rows × 7 cols)";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "masonry";
+    el.step = 5;
+    el.max = 100;
+    el.cells = 14;
+    el.columns = 7;
+    el.events = masonryDemoEvents;
+    el.style.width = "100%";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalMasonrySevenCells100Step: Story = {
+  name: "Horizontal · masonry · 7 cells · step 100",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Horizontal · masonry · 7 cells · max/step 100";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "masonry";
+    el.step = 100;
+    el.max = 100;
+    el.cells = 7;
+    el.columns = 7;
+    el.events = masonry100StepEvents;
+    el.style.width = "100%";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalMasonryFortyTwoCells: Story = {
+  name: "Horizontal · masonry · 42 cells · step 100",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Horizontal · masonry · 6 rows × 7 cols";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "masonry";
+    el.step = 100;
+    el.max = 100;
+    el.cells = 42;
+    el.columns = 7;
+    el.events = masonry100StepEvents;
+    el.style.width = "100%";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalMasonrySingleRow: Story = {
+  name: "Horizontal · masonry · 7 cells (one row)",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Horizontal · masonry · single week row";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "masonry";
+    el.step = 5;
+    el.max = 100;
+    el.cells = 7;
+    el.columns = 7;
+    el.events = masonryDemoEvents;
+    el.style.width = "100%";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalTimeline: Story = {
+  name: "Horizontal · timeline · 14 cells",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Horizontal · timeline (swimlane per event order)";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "timeline";
+    el.step = 5;
+    el.max = 100;
+    el.cells = 14;
+    el.columns = 14;
+    el.events = masonryDemoEvents;
+    el.style.width = "100%";
+    wrap.append(title, el);
+    return wrap;
+  },
+};
+
+export const HorizontalMasonryHeightAuto: Story = {
+  name: "Horizontal · masonry · height auto (lane clip)",
+  render: () => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
+    const title = document.createElement("h2");
+    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
+    title.textContent = "Masonry with height=auto (lanes clipped to cell)";
+    const el = createTimeLine();
+    el.flow = "horizontal";
+    el.layout = "masonry";
+    el.height = "auto";
+    el.step = 5;
+    el.max = 100;
+    el.cells = 14;
+    el.columns = 7;
+    el.events = masonryDemoEvents;
+    el.style.width = "100%";
+    el.style.maxHeight = "220px";
+    wrap.append(title, el);
+    return wrap;
+  },
+};

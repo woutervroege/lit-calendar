@@ -1,0 +1,94 @@
+* {
+  box-sizing: border-box;
+}
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  border: var(--border);
+  touch-action: none;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  --__event-height: var(--event-height, 32px);
+  --border: 0.5px solid #d0d0d0;
+}
+
+/* cells container */
+.cells {
+  width: 100%;
+  flex: 1;
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(var(--time-line-cols, 7), minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.cell {
+  outline: var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.cell-header,
+.cell-footer {
+  flex-shrink: 0;
+}
+
+/* Events position against this region only (horizontal absolute + vertical margins). */
+.cell-main {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
+.event {
+  position: absolute;
+  will-change: transform;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Time axis mapping inside a cell: percentages on top/bottom use the cell-main height. */
+:host([flow="vertical"]) .event {
+  left: 0;
+  right: 0;
+  top: var(--__start, 0);
+  bottom: var(--__end, 0);
+  height: auto;
+  min-height: 0;
+}
+
+:host([flow="horizontal"]) .event {
+  top: calc(var(--__lane, 0) * var(--__event-height));
+  min-height: var(--__event-height);
+  max-height: var(--__event-height);
+  height: var(--__event-height);
+  left: var(--__start, 0);
+  right: var(--__end, 0);
+  bottom: auto;
+}
+
+:host([flow="horizontal"][height="auto"]) {
+  --cell-height: none;
+}
+
+:host([flow="horizontal"][layout="timeline"]) .cell-main,
+:host([flow="horizontal"][layout="masonry"]) .cell-main {
+  min-height: var(--cell-height, var(--__lane-stack));
+}
+
+.event > * {
+  flex: 1;
+}
