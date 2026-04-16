@@ -391,9 +391,19 @@ export class TimeLine extends LitElement {
     );
     const deltaT = pointerT - session.originPointerGridT;
     const duration = session.initialEnd - session.initialStart;
+    const minStep = this.step > 0 ? this.step : 1;
     let nextStart = this.#snapTime(session.initialStart + deltaT);
-    const maxStart = Math.max(0, session.gridMax - duration);
-    nextStart = Math.max(0, Math.min(nextStart, maxStart));
+
+    let minStart: number;
+    let maxStart: number;
+    if (duration > minStep) {
+      minStart = -duration + minStep;
+      maxStart = session.gridMax - minStep;
+    } else {
+      minStart = Math.min(0, session.initialStart);
+      maxStart = Math.max(session.gridMax, session.initialEnd) - duration;
+    }
+    nextStart = Math.max(minStart, Math.min(nextStart, maxStart));
     const nextEnd = nextStart + duration;
 
     const next = new Map(this.resizePreviewByIndex ?? []);

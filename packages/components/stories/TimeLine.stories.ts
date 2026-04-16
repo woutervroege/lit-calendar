@@ -14,7 +14,7 @@ const verticalTimedEvents: TimelineEvent[] = [
   { start: 10, end: 130, label: "Event 1", color: "#ff6347" },
   { start: 35, end: 255, label: "Event 2", color: "#6495ed" },
   { start: 260, end: 385, label: "Event 3", color: "#3cb371" },
-  { start: 500, end: 1270, label: "Event 4", color: "#fcf123" },
+  { start: 500, end: 870, label: "Event 4", color: "#fcf123" },
 ];
 
 const masonryDemoEvents: TimelineEvent[] = [
