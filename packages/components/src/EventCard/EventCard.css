@@ -30,7 +30,8 @@
 
 :host([layout="flow"]) {
   @apply static block w-full touch-auto;
-  container-type: inline-size;
+  /* size (not inline-size): @container (max-height: …) must resolve against this host. */
+  container-type: size;
   container-name: event-card;
   min-height: 0;
   --_lc-event-recurring-icon-size: 14px;
