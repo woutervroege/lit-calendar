@@ -3,7 +3,11 @@ import { html } from "lit";
 import "../src/EventCard/EventCard.js";
 import "../src/TimeLine/TimeLine.js";
 import type { TimeLine } from "../src/TimeLine/TimeLine.js";
-import type { TimelineEvent } from "../src/types/TimeLine.js";
+import type {
+  TimelineEvent,
+  TimelineEventMoveCommitDetail,
+  TimelineEventResizeCommitDetail,
+} from "../src/types/TimeLine.js";
 
 const verticalTimedEvents: TimelineEvent[] = [
   { start: 10, end: 130, label: "Event 1", color: "#ff6347" },
@@ -68,6 +72,32 @@ function createTimeLine(): TimeLine {
   return el;
 }
 
+/**
+ * Keeps `el.events` in sync when the user finishes a resize or move. `TimeLine` dispatches
+ * `timeline-event-resize` / `timeline-event-move` on commit; without updating `events`, the UI
+ * would snap back after the gesture.
+ */
+function syncTimeLineEventsFromGestures(el: TimeLine, seed: TimelineEvent[]): void {
+  const events = seed.map((e) => ({ ...e }));
+  el.events = events;
+
+  const applyCommit = (index: number, start: number, end: number) => {
+    const cur = events[index];
+    if (!cur) return;
+    events[index] = { ...cur, start, end };
+    el.events = [...events];
+  };
+
+  el.addEventListener("timeline-event-resize", (e) => {
+    const { index, start, end } = (e as CustomEvent<TimelineEventResizeCommitDetail>).detail;
+    applyCommit(index, start, end);
+  });
+  el.addEventListener("timeline-event-move", (e) => {
+    const { index, start, end } = (e as CustomEvent<TimelineEventMoveCommitDetail>).detail;
+    applyCommit(index, start, end);
+  });
+}
+
 const meta: Meta = {
   title: "Calendar/TimeLine",
   component: "time-line",
@@ -97,7 +127,7 @@ export const VerticalTimed: Story = {
     el.max = 100;
     el.cells = 7;
     el.columns = 7;
-    el.events = verticalTimedEvents;
+    syncTimeLineEventsFromGestures(el, verticalTimedEvents);
     el.style.flex = "1";
     el.style.minHeight = "280px";
     wrap.append(title, el);
@@ -121,7 +151,7 @@ export const HorizontalMasonrySevenCells100Step: Story = {
     el.max = 100;
     el.cells = 7;
     el.columns = 7;
-    el.events = masonry100StepEvents;
+    syncTimeLineEventsFromGestures(el, masonry100StepEvents);
     el.style.width = "100%";
     wrap.append(title, el);
     return wrap;
@@ -144,7 +174,7 @@ export const HorizontalMasonryFortyTwoCells: Story = {
     el.max = 100;
     el.cells = 42;
     el.columns = 7;
-    el.events = masonry100StepEvents;
+    syncTimeLineEventsFromGestures(el, masonry100StepEvents);
     el.style.width = "100%";
     wrap.append(title, el);
     return wrap;
@@ -167,7 +197,7 @@ export const HorizontalMasonrySingleRow: Story = {
     el.max = 100;
     el.cells = 7;
     el.columns = 7;
-    el.events = masonryDemoEvents;
+    syncTimeLineEventsFromGestures(el, masonryDemoEvents);
     el.style.width = "100%";
     wrap.append(title, el);
     return wrap;
@@ -190,7 +220,7 @@ export const HorizontalTimeline: Story = {
     el.max = 100;
     el.cells = 7;
     el.columns = 7;
-    el.events = masonryDemoEvents;
+    syncTimeLineEventsFromGestures(el, masonryDemoEvents);
     el.style.width = "100%";
     wrap.append(title, el);
     return wrap;

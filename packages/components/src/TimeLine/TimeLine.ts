@@ -94,8 +94,10 @@ export class TimeLine extends LitElement {
   accessor onTimelineEventMove: ((detail: TimelineEventMoveCommitDetail) => void) | undefined;
 
   @state()
-  private accessor resizePreviewByIndex: ReadonlyMap<number, { start: number; end: number }> | null =
-    null;
+  private accessor resizePreviewByIndex: ReadonlyMap<
+    number,
+    { start: number; end: number }
+  > | null = null;
 
   /** While moving an event, all its segments share the dragging affordance. */
   @state()
@@ -813,8 +815,7 @@ export class TimeLine extends LitElement {
     const horiz = this.flow === "horizontal";
     const layoutEvents = this.#eventsForLayout();
     const laneMode: "timeline" | "masonry" | null =
-      layoutEvents.length > 0 &&
-      (this.layout === "timeline" || this.layout === "masonry")
+      layoutEvents.length > 0 && (this.layout === "timeline" || this.layout === "masonry")
         ? this.layout
         : null;
     const rowLayouts =
@@ -942,7 +943,7 @@ export class TimeLine extends LitElement {
                         data-segment=${segIndex}
                         @pointerdown=${this.#onEventBodyPointerDown}
                         style="
-                        --__lane:${laneMode ? (horiz ? rl?.laneByEventIndex[index] : vl?.laneByEventIndex[index]) ?? 0 : 0};
+                        --__lane:${laneMode ? ((horiz ? rl?.laneByEventIndex[index] : vl?.laneByEventIndex[index]) ?? 0) : 0};
                         --__start:${this.tToPct(segStart)}%;
                         --__end:${
                           rowSpan > 0
