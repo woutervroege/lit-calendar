@@ -50,23 +50,21 @@ const masonry100StepEvents: TimelineEvent[] = [
   { start: 3800, end: 4200, label: "Uniform", color: "#a8d8ea" },
 ];
 
-function eventCardEventTemplate(ev: TimelineEvent, host: TimeLine) {
+function eventCardEventTemplate(ev: TimelineEvent) {
   const summary = String(ev.label ?? "");
   const color = String(ev.color ?? "#64748b");
-  const horizontal = host.flow === "horizontal";
   const time = `${ev.start}–${ev.end}`;
   return html`<event-card
     layout="flow"
     .color=${color}
     .summary=${summary}
     .time=${time}
-    segment-direction=${horizontal ? "horizontal" : "vertical"}
   ></event-card>`;
 }
 
 function createTimeLine(): TimeLine {
   const el = document.createElement("time-line") as TimeLine;
-  el.eventTemplate = (ev) => eventCardEventTemplate(ev, el);
+  el.eventTemplate = (ev) => eventCardEventTemplate(ev);
   return el;
 }
 

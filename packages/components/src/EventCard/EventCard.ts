@@ -52,9 +52,6 @@ export class EventCard extends BaseElement {
   @property({ type: String })
   color = "";
 
-  @property({ type: String, attribute: "segment-direction" })
-  segmentDirection: "horizontal" | "vertical" = "horizontal";
-
   @property({ type: String, reflect: true })
   layout: "absolute" | "flow" = "absolute";
 
@@ -120,7 +117,6 @@ export class EventCard extends BaseElement {
           <div
             class=${classMap(this.#cardClasses)}
             dir="${this.dir}"
-            data-segment-direction=${this.segmentDirection}
           >
               ${this.past ? html`<span class="sr-only">Past event.</span>` : ""}
               ${this.#recurrenceStatusSrLabel ? html`<span class="sr-only">${this.#recurrenceStatusSrLabel}</span>` : ""}
