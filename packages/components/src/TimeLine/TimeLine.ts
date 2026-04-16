@@ -8,6 +8,7 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import componentStyle from "./TimeLine.css?inline";
+import "../ResizeHandle/ResizeHandle";
 
 interface TimelineEvent {
   start: number;
@@ -384,8 +385,11 @@ export class TimeLine extends LitElement {
                         };
                       "
                       >
+
+                        <resize-handle .axis="${this.flow}" .position="${"start"}"></resize-handle>
                         ${this.renderEventTemplate(ev)}
-                      </div>
+                        <resize-handle .axis="${this.flow}" .position="${"end"}"></resize-handle>
+                        </div>
                     `
                   )}
                 </div>

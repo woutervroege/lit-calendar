@@ -12,7 +12,7 @@
 }
 
 :host([axis="vertical"]) {
-  @apply py-1.5 px-2 -my-1.5 -mx-2 w-full left-0;
+  @apply py-1.5 px-2 w-full left-0;
 }
 
 :host([axis="vertical"][position="start"]) {
