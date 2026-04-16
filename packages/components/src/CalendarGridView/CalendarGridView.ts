@@ -611,9 +611,6 @@ export class CalendarGridView extends CalendarViewBase {
                 class="create-preview-card"
                 .summary=${this.defaultEventSummary}
                 .time=${segment.timeLabel}
-                .segmentDirection=${segment.segmentDirection}
-                ?first-segment=${segment.firstSegment}
-                ?last-segment=${segment.lastSegment}
                 style=${styleMap(segment.style)}
               ></event-card>
             `
@@ -1741,10 +1738,7 @@ export class CalendarGridView extends CalendarViewBase {
   }
 
   #getCreatePreviewCardModels(): Array<{
-    firstSegment: boolean;
-    lastSegment: boolean;
     timeLabel: string;
-    segmentDirection: "horizontal" | "vertical";
     style: Record<string, string>;
   }> {
     if (this.daysPerWeek <= 0) return [];
@@ -1816,10 +1810,7 @@ export class CalendarGridView extends CalendarViewBase {
         const left = (dayIndex / this.daysPerWeek) * 100;
 
         return {
-          firstSegment: segmentIndex === 0,
-          lastSegment: segmentIndex === segmentDayIndices.length - 1,
           timeLabel: segmentIndex === 0 ? timeLabel : "",
-          segmentDirection: "vertical",
           style: {
             ...colorStyles,
             top: `${top}%`,
@@ -1854,7 +1845,7 @@ export class CalendarGridView extends CalendarViewBase {
     }
 
     const orderedRows = Array.from(rowSegments.entries()).sort(([a], [b]) => a - b);
-    return orderedRows.map(([rowIndex, segment], segmentIndex) => {
+    return orderedRows.map(([rowIndex, segment]) => {
       const widthInColumns = segment.endCol - segment.startCol + 1;
       const left = (segment.startCol / cols) * 100;
       const inlineInsetStart = this.#isMonthView ? "2px" : "1px";
@@ -1864,10 +1855,7 @@ export class CalendarGridView extends CalendarViewBase {
         : `calc(var(--_lc-all-day-day-number-space) + var(--_lc-event-height, 32px) * ${laneIndex})`;
 
       return {
-        firstSegment: segmentIndex === 0,
-        lastSegment: segmentIndex === orderedRows.length - 1,
         timeLabel: "",
-        segmentDirection: "horizontal",
         style: {
           ...colorStyles,
           top,

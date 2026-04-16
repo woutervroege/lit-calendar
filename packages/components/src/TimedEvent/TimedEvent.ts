@@ -2,7 +2,6 @@ import { Temporal } from "@js-temporal/polyfill";
 import { html, unsafeCSS } from "lit";
 import { customElement } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
-import { getEventColorStyles } from "../utils/EventColor";
 import { formatShortTime, formatShortTimeRange } from "../utils/TimeFormatting";
 import "../EventCard/EventCard";
 import "../ResizeHandle/ResizeHandle";
@@ -365,7 +364,6 @@ export class TimedEvent extends EventBase {
   }
 
   render() {
-    const colorStyles = getEventColorStyles(this.color);
     const dragTransform =
       this.interactionController.isDragging || this.dragOffsetX !== 0 || this.dragOffsetY !== 0
         ? `translate(${this.dragOffsetX}px, ${this.dragOffsetY}px)`
@@ -380,7 +378,6 @@ export class TimedEvent extends EventBase {
         aria-describedby=${this.#keyboardHintId}
         aria-keyshortcuts="Control+Meta+ArrowUp Control+Meta+ArrowDown Control+Meta+ArrowLeft Control+Meta+ArrowRight Control+Shift+ArrowUp Control+Shift+ArrowDown"
         style=${styleMap({
-          ...colorStyles,
           transform: dragTransform,
           // Disable transform animation entirely to avoid any snap/flash at drag end.
           transition: "none",
@@ -417,44 +414,30 @@ export class TimedEvent extends EventBase {
 
   #renderEventCards() {
     const dayInsets = this.dayInsets;
-    const startsBeforeVisibleRange = this.#startsBeforeVisibleRange();
-    const endsAfterVisibleRange = this.#endsAfterVisibleRange();
 
     return dayInsets.map((inset, index) =>
-      this.#renderEventCard(
-        inset as Record<string, string | number>,
-        index,
-        dayInsets.length,
-        startsBeforeVisibleRange,
-        endsAfterVisibleRange
-      )
+      this.#renderEventCard(inset as Record<string, string | number>, index, dayInsets.length)
     );
   }
 
   #renderEventCard(
     inset: Record<string, string | number>,
     index: number,
-    total: number,
-    startsBeforeVisibleRange: boolean,
-    endsAfterVisibleRange: boolean
+    total: number
   ) {
     const isFirst = index === 0;
     const isLast = index === total - 1;
-    const hasRoundedStart = isFirst && !startsBeforeVisibleRange;
-    const hasRoundedEnd = isLast && !endsAfterVisibleRange;
 
     return html`
       <event-card
+        .color=${this.color}
         .summary=${this.summary}
         .time=${isFirst ? this.displayTime : ""}
         .timeDetail=${isFirst ? this.displayTimeDetail : ""}
-        .segmentDirection=${"vertical"}
         .recurring=${this.isRecurring}
         .exception=${this.isException}
         ?past=${this.isPast}
         style=${styleMap(inset)}
-        ?first-segment=${hasRoundedStart}
-        ?last-segment=${hasRoundedEnd}
       >
         ${
           isFirst
@@ -478,39 +461,5 @@ export class TimedEvent extends EventBase {
         }
       </event-card>
     `;
-  }
-
-  #startsBeforeVisibleRange(): boolean {
-    const eventStart = this.start;
-    const dayBounds = this.renderedDayBounds;
-    if (!eventStart || !dayBounds) return false;
-
-    const visibleRangeStart = dayBounds.firstDay.toPlainDateTime({
-      hour: 0,
-      minute: 0,
-      second: 0,
-      millisecond: 0,
-      microsecond: 0,
-      nanosecond: 0,
-    });
-
-    return Temporal.PlainDateTime.compare(eventStart, visibleRangeStart) < 0;
-  }
-
-  #endsAfterVisibleRange(): boolean {
-    const eventEnd = this.end;
-    const dayBounds = this.renderedDayBounds;
-    if (!eventEnd || !dayBounds) return false;
-
-    const visibleRangeEndExclusive = dayBounds.lastDay.add({ days: 1 }).toPlainDateTime({
-      hour: 0,
-      minute: 0,
-      second: 0,
-      millisecond: 0,
-      microsecond: 0,
-      nanosecond: 0,
-    });
-
-    return Temporal.PlainDateTime.compare(eventEnd, visibleRangeEndExclusive) > 0;
   }
 }
