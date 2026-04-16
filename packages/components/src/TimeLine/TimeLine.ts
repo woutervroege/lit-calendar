@@ -1,32 +1,38 @@
-import { html, nothing, type TemplateResult, unsafeCSS } from "lit";
+import {
+  html,
+  LitElement,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+  unsafeCSS,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { BaseElement } from "../BaseElement/BaseElement.js";
-import type { TimelineEvent } from "../types/TimeLine.js";
 import componentStyle from "./TimeLine.css?inline";
 
+interface TimelineEvent {
+  start: number;
+  end: number;
+  [key: string]: unknown;
+}
+
 @customElement("time-line")
-export class TimeLine extends BaseElement {
-  @property({ type: Number })
-  max = 100;
+export class TimeLine extends LitElement {
+  @property({ type: Number }) accessor max = 100;
+  @property({ type: Number }) accessor step = 10;
 
-  @property({ type: Number })
-  step = 10;
+  // number of cells
+  @property({ type: Number }) accessor cells = 3;
 
-  /** Number of cells */
-  @property({ type: Number })
-  cells = 3;
-
-  @property({ type: Number })
-  columns = 7;
+  @property({ type: Number }) accessor columns = 7;
 
   @property({ attribute: false })
-  headerTemplate: ((i: number) => TemplateResult) | undefined;
+  accessor headerTemplate: ((i: number) => TemplateResult) | undefined;
 
   @property({ attribute: false })
-  eventTemplate: (ev: TimelineEvent) => TemplateResult = () => html``;
+  accessor eventTemplate: (ev: TimelineEvent) => TemplateResult;
 
   @property({ attribute: false })
-  footerTemplate:
+  accessor footerTemplate:
     | ((
         cellIndex: number,
         visibleEvents: TimelineEvent[],
@@ -35,7 +41,7 @@ export class TimeLine extends BaseElement {
     | undefined;
 
   @property({ type: String, reflect: true })
-  flow: "vertical" | "horizontal" = "vertical";
+  accessor flow: "vertical" | "horizontal" = "vertical";
 
   /**
    * Horizontal only: `timeline` gives each event its own track (swimlane).
@@ -43,27 +49,23 @@ export class TimeLine extends BaseElement {
    * lowest lane where no still-active event (started, not yet ended) occupies that lane at its start.
    */
   @property({ type: String, reflect: true })
-  layout: "default" | "timeline" | "masonry" = "default";
+  accessor layout: "default" | "timeline" | "masonry" = "default";
 
-  /**
-   * With horizontal `timeline` / `masonry`, omit event lanes that do not fit the cell (ResizeObserver).
-   */
+  /** With horizontal `timeline` / `masonry`, omit event lanes that do not fit the cell (ResizeObserver). */
   @property({ type: String, reflect: true })
-  height: "auto" | undefined = undefined;
+  accessor height: "auto" | undefined = undefined;
 
   @property({ type: Array })
-  events: TimelineEvent[] = [];
+  accessor events: TimelineEvent[] = [];
 
   @state()
   private accessor cellVisibleLanes: number[] = [];
 
-  #cellsResizeObserver: ResizeObserver | null = null;
+  private cellsResizeObserver: ResizeObserver | null = null;
 
-  static get styles() {
-    return [...BaseElement.styles, unsafeCSS(componentStyle)];
-  }
+  static styles = unsafeCSS(componentStyle);
 
-  #laneClip(): boolean {
+  private laneClip() {
     return (
       this.height === "auto" &&
       this.flow === "horizontal" &&
@@ -71,8 +73,8 @@ export class TimeLine extends BaseElement {
     );
   }
 
-  #measureLaneCaps() {
-    if (!this.#laneClip()) return;
+  private measureLaneCaps() {
+    if (!this.laneClip()) return;
     const n = Math.max(1, this.cells);
     const br = this.renderRoot?.querySelector(".event")?.getBoundingClientRect();
     let lh =
@@ -91,48 +93,52 @@ export class TimeLine extends BaseElement {
     if (
       next.length === this.cellVisibleLanes.length &&
       next.every((v, j) => v === this.cellVisibleLanes[j])
-    ) {
+    )
       return;
-    }
     this.cellVisibleLanes = next;
   }
 
   disconnectedCallback() {
-    this.#cellsResizeObserver?.disconnect();
-    this.#cellsResizeObserver = null;
+    this.cellsResizeObserver?.disconnect();
+    this.cellsResizeObserver = null;
     super.disconnectedCallback();
   }
 
-  updated(changed: Map<string | number | symbol, unknown>) {
+  protected updated(changed: PropertyValues) {
     super.updated(changed);
-    if (!this.#laneClip()) {
-      this.#cellsResizeObserver?.disconnect();
-      this.#cellsResizeObserver = null;
+    if (!this.laneClip()) {
+      this.cellsResizeObserver?.disconnect();
+      this.cellsResizeObserver = null;
       if (this.cellVisibleLanes.length) this.cellVisibleLanes = [];
       return;
     }
     const cellsEl = this.renderRoot?.querySelector(".cells");
     const rebind =
-      !this.#cellsResizeObserver ||
+      !this.cellsResizeObserver ||
       changed.has("height") ||
       changed.has("flow") ||
       changed.has("layout") ||
       changed.has("cells") ||
       changed.has("columns");
     if (rebind && cellsEl) {
-      this.#cellsResizeObserver?.disconnect();
-      this.#cellsResizeObserver = new ResizeObserver(() => this.#measureLaneCaps());
-      this.#cellsResizeObserver.observe(cellsEl);
+      this.cellsResizeObserver?.disconnect();
+      this.cellsResizeObserver = new ResizeObserver(() => this.measureLaneCaps());
+      this.cellsResizeObserver.observe(cellsEl);
     }
-    queueMicrotask(() => this.#measureLaneCaps());
+    queueMicrotask(() => this.measureLaneCaps());
   }
 
-  #tToPct(t: number) {
+  private tToPct(t: number) {
     return this.max > 0 ? (t / this.max) * 100 : 0;
   }
 
   /** Whether `ev` overlaps this cell’s absolute time range (includes continuations from earlier cells). */
-  #eventOverlapsCell(ev: TimelineEvent, cell: number, span: number, gridMax: number): boolean {
+  private eventOverlapsCell(
+    ev: TimelineEvent,
+    cell: number,
+    span: number,
+    gridMax: number
+  ): boolean {
     const t0 = cell * span;
     const t1 = Math.min((cell + 1) * span, gridMax);
     const evEnd = Math.min(ev.end, gridMax);
@@ -143,7 +149,7 @@ export class TimeLine extends BaseElement {
    * Smallest per-cell lane cap along a horizontal segment (cells `cellStart` … `cellStart + rowSpan`),
    * clamped to the row. Hides the bar if any spanned cell cannot fit the lane.
    */
-  #minLaneCapAcrossSpan(
+  private minLaneCapAcrossSpan(
     cellStart: number,
     rowSpan: number,
     cols: number,
@@ -163,7 +169,7 @@ export class TimeLine extends BaseElement {
   }
 
   /** Smallest lane cap among all cells in `row` that `ev` overlaps (that row’s time band only). */
-  #minLaneCapForEventInRow(
+  private minLaneCapForEventInRow(
     ev: TimelineEvent,
     row: number,
     cols: number,
@@ -194,7 +200,7 @@ export class TimeLine extends BaseElement {
   }
 
   /** Greedy lowest-lane packing; intervals are [start, end). */
-  #masonryLanes(events: TimelineEvent[]): number[] {
+  private masonryLanes(events: TimelineEvent[]): number[] {
     const order = events
       .map((ev, i) => ({ ev, i }))
       .sort((a, b) => a.ev.start - b.ev.start || a.i - b.i);
@@ -202,11 +208,7 @@ export class TimeLine extends BaseElement {
     const lanes = new Array<number>(events.length);
     for (const { ev, i } of order) {
       let L = 0;
-      while (L < ends.length) {
-        const occupiedUntil = ends[L];
-        if (occupiedUntil === undefined || occupiedUntil <= ev.start) break;
-        L++;
-      }
+      while (L < ends.length && ends[L]! > ev.start) L++;
       if (L === ends.length) ends.push(ev.end);
       else ends[L] = ev.end;
       lanes[i] = L;
@@ -215,7 +217,7 @@ export class TimeLine extends BaseElement {
   }
 
   /** Per grid row: dense lanes and count, using only events that overlap that row’s time span. */
-  #rowLaneLayouts(
+  private rowLaneLayouts(
     events: TimelineEvent[],
     mode: "timeline" | "masonry",
     cellCount: number,
@@ -239,18 +241,11 @@ export class TimeLine extends BaseElement {
       let laneCount: number;
       if (mode === "timeline") {
         inRow.sort((a, b) => a.i - b.i);
-        for (let L = 0; L < inRow.length; L++) {
-          const entry = inRow[L];
-          if (entry) laneByEventIndex[entry.i] = L;
-        }
+        inRow.forEach(({ i }, L) => (laneByEventIndex[i] = L));
         laneCount = inRow.length;
       } else {
-        const subLanes = this.#masonryLanes(inRow.map((x) => x.ev));
-        for (let j = 0; j < inRow.length; j++) {
-          const entry = inRow[j];
-          const lane = subLanes[j];
-          if (entry && lane !== undefined) laneByEventIndex[entry.i] = lane;
-        }
+        const subLanes = this.masonryLanes(inRow.map((x) => x.ev));
+        inRow.forEach(({ i }, j) => (laneByEventIndex[i] = subLanes[j]!));
         laneCount = Math.max(...subLanes, 0) + 1;
       }
       rows.push({ laneCount: Math.max(1, laneCount), laneByEventIndex });
@@ -258,21 +253,21 @@ export class TimeLine extends BaseElement {
     return rows;
   }
 
-  #renderHeaderTemplate(i: number) {
+  renderHeaderTemplate(i: number) {
     return this.headerTemplate?.(i);
   }
 
-  #renderEventTemplate(ev: TimelineEvent) {
-    return this.eventTemplate(ev);
+  renderEventTemplate(ev: TimelineEvent) {
+    return this.eventTemplate?.(ev);
   }
 
-  #renderFooterTemplate(
+  renderFooterTemplate(
     cellIndex: number,
     visibleEvents: TimelineEvent[],
     allCellEvents: TimelineEvent[]
   ) {
     return this.footerTemplate
-      ? this.footerTemplate(cellIndex, visibleEvents, allCellEvents)
+      ? this.footerTemplate?.(cellIndex, visibleEvents, allCellEvents)
       : html``;
   }
 
@@ -290,17 +285,19 @@ export class TimeLine extends BaseElement {
           : null
         : null;
     const rowLayouts = laneMode
-      ? this.#rowLaneLayouts(this.events, laneMode, cellCount, cols, span, gridMax)
+      ? this.rowLaneLayouts(this.events, laneMode, cellCount, cols, span, gridMax)
       : [];
 
     return html`
-      <div class="viewport" style="--time-line-cols: ${cols}">
+      <div
+        class="viewport"
+        style="--time-line-grid-rows: repeat(${this.columns}, 1fr)"
+      >
         <div class="cells">
           ${cellIndexes.map((cell) => {
-            const rowIndex = Math.floor(cell / cols);
-            const rl = laneMode ? (rowLayouts[rowIndex] ?? null) : null;
-            const clip = this.#laneClip();
-            const row = rowIndex;
+            const rl = laneMode ? rowLayouts[Math.floor(cell / cols)] : null;
+            const clip = this.laneClip();
+            const row = Math.floor(cell / cols);
             const cellEvents = this.events.flatMap((ev, i) => {
               const out: Array<{
                 ev: TimelineEvent;
@@ -343,19 +340,19 @@ export class TimeLine extends BaseElement {
               if (!clip) return true;
               const lane = rl?.laneByEventIndex[index] ?? 0;
               const effCap = horiz
-                ? this.#minLaneCapAcrossSpan(cell, rowSpan, cols, cellCount)
+                ? this.minLaneCapAcrossSpan(cell, rowSpan, cols, cellCount)
                 : (this.cellVisibleLanes[cell] ?? Infinity);
               return lane < effCap;
             });
             const allCellEvents = this.events.filter((ev) =>
-              this.#eventOverlapsCell(ev, cell, span, gridMax)
+              this.eventOverlapsCell(ev, cell, span, gridMax)
             );
             const visibleEvents = this.events.filter((ev, index) => {
-              if (!this.#eventOverlapsCell(ev, cell, span, gridMax)) return false;
+              if (!this.eventOverlapsCell(ev, cell, span, gridMax)) return false;
               if (!clip) return true;
               const lane = rl?.laneByEventIndex[index] ?? 0;
               const effCap = horiz
-                ? this.#minLaneCapForEventInRow(ev, row, cols, span, gridMax, cellCount)
+                ? this.minLaneCapForEventInRow(ev, row, cols, span, gridMax, cellCount)
                 : (this.cellVisibleLanes[cell] ?? Infinity);
               return lane < effCap;
             });
@@ -369,11 +366,7 @@ export class TimeLine extends BaseElement {
                     : `--__lane-count: ${laneCount}`
                 }"
               >
-                ${
-                  this.headerTemplate
-                    ? html`<div class="cell-header">${this.#renderHeaderTemplate(cell)}</div>`
-                    : nothing
-                }
+                ${this.headerTemplate ? html`<div class="cell-header">${this.renderHeaderTemplate(cell)}</div>` : nothing}
                 <div class="cell-main">
                   ${visibleCellEvents.map(
                     ({ ev, index, segIndex, segStart, segEnd, rowSpan }) => html`
@@ -383,15 +376,15 @@ export class TimeLine extends BaseElement {
                         data-segment=${segIndex}
                         style="
                         --__lane:${laneMode ? (rl?.laneByEventIndex[index] ?? 0) : 0};
-                        --__start:${this.#tToPct(segStart)}%;
+                        --__start:${this.tToPct(segStart)}%;
                         --__end:${
                           rowSpan > 0
-                            ? `calc(-${rowSpan * 100}% + ${100 - this.#tToPct(segEnd)}%)`
-                            : `${100 - this.#tToPct(segEnd)}%`
+                            ? `calc(-${rowSpan * 100}% + ${100 - this.tToPct(segEnd)}%)`
+                            : `${100 - this.tToPct(segEnd)}%`
                         };
                       "
                       >
-                        ${this.#renderEventTemplate(ev)}
+                        ${this.renderEventTemplate(ev)}
                       </div>
                     `
                   )}
@@ -399,7 +392,7 @@ export class TimeLine extends BaseElement {
                 ${
                   this.footerTemplate
                     ? html`<div class="cell-footer">
-                      ${this.#renderFooterTemplate(cell, visibleEvents, allCellEvents)}
+                      ${this.renderFooterTemplate(cell, visibleEvents, allCellEvents)}
                     </div>`
                     : nothing
                 }

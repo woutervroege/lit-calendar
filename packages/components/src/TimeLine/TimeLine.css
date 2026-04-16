@@ -15,9 +15,8 @@
   touch-action: none;
   user-select: none;
   display: flex;
-  flex-direction: column;
   --__event-height: var(--event-height, 32px);
-  --border: 0.5px solid #d0d0d0;
+  --border: 0.5px solid light-dark(#d0d0d0, #505050);
 }
 
 /* cells container */
@@ -27,8 +26,7 @@
   display: grid;
   grid-auto-flow: row;
   grid-auto-rows: 1fr;
-  grid-template-columns: repeat(var(--time-line-cols, 7), minmax(0, 1fr));
-  align-items: stretch;
+  grid-template-columns: var(--time-line-grid-rows, 1fr);
 }
 
 .cell {
@@ -36,7 +34,6 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  min-width: 0;
 }
 
 .cell-header,
@@ -57,27 +54,24 @@
   will-change: transform;
   display: flex;
   flex: 1;
-  overflow: hidden;
 }
 
-/* Time axis mapping inside a cell: percentages on top/bottom use the cell-main height. */
+/* Time axis mapping inside a cell */
 :host([flow="vertical"]) .event {
+  position: relative;
   left: 0;
   right: 0;
-  top: var(--__start, 0);
-  bottom: var(--__end, 0);
-  height: auto;
-  min-height: 0;
+  margin-top: var(--__start);
+  margin-bottom: var(--__end);
 }
 
 :host([flow="horizontal"]) .event {
-  top: calc(var(--__lane, 0) * var(--__event-height));
+  top: 0;
   min-height: var(--__event-height);
   max-height: var(--__event-height);
   height: var(--__event-height);
-  left: var(--__start, 0);
-  right: var(--__end, 0);
-  bottom: auto;
+  left: var(--__start);
+  right: var(--__end);
 }
 
 :host([flow="horizontal"][height="auto"]) {
@@ -87,6 +81,15 @@
 :host([flow="horizontal"][layout="timeline"]) .cell-main,
 :host([flow="horizontal"][layout="masonry"]) .cell-main {
   min-height: var(--cell-height, var(--__lane-stack));
+}
+
+:host([flow="horizontal"][layout="timeline"]) .event,
+:host([flow="horizontal"][layout="masonry"]) .event {
+  top: calc(var(--__lane, 0) * var(--__event-height));
+  min-height: var(--__event-height);
+  max-height: var(--__event-height);
+  height: var(--__event-height);
+  bottom: auto;
 }
 
 .event > * {

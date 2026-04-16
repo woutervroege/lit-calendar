@@ -1,43 +1,45 @@
-import { html } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { html } from "lit";
+import "../src/EventCard/EventCard.js";
 import "../src/TimeLine/TimeLine.js";
 import type { TimeLine } from "../src/TimeLine/TimeLine.js";
 import type { TimelineEvent } from "../src/types/TimeLine.js";
+import { getEventColorStyles } from "../src/utils/EventColor.js";
 
 const verticalTimedEvents: TimelineEvent[] = [
-  { start: 10, end: 130, label: "Event 1", color: "tomato" },
-  { start: 35, end: 255, label: "Event 2", color: "cornflowerblue" },
-  { start: 260, end: 385, label: "Event 3", color: "mediumseagreen" },
+  { start: 10, end: 130, label: "Event 1", color: "#ff6347" },
+  { start: 35, end: 255, label: "Event 2", color: "#6495ed" },
+  { start: 260, end: 385, label: "Event 3", color: "#3cb371" },
 ];
 
 const masonryDemoEvents: TimelineEvent[] = [
-  { start: 0, end: 1385, label: "Atlas (full grid)", color: "tomato" },
-  { start: 12, end: 92, label: "Bravo", color: "coral" },
-  { start: 24, end: 58, label: "Charlie", color: "orange" },
-  { start: 62, end: 96, label: "Delta", color: "darkorange" },
-  { start: 180, end: 820, label: "Echo (crosses row)", color: "gold" },
-  { start: 560, end: 940, label: "Foxtrot (row break)", color: "cornflowerblue" },
-  { start: 708, end: 718, label: "Golf", color: "royalblue" },
-  { start: 700, end: 920, label: "Hotel", color: "dodgerblue" },
-  { start: 980, end: 1320, label: "India (week 2)", color: "mediumseagreen" },
-  { start: 1020, end: 1125, label: "Juliet", color: "seagreen" },
-  { start: 1188, end: 1205, label: "Kilo", color: "plum" },
-  { start: 1280, end: 1395, label: "Lima (tail)", color: "orchid" },
+  { start: 0, end: 1385, label: "Atlas (full grid)", color: "#ff6347" },
+  { start: 12, end: 92, label: "Bravo", color: "#ff7f50" },
+  { start: 24, end: 58, label: "Charlie", color: "#ffa500" },
+  { start: 62, end: 96, label: "Delta", color: "#ff8c00" },
+  { start: 180, end: 820, label: "Echo (crosses row)", color: "#ffd700" },
+  { start: 560, end: 940, label: "Foxtrot (row break)", color: "#6495ed" },
+  { start: 708, end: 718, label: "Golf", color: "#4169e1" },
+  { start: 700, end: 920, label: "Hotel", color: "#1e90ff" },
+  { start: 980, end: 1320, label: "India (week 2)", color: "#3cb371" },
+  { start: 1020, end: 1125, label: "Juliet", color: "#2e8b57" },
+  { start: 1188, end: 1205, label: "Kilo", color: "#dda0dd" },
+  { start: 1280, end: 1395, label: "Lima (tail)", color: "#da70d6" },
 ];
 
 const masonry100StepEvents: TimelineEvent[] = [
-  { start: 0, end: 4200, label: "Atlas (full grid)", color: "tomato" },
-  { start: 0, end: 200, label: "Bravo", color: "coral" },
-  { start: 0, end: 100, label: "Charlie", color: "orange" },
-  { start: 300, end: 500, label: "Delta", color: "darkorange" },
-  { start: 100, end: 900, label: "Echo (crosses row)", color: "gold" },
-  { start: 500, end: 1000, label: "Foxtrot (row break)", color: "cornflowerblue" },
-  { start: 700, end: 800, label: "Golf", color: "royalblue" },
-  { start: 700, end: 1000, label: "Hotel", color: "dodgerblue" },
-  { start: 900, end: 1400, label: "India (week 2)", color: "mediumseagreen" },
-  { start: 1000, end: 1200, label: "Juliet", color: "seagreen" },
-  { start: 1100, end: 1300, label: "Kilo", color: "plum" },
-  { start: 1200, end: 1400, label: "Lima (tail)", color: "orchid" },
+  { start: 0, end: 4200, label: "Atlas (full grid)", color: "#ff6347" },
+  { start: 0, end: 200, label: "Bravo", color: "#ff7f50" },
+  { start: 0, end: 100, label: "Charlie", color: "#ffa500" },
+  { start: 300, end: 500, label: "Delta", color: "#ff8c00" },
+  { start: 100, end: 900, label: "Echo (crosses row)", color: "#ffd700" },
+  { start: 500, end: 1000, label: "Foxtrot (row break)", color: "#6495ed" },
+  { start: 700, end: 800, label: "Golf", color: "#4169e1" },
+  { start: 700, end: 1000, label: "Hotel", color: "#1e90ff" },
+  { start: 900, end: 1400, label: "India (week 2)", color: "#3cb371" },
+  { start: 1000, end: 1200, label: "Juliet", color: "#2e8b57" },
+  { start: 1100, end: 1300, label: "Kilo", color: "#dda0dd" },
+  { start: 1200, end: 1400, label: "Lima (tail)", color: "#da70d6" },
   { start: 1400, end: 1800, label: "Mike (week 3)", color: "#c77dff" },
   { start: 1600, end: 2000, label: "November", color: "#ff6b6b" },
   { start: 2100, end: 2600, label: "Oscar", color: "#4ecdc4" },
@@ -49,19 +51,36 @@ const masonry100StepEvents: TimelineEvent[] = [
   { start: 3800, end: 4200, label: "Uniform", color: "#a8d8ea" },
 ];
 
-function defaultEventTemplate(ev: TimelineEvent) {
+function eventCardStyleFromTimelineColor(color: string): string {
+  const palette = getEventColorStyles(color);
+  const sizing = "min-width:0;max-width:100%;height:100%";
+  if (Object.keys(palette).length === 0) {
+    return `--_lc-event-bg:${color};--_lc-event-accent-color:${color};--_lc-event-text-color:#111;${sizing}`;
+  }
+  return `${Object.entries(palette)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(";")};${sizing}`;
+}
+
+function eventCardEventTemplate(ev: TimelineEvent, host: TimeLine) {
+  const summary = String(ev.label ?? "");
   const color = String(ev.color ?? "#64748b");
-  const label = String(ev.label ?? "");
-  return html`<div
-    style="background:${color};padding:8px;font:0.8rem system-ui,sans-serif;color:#111;border-radius:4px;box-sizing:border-box;height:100%;overflow:hidden"
-  >
-    ${label}
-  </div>`;
+  const horizontal = host.flow === "horizontal";
+  const time = `${ev.start}–${ev.end}`;
+  return html`<event-card
+    layout="flow"
+    style=${eventCardStyleFromTimelineColor(color)}
+    .summary=${summary}
+    .time=${time}
+    .firstSegment=${true}
+    .lastSegment=${true}
+    segment-direction=${horizontal ? "horizontal" : "vertical"}
+  ></event-card>`;
 }
 
 function createTimeLine(): TimeLine {
   const el = document.createElement("time-line") as TimeLine;
-  el.eventTemplate = defaultEventTemplate;
+  el.eventTemplate = (ev) => eventCardEventTemplate(ev, el);
   return el;
 }
 
@@ -96,29 +115,6 @@ export const VerticalTimed: Story = {
     el.events = verticalTimedEvents;
     el.style.flex = "1";
     el.style.minHeight = "280px";
-    wrap.append(title, el);
-    return wrap;
-  },
-};
-
-export const HorizontalMasonryTwoRows: Story = {
-  name: "Horizontal · masonry · 14 cells",
-  render: () => {
-    const wrap = document.createElement("div");
-    wrap.style.cssText =
-      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
-    const title = document.createElement("h2");
-    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
-    title.textContent = "Horizontal grid (masonry, 2 rows × 7 cols)";
-    const el = createTimeLine();
-    el.flow = "horizontal";
-    el.layout = "masonry";
-    el.step = 5;
-    el.max = 100;
-    el.cells = 14;
-    el.columns = 7;
-    el.events = masonryDemoEvents;
-    el.style.width = "100%";
     wrap.append(title, el);
     return wrap;
   },
@@ -211,31 +207,6 @@ export const HorizontalTimeline: Story = {
     el.columns = 14;
     el.events = masonryDemoEvents;
     el.style.width = "100%";
-    wrap.append(title, el);
-    return wrap;
-  },
-};
-
-export const HorizontalMasonryHeightAuto: Story = {
-  name: "Horizontal · masonry · height auto (lane clip)",
-  render: () => {
-    const wrap = document.createElement("div");
-    wrap.style.cssText =
-      "box-sizing:border-box;padding:16px;height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px;";
-    const title = document.createElement("h2");
-    title.style.cssText = "margin:0;font:600 1rem system-ui,sans-serif;";
-    title.textContent = "Masonry with height=auto (lanes clipped to cell)";
-    const el = createTimeLine();
-    el.flow = "horizontal";
-    el.layout = "masonry";
-    el.height = "auto";
-    el.step = 5;
-    el.max = 100;
-    el.cells = 14;
-    el.columns = 7;
-    el.events = masonryDemoEvents;
-    el.style.width = "100%";
-    el.style.maxHeight = "220px";
     wrap.append(title, el);
     return wrap;
   },
