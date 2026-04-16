@@ -17,6 +17,7 @@
   display: flex;
   --__event-height: var(--event-height, 32px);
   --border: 0.5px solid light-dark(#d0d0d0, #505050);
+  pointer-events: none;
 }
 
 /* cells container */
@@ -41,7 +42,7 @@
   flex-shrink: 0;
 }
 
-/* Events position against this region only (horizontal absolute + vertical margins). */
+/* Events anchor to this region (absolute; vertical uses top/bottom % of height). */
 .cell-main {
   flex: 1;
   min-height: 0;
@@ -54,15 +55,17 @@
   will-change: transform;
   display: flex;
   flex: 1;
+  z-index: 2;
 }
 
-/* Time axis mapping inside a cell */
+/* Time axis in vertical flow: % on top/bottom resolve against .cell-main height (not margin-% which uses width). */
 :host([flow="vertical"]) .event {
-  position: relative;
   left: 0;
   right: 0;
-  margin-top: var(--__start);
-  margin-bottom: var(--__end);
+  top: var(--__start, 0);
+  bottom: var(--__end, 0);
+  height: auto;
+  min-height: 0;
 }
 
 :host([flow="horizontal"]) .event {
@@ -94,4 +97,5 @@
 
 .event > * {
   flex: 1;
+  pointer-events: auto;
 }
